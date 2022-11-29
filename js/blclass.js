@@ -1,5 +1,5 @@
 // file: blclass.js   
-var g_ver_blClass = "CBlClass_bv1.6.312"
+var g_ver_blClass = "CBlClass_bv1.6.314"
 
 function myAjaxCmd(method, url, data, callback){
 	const getToken = function () {
@@ -154,6 +154,7 @@ function CBlClass ()
 		var d= blo0.blMD(_id, "blPaint-"+_id,_x,_y,_w,_h,blGrey[1]);
 		if(!d.load){
 			d.load = true;	 
+			var xHit = -1, yHit = -1;
 			var items = [];   
 			d.parseTa = function(){ 
 				const x0 = 200, y0 = 100, dx = 30, dy = 33;  
@@ -188,6 +189,35 @@ function CBlClass ()
 
 			}(); 
 
+			d.selectItem = function(x,y){
+				for(i in items){
+					const oi = items[i];
+					if(blo0.blPiR(x,y,oi.x,oi.y,oi.w,oi.y)){						
+						if (typeof oi.selectMe == "function") {
+							oi.selectMe();
+						}
+					} 
+				}
+			}
+			d.turnoverItem = function(x,y){
+				for(i in items){
+					const oi = items[i];
+					if(blo0.blPiR(x,y,oi.x,oi.y,oi.w,oi.y)){						
+						if (typeof oi.turnMeOver == "function") {
+							oi.turnMeOver();
+						}
+					}
+				}
+			}
+			d.hitItems = function(x,y){
+				xHit = x;
+				yHit = y;
+				for(i in items){
+					if (typeof items[i].hitTest == "function") {
+						items[i].hitTest(x,y);
+					}
+				}
+			}
 			d.addImgItem = function(x,y,w,h,src){
 				var i = {};  i.x = x; i.y = y; i.w = w; i.h = h;				
 				var block = new Image(); 
@@ -204,13 +234,29 @@ function CBlClass ()
 			}
 			d.addItem = function(type,x,y,w,h,iHandle){
 				var i = {}; i.type = type; i.x = x; i.y = y; i.w = w; i.h = h;
+				var clrFill = "lightgreen";
+				var bSelect = false;
+				var bTurnover = false;
+
 				i.draw = function(ctx){
 					if(type == "rect"){
-						ctx.fillStyle = "blue"; 
+						ctx.fillStyle = bTurnover?clrFill:"black"; 
 						ctx.fillRect(i.x,i.y,i.w,i.h);
+						if(bSelect){
+							ctx.fillStyle = "brown"; 
+							ctx.fillRect(i.x,i.y,15,15);
+						} 
+					}
+					else if(type == "turn5Items"){
+						ctx.fillStyle = bTurnover?clrFill:"black"; 
+						ctx.fillRect(i.x,i.y,i.w,i.h);
+						if(bSelect){
+							ctx.fillStyle = "brown"; 
+							ctx.fillRect(i.x,i.y,5,5);
+						} 
 					}
 					else if(type == "div"){
-						ctx.fillStyle = "lightgreen"; 
+						ctx.fillStyle = clrFill; 
 						ctx.fillRect(i.x,i.y,i.w,i.h);
 						if(iHandle&&iHandle.drawMe){
 							iHandle.drawMe(ctx,i.x,i.y,i.w,i.h);
@@ -224,9 +270,26 @@ function CBlClass ()
 					}
 				}
 				i._2move = function(dx,dy){ i.x += dx; i.y += dy;}
-				
+				i.hitTest = function(_x,_y){
+					if(blo0.blPiR(_x,_y,i.x,i.y,i.w,i.h)){
+						clrFill = "red";
+					}
+					else{
+						clrFill = "blue";
+					}
+				}
+				i.selectMe = function(){
+					bSelect = !bSelect; 
+				}
+				i.turnMeOver = function(){
+					bTurnover = !bTurnover;
+				}
+				i.selectStatus = function(){
+					return bSelect;
+				}
 				if(iHandle){ iHandle._followMe(i);}
 				items.push(i);
+				return i;
 			}
 			d.getItems = function(){ return items;}
 			d.drawItems = function(ctx){
@@ -238,9 +301,33 @@ function CBlClass ()
 				ctx.fillStyle = "#FF0000";
 				ctx.font = "30px Arial";
 				ctx.fillText("l=" + items.length, 150,50);
+				ctx.fillStyle = "#aa11bb";
+				ctx.fillText("hit at [" + xHit + "," + yHit + "]", 250,50);
 				
 				for(i in items){
 					items[i].draw(ctx);
+				}
+			}
+			d.turn5anonce = function(handle){
+				var n = 0;
+				var si = [];
+				for(i in items){
+					if (typeof items[i].selectStatus == "function") {
+						if(items[i].selectStatus()){
+							n++;
+							si.push(items[i]);
+						}  
+					}
+				}
+				if(5==n){
+					for(j in si){
+						si[j].turnMeOver();
+						si[j].selectMe();
+					}
+					handle.okMsg();
+				}
+				else{
+					handle.errorMsg();
 				}
 			}
 			var x = 0, y = 0;
@@ -334,6 +421,55 @@ function CBlClass ()
 				this.funMU = function(){}
 				this.funMM = function(){}
 			};
+			var CO_Hit = function(){
+				this.getName = function(){return "HitTest";}
+				this.funMD = function(){				 
+					d.hitItems(x,y);
+				}
+				this.funMU = function(){}
+				this.funMM = function(){}
+			};
+			var CO_Select = function(){
+				this.getName = function(){return "toSelect";}
+				this.funMD = function(){				 
+					d.selectItem(x,y);
+				}
+				this.funMU = function(){}
+				this.funMM = function(){}
+			};
+			var CO_Turnover = function(){
+				this.getName = function(){return "toTurnover";}
+				this.funMD = function(){				 
+					d.turnoverItem(x,y);
+				}
+				this.funMU = function(){}
+				this.funMM = function(){}
+			};
+			var CO_Turn5Over = function(){
+				var n = 0;
+				var fs = "gray";
+				const i = d.addItem("turn5Items",666,20,44,33);
+				i.draw = function(ctx){					
+					ctx.fillStyle = fs; 
+					ctx.fillRect(i.x,i.y,i.w,i.h); 
+					ctx.font = "30px Arial";
+					ctx.strokeText(n, i.x, i.y);
+
+				}
+				i.errorMsg = function(){
+					fs = "red";
+				}
+				i.okMsg = function(){
+					fs = "green";
+					n++;
+				}
+				this.getName = function(){return "toTurn5Over";}
+				this.funMD = function(){	
+					d.turn5anonce(i);	
+				}
+				this.funMU = function(){}
+				this.funMM = function(){}
+			};
 			var CO_Rect = function(){
 				this.getName = function(){return "rectangle";}
 				this.funMD = function(){				
@@ -342,7 +478,7 @@ function CBlClass ()
 					ctx.font = "30px Arial";
 					ctx.strokeText(this.getName(), x, y);
 
-					d.addItem("rect",x,y,150,75);
+					d.addItem("rect",x,y,44,33);
 				}
 				this.funMU = function(){}
 				this.funMM = function(){}
@@ -444,9 +580,14 @@ function CBlClass ()
 			};
 			var o1 = new CO_Circle(vc,st);		d.os.push(o1); 
 			var o2 = new CO_Rect();				d.os.push(o2); 
-			var o2 = new CO_FreeDraw();			d.os.push(o2); 
-			var o2 = new CO_Img(vc,st);			d.os.push(o2); 
-			var o2 = new CO_Div(vc,st);			d.os.push(o2); 
+			var o3 = new CO_FreeDraw();			d.os.push(o3); 
+			var o4 = new CO_Img(vc,st);			d.os.push(o4); 
+			var o5 = new CO_Div(vc,st);			d.os.push(o5); 
+			var o6 = new CO_Hit();				d.os.push(o6); 			
+			var o7 = new CO_Select();			d.os.push(o7); 	
+			var o8 = new CO_Turnover();			d.os.push(o8); 
+			var o9 = new CO_Turn5Over();		d.os.push(o9);
+			
 
 			
 			d.btnOs = [];
@@ -2306,19 +2447,33 @@ function CBlClass ()
 			const fn = _saveAsFileName;
 			const vRes = _vRes;
 			var b = false;
+			var n = 0;
 
 			this.type = blc_4_t_DOWNLOAD;
 			
 			this.done = function(){return b;};
+			this.status = function(){return n;};
 
 			this.bl2Do = function(){			
 				var url = svrAPI + "?url="+ srcURL + "&filename="+ fn;  
 				var w = {};
+				n = 0;
 				w._2do = function(txt){
-					var str = "var a =" +  txt;  
+					/*
+					 var str = "var a =" +  txt;  
 					eval(str);  
 					vRes.innerHTML =  a.filename; 
-					b = true;
+					b = true; 
+					//*/
+					n++;
+					if("error xd 11"==txt){
+						vRes.innerHTML = n + " rs: not 4 && not 200. " + Date(); 
+						b = false;
+					}
+					else{
+						vRes.innerHTML =  n + " " + txt; 
+						b = true; 
+					}
 				}
 				blo0.blAjx(w,url);		 
 			};
@@ -2326,8 +2481,7 @@ function CBlClass ()
 		const o = new C4Download(_svrAPI,_srcURL,_saveAsFileName,_vRes);
 		return o;
 	}
-	this.blTask = function(){
-		
+	this.blTask = function(){		
 		const C4Task = function(){
 			var n = 0;
 			var btn = null;
@@ -2366,7 +2520,17 @@ function CBlClass ()
 				}
 
 				if(btn) {
-					btn.innerHTML = n;
+					var s = inf.status; 
+					if(s==undefined){
+						s= "no status function.";
+					}
+					else{
+						s= inf.status(); 
+						if(s==2){
+							inf.bl2Do();
+						}
+					}
+					btn.innerHTML = n + ": s=" + s;
 				}
 			}
 		}
@@ -2571,7 +2735,7 @@ function CBlClass ()
 				} 
 				
 				else if(curDrawingType==G_EDIT_OBJECT){  	
-					eui = blo0.blMD("id_eui","*",100,100,222,100,"blue");		
+					eui = blo0.blMD("id_eui","uiEditor",100,100,222,100,"blue");		
 					eui.v1 = blo0.blDiv(eui,eui.id+"v1","v1","lightblue");		
 					for(i in lsOs){
 						if(lsOs[i].edit_me) {
@@ -5686,6 +5850,7 @@ const gc4Note = function(){
 
 const gc4BLS = function(){
 	var x1,y1,x2,y2,s = false,e = false,mx1,my1,mx2,my2,sBlsTitle = "...";
+	var msgDbg = "msgBLS";
 	
 
 	this.select = function(b){		s = b;		}
@@ -5709,14 +5874,37 @@ const gc4BLS = function(){
 		}
 		
 		var oldStyle = ctx.fillStyle;
-		ctx.fillStyle = "gray"; 
+		ctx.fillStyle = function(){
+			var c = _curF>-1?lsFrame[_curF].backgroundColor:"yellow";
+			if("200,100,200"==c ||
+				"100,200,200"==c ||
+				"222,0,0"==c  ||
+				"111,0,0"==c  ||
+				"10,0,0"==c  ||
+				"111,0,0"==c  
+			) c = "rgb(" + c + ")";
+			return c;
+		}(); 
 		ctx.fillRect(x1,y1,x2-x1,y2-y1);
 		
-		ctx.fillStyle = "blue";
+		ctx.fillStyle = "rgb(200,111,1)";//"blue";
 		ctx.font = "30px Arial";
 		var ss = sBlsTitle + " : curFrame = " + _curF;
 		ctx.fillText(ss, x1,y1);
 
+		const showObjectsInFrame = function(){
+			ctx.fillStyle = "blue";
+			ctx.font = "10px Arial";
+			var s = _getObjsInFrame(lsFrame,_curF);
+			ctx.fillText(s, x1,y1+10);		
+		}();
+		
+		const showDebugMsg4BLS = function(){
+			ctx.fillStyle = "yellow";
+			ctx.font = "10px Arial";
+			var s = _makeDbgMsgInFrame();
+			ctx.fillText(s, x1,y1+30);		
+		}();
 		ctx.fillstyle = oldStyle;
 	}
 	this.select_me = function(x,y){
@@ -5729,12 +5917,12 @@ const gc4BLS = function(){
 			 e = true; 
 			 eui.v1.innerHTML = "";
 			 const tb = blo0.blDiv(eui.v1,eui.v1.id+"tb","tb","gray");
-			 var b1 = blo0.blBtn(tb,tb.id+"b1","setTitle","lightblue");
+			 var b1 = blo0.blBtn(tb,tb.id+"b1","setTitleFromTA","lightblue");
 			 b1.style.float = "left";
 			 b1.onclick = function(){
 				sBlsTitle = blo0.blGetTa().value;	
 			 } 
-			 var b2 = blo0.blBtn(tb,tb.id+"b2","bls","lightgreen");
+			 var b2 = blo0.blBtn(tb,tb.id+"b2","bls2TA","lightgreen");
 			 b2.style.float = "left";
 			 b2.onclick = function(){
 				blo0.blGetTa().value = JSON.stringify(_makeBLS());	
@@ -5743,7 +5931,7 @@ const gc4BLS = function(){
 			 
 			 const split1 = blo0.blDiv(eui.v1,eui.v1.id+"split1","split1","green");
 
-			 const tbW = blo0.blDiv(eui.v1,eui.v1.id+"tbW","W:","gray");
+			 const tbW = blo0.blDiv(eui.v1,eui.v1.id+"tbW","blsWidth:","gray");
 			 
 			 var bw = blo0.blBtn(tbW,tbW.id+"bw",x2-x1,"lightgreen");
 			 const ws = [1,-1,2,-2,5,-5,10,-10,100,-100];
@@ -5757,9 +5945,25 @@ const gc4BLS = function(){
 					}
 				}(i);
 			 }
-			 const split1a = blo0.blDiv(eui.v1,eui.v1.id+"split1a","split1a","green");
+			 const split1w = blo0.blDiv(eui.v1,eui.v1.id+"split1a","split1a","green");
 
-			 const tbFrames = blo0.blDiv(eui.v1,eui.v1.id+"tbFrames","Frames:","gray");
+			 const tbH = blo0.blDiv(eui.v1,eui.v1.id+"tbH","blsHeight:","gray");			 
+			 var bh = blo0.blBtn(tbH,tbH.id+"bh",y2-y1,"lightgreen");
+			 const hs = [1,-1,2,-2,5,-5,10,-10,100,-100];
+			 for(i in hs){
+				var s = hs[i]>0?"+"+hs[i]:hs[i];
+				var b = blo0.blBtn(tbH,tbH.id+i,s,"gray");
+				b.onclick = function(_i){
+					return function(){
+						y2 += hs[_i];
+						bh.innerHTML = y2-y1;
+					}
+				}(i);
+			 }
+			 const split1h = blo0.blDiv(eui.v1,eui.v1.id+"split1h","split1h","green");
+
+			 const tbFrames = blo0.blDiv(eui.v1,eui.v1.id+"tbFrames","blsFrames:","green");
+			 tbFrames.style.color = "white";
 			 const split1b = blo0.blDiv(eui.v1,eui.v1.id+"split1b","split1b","lightgray");
 			 const tabFrames = blo0.blDiv(eui.v1,eui.v1.id+"tabFrames","tabFrames:","lightgray");
 			 tabFrames.refreshFrames = function(){
@@ -5767,18 +5971,21 @@ const gc4BLS = function(){
 				for(i in lsFrame){ 
 				   var b = blo0.blBtn(tabFrames,tabFrames.id+i,i,"gray");
 				   b.style.float = "left";
-				   b.onclick = function(_i){
+				   b.onclick = function(_btn,_i,_f){
 					   return function(){ 
-						   _curF = _i;
+						   _curF = _i; 
+						   _ui4curFrame(_btn,v4curF,_f,_i);
 					   }
-				   }(i);
+				   }(b,i,lsFrame);
 				}
 			 }
-			 const newFrame = blo0.blBtn(tbFrames,tbFrames.id+"newFrame","+","gray");
+			 const newFrame = blo0.blBtn(tbFrames,tbFrames.id+"newFrame","+","green");
 			 newFrame.style.float = "left";
+			 newFrame.style.color = "white";
 			 newFrame.onclick = function(){
 				var f = {};
 				f.times = 1;
+				f.backgroundColor = "gray";
 				lsFrame.push(f); 
 				tabFrames.refreshFrames(); 
 			 }
@@ -5786,11 +5993,13 @@ const gc4BLS = function(){
 			 tabFrames.refreshFrames(); 
 			 
 			 const split2 = blo0.blDiv(eui.v1,eui.v1.id+"split2","split2","green");
+			 const v4curF = blo0.blDiv(eui.v1,eui.v1.id+"v4curF","v4curF","gray");
+
 			 const split3= blo0.blDiv(eui.v1,eui.v1.id+"split3","split3","lightblue");
 			 const tbServer = blo0.blDiv(eui.v1,eui.v1.id+"tbServer","tbServer:","gray");
 			 const vServer = blo0.blDiv(eui.v1,eui.v1.id+"vServer","vServer:","lightblue");
 			 
-			 var btnSaveScript = blo0.blBtn(tbServer,tbServer.id+"btnSaveScript","save","lightgreen");
+			 var btnSaveScript = blo0.blBtn(tbServer,tbServer.id+"btnSaveScript","bls2server","lightgreen");
 			 btnSaveScript.style.float = "left"; 
 			 btnSaveScript.onclick = function(){				 
 				var pl = _makeBLS(); 
@@ -5800,7 +6009,7 @@ const gc4BLS = function(){
 					vServer.innerHTML = "<a href ='http://localhost:8080/"+sBlsTitle+".json' target='_blank'>"+sBlsTitle+".json</a>";
 				}); 
 			}
-			var btnMakeMP4 = blo0.blBtn(tbServer,tbServer.id+"btnMakeMP4","mp4","lightblue");
+			var btnMakeMP4 = blo0.blBtn(tbServer,tbServer.id+"btnMakeMP4","makeMP4","lightblue");
 			btnMakeMP4.style.float = "right"; 
 			btnMakeMP4.onclick = function(){	
 					var url = "http://localhost:8080/image/json2video?script=" + sBlsTitle + ".json&video=" + sBlsTitle + ".mp4"; 
@@ -5828,6 +6037,10 @@ const gc4BLS = function(){
 			ex1 = ex2;
 			ey1 = ey2;
 	
+			msgDbg = "msgDbg1 xy:" + x + "," + y;
+		}
+		else{
+			msgDbg = "msgDbg2 xy:" + x + "," + y;
 		}
 	}
 	this.move_start = function(dx,dy){
@@ -5884,7 +6097,7 @@ const gc4BLS = function(){
 				}
 			}
 		], 
-		"backgroundColor": "100,100,100"
+		"backgroundColor": "200,100,200"
 		},
 		{
 		"number": "2", 
@@ -5922,7 +6135,7 @@ const gc4BLS = function(){
 				}
 			}
 		], 
-		"backgroundColor": "100,100,100"
+		"backgroundColor": "100,200,200"
 		}
 	];
 	var _curF = -1;
@@ -5931,15 +6144,77 @@ const gc4BLS = function(){
 	var _makeBLS = function(){
 		var s = {};
 		var r = {};		
-		r.version 		= "gc4BLS: _makeBLS: bv0.14";
+		r.version 		= "gc4BLS: bv0.15";
 		r.width 		= x2 - x1;
 		r.height 		= y2 - y1;
-		r.music 		= "https://littleflute.github.io/english/NewConceptEnglish/Book2/11.mp3";
+		r.music 		= "1.mp3";//"https://littleflute.github.io/english/NewConceptEnglish/Book2/11.mp3";
 		r.rate 			= "1"; 
 		r.frames 		= lsFrame;		
 		r.superObjects 	= _supObjs;	
 		s.request 		= r;			
 		return s;	
+	}
+	const _getObjsInFrame = function(lsf,i){
+		var r;
+		const os = lsf[i].objects;
+		r = "objects in frame: " +os;
+		return r;
+	}
+	const _makeDbgMsgInFrame = function(){
+		var r; 
+		r = msgDbg + " :: v 13 showDebugMsg4BLS: x1y1[" + x1 + ","+ y1 + "]";;
+		return r;
+	}
+	const _ui4curFrame = function(btnBoss,v,f,n){
+		v.innerHTML = "";
+		const fn4settime = function(){
+			const tb4time = blo0.blDiv(v,v.id+"tb4time","time0.11","brown");		
+			const btn4TimeStatic = blo0.blBtn(tb4time,tb4time.id+"btn4TimeStatic","f.time","gray");
+			btn4TimeStatic.style.float = "left";
+			const btn4TimeVal = blo0.blBtn(tb4time,tb4time.id+"btn4TimeVal",f[n].time,"lightblue");
+			btn4TimeVal.style.float = "left";
+			const ws = [1,-1,2,-2,5,-5,10,-10];
+			for(i in ws){
+					var s = ws[i]>0?"+"+ws[i]:ws[i];
+					var b = blo0.blBtn(tb4time,tb4time.id+i,s,"gray");
+					b.onclick = function(_i){
+						return function(){
+							f[n].time += ws[_i];
+							btn4TimeVal.innerHTML = f[n].time;
+						}
+					}(i);
+			}
+		}();
+		const fn4setbackgroundColor = function(){
+			const tb = blo0.blDiv(v,v.id+"tb4backgroundcolor","backgroundcolor0.11","blue");		
+			const static = blo0.blBtn(tb,tb.id+"Static","f.backgroundColor","gray");
+			static.style.float = "left"; 	
+			const val = blo0.blBtn(tb,tb.id+"val",f[n].backgroundColor,"lightgray");
+			val.style.float = "left"; 
+			const fn4Red = function(_tb,_val){
+				const tb = blo0.blDiv(_tb,_tb.id+"tb4Red","red","red");		
+				const v = blo0.blBtn(tb,tb.id+"v","red","gray");
+				const ws = [1,10,111,222];
+				for(i in ws){						
+						var b = blo0.blBtn(tb,tb.id+i,ws[i],"rgb("+ws[i]+",11,11)");
+						b.onclick = function(_i,_ls){
+							return function(){
+								f[n].backgroundColor = _ls[_i]+",0,0";
+								btnBoss.click();
+							}
+						}(i,ws);
+				}
+				
+			}(tb,val);
+			const fn4Green = function(_tb,_val){
+				const tb = blo0.blDiv(_tb,_tb.id+"tb4Green","green","green");		
+				const v = blo0.blBtn(tb,tb.id+"v","green","gray");
+			}(tb,val);
+			const fn4Blue = function(_tb,_val){
+				const tb = blo0.blDiv(_tb,_tb.id+"tb4Blue","blue","blue");		
+				const v = blo0.blBtn(tb,tb.id+"v","blue","gray");
+			}(tb,val);
+		}();
 	}
 }
 
