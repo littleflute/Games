@@ -32,6 +32,7 @@ describe(tag4xdTest, function(){
   });
   
   it('word', function(){     assert.equal("done",'done');  });
-  it('music', function(){     assert.equal("done",'doing');  });
+  it('abc0', function(){     assert.equal("done",'done');  });
+  it('blscript editor', function(){     assert.equal("done",'doing');  });
   
 });
