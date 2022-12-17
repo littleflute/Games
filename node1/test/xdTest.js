@@ -31,6 +31,10 @@ describe(tag4xdTest, function(){
     var done ="";    
 
     done += ` 
+
+    9分！封杀26年回归，震撼到失语，真是最伟大的禁片…
+    https://mp.weixin.qq.com/s/84W1DtsTRBBZGh87uTsGLw
+
     https://developer.mozilla.org/en-US/docs/Web/API/Touch_events
     https://littleflute.github.io/Games/issues/21/touch.html
      
@@ -45,8 +49,12 @@ describe(tag4xdTest, function(){
     assert.equal(done,doing);
   });
 
-  it('xd dev', function(){ 
-    assert.equal(app(),'to test xdApp: done.');
+  it('superObject', function(){ 
+    var done =`
+    1. load a picture from TA.
+    `;    
+    const doing =`...`;
+    assert.equal(done,doing);
   });
   
   it('word', function(){assert.equal("done",'done');  });
