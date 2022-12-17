@@ -26,7 +26,33 @@ describe(tag4xdTest, function(){
         assert("{}"==testMe,"testMe=" + testMe); 
     }) 
   });    
- 
+
+  it('wechat', function(){ 
+    var done ="";    
+
+    done += ` 
+
+    这么多人一个爹？都有轻微房颤，从感染到去世只有八天？
+    https://mp.weixin.qq.com/s/FORh5jJBr47iyV9ndcfXHA
+    
+
+    9分！封杀26年回归，震撼到失语，真是最伟大的禁片…
+    https://mp.weixin.qq.com/s/84W1DtsTRBBZGh87uTsGLw
+
+    https://developer.mozilla.org/en-US/docs/Web/API/Touch_events
+    https://littleflute.github.io/Games/issues/21/touch.html
+     
+    
+    https://littleflute.github.io/Games/issues/21/testC4AutoRun.html
+    
+    https://littleflute.github.io/Games/issues/21/testC4Canvas.html
+    https://mp.weixin.qq.com/s/IDtlkjfAIWF-471Wrem42A
+
+    `;
+    const doing =`...`;
+    assert.equal(done,doing);
+  });
+
   it('xd dev', function(){ 
     assert.equal(app(),'to test xdApp: done.');
   });
