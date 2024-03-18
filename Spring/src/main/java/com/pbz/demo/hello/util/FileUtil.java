@@ -1,8 +1,10 @@
 package com.pbz.demo.hello.util;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -44,10 +46,12 @@ import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.jaudiotagger.audio.mp3.MP3AudioHeader;
 import org.jaudiotagger.audio.mp3.MP3File;
+import org.json.JSONObject;
 
 public class FileUtil {
 
 	private static String zhPattern = "[\\u4e00-\\u9fa5]";
+	public static final String delString = "1234567890.黑胜红和局()";
 	private static final String replaceString = "raw.githubusercontent.com";
 
 	public static void copyDirectory(File sourceDir, File targetDir) throws IOException {
@@ -280,15 +284,12 @@ public class FileUtil {
 
     public static String downloadFileIfNeed(String file) throws IOException {
 
+        if (file.startsWith("commentID:")) {
+            return savePlugInToJSFile(file);
+        }
+        
         if (file.startsWith("tts:")) {
-            String text = file.substring(4);
-            String url = "https://tts.baidu.com/text2audio?tex=" + text;
-            if (url.indexOf("ctp=1") == -1) {
-                url += "&cuid=xincibaike&lan=ZH&ctp=1&pdt=301&vol=10&rate=4&spd=5"; //Default parameters
-            }
-            String downloadFileName = FileUtil.randomFileName() + ".mp3";
-            FileUtil.downloadFile(url, downloadFileName);
-            return downloadFileName;
+            return saveTextToAudioFile(file);
         }
 
         String fileName = file;
@@ -306,7 +307,58 @@ public class FileUtil {
         return fileName;
     }
 
-	public static String downloadFile(String fileUrl) throws Exception {
+    private static String saveTextToAudioFile(String file) throws IOException {
+        // tts:hello
+        String text = file.substring(4);
+        String textOfAudio = URLEncoder.encode(text, "UTF-8");
+
+        String url = "https://tts.baidu.com/text2audio?tex=" + text;
+        if (url.indexOf("ctp=1") == -1) {
+            url += "&cuid=baike&lan=ZH&ctp=1&pdt=301&vol=10&rate=4&spd=5"; // Default parameters
+        }
+        // Fixed url, use sogou instead of baidu.
+        url = "https://fanyi.sogou.com/reventondc/synthesis?text=" + textOfAudio
+                + "&speed=1&lang=zh-CHS&from=translateweb&speaker=6";
+        // Fixed url, use google instead of sogou.
+        url = "https://translate.google.com/translate_tts?ie=UTF-8&total=1&idx=0&textlen=32&client=tw-ob&q="
+                + textOfAudio + "&tl=zh-CN";
+
+        String downloadFileName = FileUtil.randomFileName() + ".mp3";
+        FileUtil.downloadFile(url, downloadFileName);
+
+        String targetPath = System.getProperty("user.dir");
+        File mp3File = new File(targetPath + "/" + downloadFileName);
+        if (!mp3File.exists()) {
+            System.out.println("The map3 file is NOT generated:" + mp3File);
+            return "A_Sax.wav";
+        }
+        return downloadFileName;
+    }
+
+    private static String savePlugInToJSFile(String strInput) throws IOException {
+        // commentID:1234
+        String commentID = strInput.substring(strInput.indexOf(":") + 1);
+        String url = "https://api.github.com/repos/jeremyjia/Games/issues/comments/" + commentID;
+        String resultString = NetAccessUtil.doGetOnGitHub(url, "");
+        int s = resultString.indexOf("body");
+        int e = resultString.indexOf("reactions");
+        String plugInContentStr = resultString.substring(s + 7, e - 3);
+
+        String fileName = "plx_"+commentID + ".js";
+        String fullPath = System.getProperty("user.dir") + "/" + fileName;
+               
+        FileWriter fw2 = new FileWriter(fullPath);
+        BufferedWriter bw = new BufferedWriter(fw2);    
+        plugInContentStr = plugInContentStr.replace("\\r\\n", "\r\n");
+        plugInContentStr = plugInContentStr.replace("\\", "");
+        bw.write(plugInContentStr); 
+        bw.close();
+
+        System.out.println(plugInContentStr);
+        return fileName;
+    }
+
+    public static String downloadFile(String fileUrl) throws Exception {
 		if (!fileUrl.startsWith("http")) {
 			throw new Exception("The file url is not correct!");
 		}
@@ -403,15 +455,16 @@ public class FileUtil {
 		}
 	}
 
-	// 将文本分割为多行
+	// 将文本分割为多行,考虑中文文章没有空格的情况也会强制分行
 	public static String addLinefeeds(String text, int number) {
 		StringBuffer buffer = new StringBuffer();
 		int index = 0;
 		for (int i = 0; i < text.length(); i++) {
 			char p = text.charAt(i);
-			if (index == number) {
-				if (p != ' ') {
+			if (index >= number && number>0) {
+				if (p != ' ' && (index-number)<=3) {
 					buffer.append(p);
+					index++;
 					continue;
 				}
 				buffer.append("\\n");
@@ -425,6 +478,39 @@ public class FileUtil {
 		return buffer.toString().trim();
 	}
 
+    public static String getChessLog(String strFromWeb) {
+        String str = removeNoNeedChar(strFromWeb, delString);
+        String array[] = str.split(" ");
+        StringBuffer sbf = new StringBuffer("");
+        for (String s : array) {
+            if (s != " " && !s.isEmpty()) {
+                sbf.append(s).append(" ");
+            }
+        }
+        str = sbf.toString();
+        str = str.replaceAll("\r|\n|\t", "");
+        str = str.replace("\\n", "");
+        return str;
+    }
+
+    public static String removeNoNeedChar(String str, String delString) {
+        StringBuffer sbf = new StringBuffer("");
+        for (int i = 0; i < str.length(); i++) {
+            char c = str.charAt(i);
+            boolean bFind = false;
+            for (int j = 0; j < delString.length(); j++) {
+                char delChar = delString.charAt(j);
+                if (c == delChar) {
+                    bFind = true;
+                }
+            }
+            if (!bFind) {
+                sbf.append(c);
+            }
+        }
+        return sbf.toString().trim();
+    }
+	    
 	public static String saveJsonString2File(String jsonString, String fileName) throws Exception {
 		jsonString = URLEncoder.encode(jsonString, "UTF-8");
 		jsonString = URLDecoder.decode(jsonString, "UTF-8");

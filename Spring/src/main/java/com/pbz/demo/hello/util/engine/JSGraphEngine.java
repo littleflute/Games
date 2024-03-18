@@ -21,7 +21,7 @@ public class JSGraphEngine {
 
 	private CanvasObj canvas = new CanvasObj();
 	private Graphics2D graphics = null;
-	private static final boolean isWindows = System.getProperty("os.name").startsWith("Windows");
+	private static final boolean isMacOS = System.getProperty("os.name").startsWith("Mac OS");
 
 	public Graphics2D getGraphics() {
 		return graphics;
@@ -95,7 +95,7 @@ public class JSGraphEngine {
         }
 
 		public void rotate(double angle) {
-			this.angle = angle;
+		    this.angle += angle;//Bug fix
 			graphics.rotate(angle, 0, 0);
 		}
 
@@ -288,10 +288,10 @@ public class JSGraphEngine {
 				fontSize = fontSize.substring(0, index);
 				float fSzie = Float.parseFloat(fontSize);
 				Font font = null;
-				if (isWindows) {
-					font = new Font("黑体", Font.BOLD, (int) fSzie);
-				} else {
+				if (isMacOS) {
 					font = new Font(fontName, Font.BOLD, (int) fSzie);
+				} else {
+					font = new Font("黑体", Font.BOLD, (int) fSzie);
 				}
 				graphics.setFont(font);
 			} else {
@@ -300,9 +300,15 @@ public class JSGraphEngine {
 			}
 		}
 
-		public void beginPath() {
-		    m_Path2D.reset();
-		}
+        public TextObj measureText(String strText) {
+            int w = graphics.getFontMetrics().getHeight();
+            System.out.println("measureText:" + w);
+            return new TextObj(w);
+        }
+
+        public void beginPath() {
+            m_Path2D.reset();
+        }
 
 		public void closePath() {
 		}
@@ -326,4 +332,11 @@ public class JSGraphEngine {
 	public class ImageObj {
 		public String src = "";
 	}
+	
+    public class TextObj {
+        public TextObj(int w) {
+            width = w;
+        }
+        public int width = 30;
+    }
 }
