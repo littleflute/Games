@@ -1,5 +1,31 @@
 document.addEventListener('DOMContentLoaded', function() {    
-    document.title+="~jsv0.34";
+    document.title+="~jsv0.45";
+    const oui = function(){
+        let o = {};
+        o.stepUI = function(pd,id,innerHTML,x,y,w,h,c){
+            let d = document.createElement("div");
+            d.id = id;
+            d.innerHTML = innerHTML;
+              
+            d.style.left		= x+"px";
+            d.style.top			= y+"px";
+            d.style.width		= w+"px";
+            d.style.height		= h+"px";
+    
+            if(pd!=null)pd.appendChild(d);
+            return d;
+        };
+        o.mkUI = function(){            
+            let d = null;
+            for(var i = 1; i<=4;i++){
+                d = this.stepUI(document.getElementById('id4sequencer'),"step-"+i,i,i*50,111,50,50);
+                d.classList.add("step");
+            }
+        };
+        return o;
+    }();    
+    oui.mkUI();
+
     const steps = document.querySelectorAll('.step');
     const playButton = document.getElementById('play-button');
     const btnTest = document.getElementById('test');
