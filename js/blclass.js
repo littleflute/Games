@@ -1,5 +1,5 @@
 // file: blclass.js   
-var g_ver_blClass = "CBlClass_bv1.6.454"
+var g_ver_blClass = "CBlClass_bv1.6.513"
 
 function myAjaxCmd(method, url, data, callback){
 	const getToken = function () {
@@ -8190,9 +8190,16 @@ const gc4BLS = function(){
 					r.attribute 		= a;
 
 					r.drawMyself = function(ctx,x,y){
-						ctx.fillStyle = "white";
+						ctx.fillStyle = "green";
 						ctx.font = "10px Arial";					
-						ctx.fillText(r.attribute.note+"-"+r.attribute.time+"-"+r.attribute.tone,r.attribute.left+x,r.attribute.top+y);	 
+						 
+						
+						var aNote = function (c,n,tm,tn,_x,_y){
+							//ctx.fillText(n+tm+tn,_x,_y);	
+							gBlNote(c,_x,_y,n,tn,tm);
+						}(ctx,r.attribute.note,r.attribute.time,+r.attribute.tone,
+						r.attribute.left+x,r.attribute.top+y);
+						
 						if(bMoveText){
 							ctx.fillStyle = "red";
 							ctx.fillRect(r.x+x,r.y+y,20,20);
@@ -8361,6 +8368,14 @@ const gc4BLS = function(){
 							},
 							"bgc":"LightSkyBlue"
 						},
+						{
+							"id":"id_4_objUndo",
+							"name":"undo",
+							"fn2click":function(_v,btn){  
+								_v.innerHTML = btn.id;
+							},
+							"bgc":"lightgray"
+						},
 					];
 					const split4CurFrame = blo0.blDiv(targetV,targetV.id+"split4CurFrame","split4CurFrame","lightgreen");
 					const tb = blo0.blDiv(targetV,targetV.id+"tb","tb","gray");
@@ -8496,6 +8511,10 @@ const gc4BLS = function(){
 						for(i in os){
 							if(os[i].upOnMe) os[i].upOnMe(x,y,x0,y0);
 						}
+					}	
+					 
+					if("id_4_objUndo"==type){ 
+						os.pop();
 					}	 
 				}				
 				else{
