@@ -1,5 +1,5 @@
 // file: blclass.js   
-var g_ver_blClass = "CBlClass_bv1.6.523"
+var g_ver_blClass = "CBlClass_bv1.6.552"
 
 function myAjaxCmd(method, url, data, callback){
 	const getToken = function () {
@@ -736,6 +736,7 @@ function CBlClass ()
 		const r = function() {	
 			var bRun = false;
 			var fps = 1;
+			var time = 5; //added by jeremyjia
 			var n = 0; 
 			var t1 = Date.now();
 			var t2 = Date.now();
@@ -769,14 +770,8 @@ function CBlClass ()
 
 			o.paintCurFrame = function(ctx,_lsf,n,x1,y1,x2,y2){
 				ctx.fillStyle = function(){
-					var c = n>-1?_lsf[n].backgroundColor:"Khaki";
-					if("200,100,200"==c ||
-						"100,200,200"==c ||
-						"222,0,0"==c  ||
-						"111,0,0"==c  ||
-						"10,0,0"==c  ||
-						"1,0,0"==c  
-					) c = "rgb(" + c + ")";
+					var c = n>-1?_lsf[n].backgroundColor:"Khaki";					
+					c = "rgb(" + c + ")";
 					return c;
 				}(); 
 				ctx.fillRect(x1,y1,x2-x1,y2-y1);
@@ -793,6 +788,12 @@ function CBlClass ()
 			}
 			o.getFPS = function(){
 				return fps;
+			}
+			o.setVideoTime = function(n){
+				time = n;
+			}
+			o.getVideoTime = function(){
+				return time;
 			}
 			o.getVP = function(){ return vp;}
 			o.getFrameNo = function(l,nf){
@@ -827,6 +828,37 @@ function CBlClass ()
 				s += " t2-t1 = " + (t2-t1)/1000 + "s";
 				s += " fps = " + fps;
 				ctx.fillText(s, x1,y1 + 20);
+
+
+				
+				
+
+				const checkSite = function(_x,_y){
+					async function isWebsiteAccessible(url) {
+						try {
+							const response = await fetch(url, { method: 'HEAD' }); // 使用 HEAD 请求以减轻负载
+							if (response.ok) {
+								return true; // 状态码在200-299之间
+							} else {
+								return false;
+							}
+						} catch (error) {
+							console.error('Error fetching the URL:', error);
+							return false;
+						}
+					}
+
+					// 示例使用
+					isWebsiteAccessible('http://localhost:8080/')
+					.then(isAccessible => {
+						if (isAccessible) {
+							ctx.fillText("server_status: ok! ", _x,_y);
+						} else {
+							ctx.fillText("server_status:  error!",_x,_y);
+						}
+					});
+					
+				}(x1,y1+55);
 			}
 			return o;
 		}();
@@ -2323,7 +2355,12 @@ function CBlClass ()
                worker._2do(xmlhttp.responseText);
             }
 			else{    
-			  worker._2do("error xd 11");
+				if (xmlhttp.readyState >= 1 && xmlhttp.readyState < 4) {
+					worker._2do("Task is in progress");
+				}
+				else {
+					worker._2do("error xd 11");
+				}
 			}
         }
         xmlhttp.open("GET",href,true);
@@ -2373,6 +2410,61 @@ function CBlClass ()
         }
         return r;
     }
+	this.blColorPicker = function(oBoss,id,bkClr){
+		
+		let r = '';
+		r += '<h2>颜色选择器</h2>';
+		r += '<label id="colorDisplay'+id+'">cc</label>';
+		r += '<label for="red">红:</label>';
+		r += '<input type="range" id="red'+id+'" min="0" max="255" value="255">';
+		r += '<label for="green">绿:</label>';
+		r += '<input type="range" id="green'+id+'" min="0" max="255" value="0">';
+		r += '<label for="blue">蓝:</label>';
+		r += '<input type="range" id="blue'+id+'" min="0" max="255" value="0">';
+		r += '<p id="colorCode'+id+'"></p >';
+		
+			
+		var o = document.getElementById(id);
+		if(!o){
+			o = document.createElement("div");
+			o.id = id;
+			o.innerHTML = r; 
+
+			document.addEventListener('DOMContentLoaded', function() {
+				console.log(blo0.blTime(0) + " xddbg");
+				const redSlider = document.getElementById('red' + id);
+				const greenSlider = document.getElementById('green' + id);
+				const blueSlider = document.getElementById('blue' + id);
+				const colorDisplay = document.getElementById('colorDisplay' + id);
+				const colorCode = document.getElementById('colorCode' + id);
+				colorDisplay.style.width    = "100px" ;
+				colorDisplay.style.height   = "100px" ;
+				colorDisplay.style.border   = '1px solid #000';
+				colorDisplay.style.marginTop = "20px";
+	
+	
+				function updateColor() {
+					const red = redSlider.value;
+					const green = greenSlider.value;
+					const blue = blueSlider.value;
+					const rgbColor = `rgb(${red}, ${green}, ${blue})`;
+	
+					colorDisplay.style.backgroundColor = rgbColor;
+					colorCode.textContent = `RGB: ${red}, ${green}, ${blue}`;
+				}
+	
+				redSlider.addEventListener('input', updateColor);
+				greenSlider.addEventListener('input', updateColor);
+				blueSlider.addEventListener('input', updateColor);
+			});
+
+			
+			o.style.backgroundColor=bkClr?bkClr:"gray";
+			if(oBoss!=null)oBoss.appendChild(o);
+		}
+		return o;
+	}
+	
     this.blTextarea = function (oBoss,id,html,bkClr){
         var r = document.getElementById(id);
         if(!r){
@@ -3772,7 +3864,7 @@ function CBlClass ()
 				if(ID_CMD_BLS_UI == cmdID){
 					var d = blo0.blMDiv(oBoss,oBoss.id+"mdiv4_bls_UI","blsUI",555,100,222,100,"green");
 					var tb = blo0.blDiv(d,d.id+"tb","tb","gray");
-					var b1= blo0.blBtn(tb,tb.id+"b1","b1","gray");
+					var b1= blo0.blBtn(tb,tb.id+"b1","blsNew","gray");
 					b1.onclick = function(){
 						curDrawingType = G_DRAW_BLS;
 					}
@@ -6523,6 +6615,11 @@ const gBlNote = function(ctx,_x,_y,c,tone,time){
 	  y = _y + 1*dy;    
 	  ctx.fillRect(x,y,18, 2); 
 	}  
+	if(time==0.75){
+	  ctx.fillText('.', x + dx*2,y);
+	  y = _y + 0.5*dy;    
+	  ctx.fillRect(x,y,18  + dx*2, 2); 
+	} 
 	if(time==2){
 	  x = _x + 2*dx;
 	  ctx.fillText("-", x,y);
@@ -7262,7 +7359,13 @@ const gc4BLS = function(){
 	this.getSOs = function(){return lsSuperObjects;}
 	this.select = function(b){		s = b;		}
 	this.setXY1 = function(x,y){		x1 = x; y1 = y;		}
-	this.setXY2 = function(x,y){		x2 = x; y2 = y;		}
+	this.setXY2 = function(x,y){ 
+		x2 = x; y2 = y;	
+		if(x1>x2)	x2 = x1 + 100;
+		if(y1>y2)	y2 = y1 + 100;
+		x2 = (x2-x1)%2?x2+1:x2; 
+		y2 = (y2-y1)%2?y2+1:y2; 
+	}
 	this.draw_me = function(cvs){	
 		var ctx = cvs.getContext("2d");	
 		const d = 10; 
@@ -7287,7 +7390,7 @@ const gc4BLS = function(){
 		blsTimer.drawOnLoop(cvs,this,x1,y1,x2,y2);
 
 		const showDebugMsg4BLS = function(){
-			ctx.fillStyle = "yellow";
+			ctx.fillStyle = "purple";
 			ctx.font = "10px Arial";
 			var s = _makeDbgMsgInFrame();
 			ctx.fillText(s, x1,y1+30);		
@@ -7351,6 +7454,11 @@ const gc4BLS = function(){
 								o.name = "bzll.mp3";
 								o.src = "http://localhost:8080/bzll.mp3";
 								ls.push(o);
+								var o = {};
+								o.id = 12;
+								o.name = "j72_4_4.mp3";
+								o.src = "https://littleflute.github.io/gt1/mp3/j72_4_4.mp3";
+								ls.push(o);
 								return ls;
 							}(); 
 							
@@ -7387,7 +7495,7 @@ const gc4BLS = function(){
 					{
 						"name":"rate",
 						"fn4ui": function(v){ 
-							const fs = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,25,60];
+							const fs = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,25,60,72,76,80,104];
 							const tb = blo0.blDiv(v,v.id+"tb","tb","Violet"); 
 							for(i in fs){
 								const b = blo0.blBtn(tb,tb.id+i,fs[i],"Fuchsia");
@@ -7401,14 +7509,30 @@ const gc4BLS = function(){
 						"color": "Orchid"
 					},
 					{
+						"name":"time",
+						"fn4ui": function(v){							
+							const tb = blo0.blDiv(v,v.id+"tb_time","video time for w/o frame","Violet"); 
+							const ta = blo0.blTextarea(tb,tb.id+"Tafortime",t.getVideoTime(),blGrey[1]);
+							ta.style.width="15%";
+							ta.style.height="22px";
+							ta.addEventListener("input", function(e) {
+								var tav = this.value;
+								t.setVideoTime(tav) ;
+							})
+						},
+						"color": "Orchid"
+					},
+					{
 						"name":"so",
 						"fn4ui": function(v){ 
 							const tb = blo0.blDiv(v,v.id+"tb","tb",this.color);
+							const allSO = blo0.blDiv(v,v.id+"allSO","so:","gray");
 							const vos = blo0.blDiv(v,v.id+"vos","vos","BurlyWood");
 							const vEndOfOS = blo0.blDiv(v,v.id+"vEndOfOS","vEndOfOS","white");
-							tb.refreshSOs = function(l){ 
+							tb.refreshSOs = function(l){  
+								allSO.innerHTML = "so:";
 								for(i in l){
-									const b = blo0.blBtn(tb,tb.id+i,i,"Lavender"); 
+									const b = blo0.blBtn(allSO,allSO.id+i,i,"Lavender"); 
 									newSO.style.float = "right";
  
 									b.onclick = function(_b,_i,_v){
@@ -7504,7 +7628,7 @@ const gc4BLS = function(){
 							}							
 							const l = _thisBLS.getSOs();
 							const newSO = blo0.blBtn(tb,tb.id+"newSO","newSO","Salmon"); 
-							newSO.style.float = "left";
+							newSO.style.float = "right";
 							newSO.onclick = function(){
 								var o = {};
 								o.type = "javascript";
@@ -7518,6 +7642,40 @@ const gc4BLS = function(){
 								l.push(o); 
 								tb.refreshSOs(l); 
 							}
+							
+							const delSO = blo0.blBtn(tb,tb.id+"delSO","delSO","brown"); 
+							delSO.style.float = "right";
+							delSO.onclick = function(){
+								l.splice(l.length-1,1); // changed by jeremyjia
+								tb.refreshSOs(l);  
+							}
+							const soPlugIns = function(){
+								let pis = [
+									"https://jeremyjia.github.io/Games/pbzTools/scriptengine/plugin/myplx.js",
+									"https://jeremyjia.github.io/Games/pbzTools/scriptengine/plugin/plxRain.js",
+									"https://jeremyjia.github.io/Games/pbzTools/scriptengine/plugin/plxWaterDrop.js",
+									"https://jeremyjia.github.io/Games/pbzTools/scriptengine/plugin/plxRunning.js"
+								];
+								for (i in pis){
+									let b = blo0.blBtn(tb,tb.id+"pi" + i, i,"darkgray"); 
+									b.onclick = function(_p,_i){
+										return function(){
+											var o = {};
+											o.type = "javascript";
+											o.frameRange = "(1,1000)";
+											var a = {};
+											a.script = _p[_i];
+											a.function = "animateFrame";
+											a.start = 1;
+											o.attribute = a;
+											o.layer = 1;
+											l.push(o); 
+											tb.refreshSOs(l); 
+										}
+									}(pis,i);
+								}
+							}();
+
 							tb.refreshSOs(l);
 						},
 						"color": "Turquoise"
@@ -7529,7 +7687,7 @@ const gc4BLS = function(){
 							return "h:" + (y2-y1);
 						},
 						"fn4ui": function(_v,_b){
-							const hs = [1,-1,2,-2,5,-5,10,-10,100,-100,200,-200,500,-500];
+							const hs = [2,-2,10,-10,100,-100,200,-200,500,-500];
 							for(i in hs){
 								var s = hs[i]>0?"+"+hs[i]:hs[i];
 								var b = blo0.blBtn(_v,_v.id+i,s,"Indigo");
@@ -7550,7 +7708,7 @@ const gc4BLS = function(){
 							return "w:" + (x2-x1);
 						},
 						"fn4ui": function(_v,_b){ 
-							const ws = [1,-1,2,-2,5,-5,10,-10,100,-100,200,-200,500,-500];
+							const ws = [2,-2,10,-10,100,-100,200,-200,500,-500];
 							for(i in ws){
 								var s = ws[i]>0?"+"+ws[i]:ws[i];
 								var b = blo0.blBtn(_v,_v.id+i,s,"purple");
@@ -8195,6 +8353,8 @@ const gc4BLS = function(){
 						var matches2 = r.attribute.note.match(pattern2);
 						var pattern3 = /[0-7][du]*\/\/[0-7][du]*\/\/[0-7][du]*\/\/[0-7][du]*\/\//g;  //   1//2//3//4//
 						var matches3 = r.attribute.note.match(pattern3);
+						var pattern4 = /[0-7][du]*\/\/[0-7][du]*\/\/[0-7][du]*\//g;  //   1//2//3/
+						var matches4 = r.attribute.note.match(pattern4); 
 
 						if (matches1) {
 							matches1.forEach(function(match) { 
@@ -8222,18 +8382,21 @@ const gc4BLS = function(){
 							});
 						}
 						else if(matches2){
+							var a = r.attribute.note;// 1/2/
+							var b = a.split('/');					
+							
 							matches2.forEach(function(match) { 
 								gBlNote(ctx,
 									r.attribute.left+x,
 									r.attribute.top+y,
-									1, // note
+									b[0], // note
 									0, // tone
 									0.5  // time
 								);
 								gBlNote(ctx,
 									r.attribute.left+x + 20,
 									r.attribute.top+y,
-									2, // note
+									b[1], // note
 									0, // tone
 									0.5  // time
 								); 
@@ -8269,6 +8432,31 @@ const gc4BLS = function(){
 									0, // tone
 									0.25  // time
 								); 
+							}); 
+						}
+						else if(matches4){
+							matches4.forEach(function(match) { 
+								gBlNote(ctx,
+									r.attribute.left+x,
+									r.attribute.top+y,
+									1, // note
+									0, // tone
+									0.25  // time
+								);
+								gBlNote(ctx,
+									r.attribute.left+x + 20,
+									r.attribute.top+y,
+									2, // note
+									0, // tone
+									0.25  // time
+								); 
+								gBlNote(ctx,
+									r.attribute.left+x + 40,
+									r.attribute.top+y,
+									3, // note
+									0, // tone
+									0.5  // time
+								);  
 							}); 
 						}
 						else{
@@ -8438,6 +8626,7 @@ const gc4BLS = function(){
 		r.version 		= "gc4BLS: bv0.15";
 		r.width 		= x2 - x1;
 		r.height 		= y2 - y1;
+		r.time          = blsTimer.getVideoTime();  //add by jeremyjia
 		r.music 		= blsTimer.getVP().src;
 		r.rate 			= function(){
 			var s = "";
@@ -8514,7 +8703,7 @@ const gc4BLS = function(){
 											}(tb);
 											const fn2mkTime = function(_tb){
 												const tbTime = blo0.blDiv(_tb,_tb.id+"tbTime","tbTime",blColor[2]);
-												const nsTime = [1,2,3,4,0.5,0.25];
+												const nsTime = [1,2,3,4,0.75,0.5,0.25];
 												for(i in nsTime){
 													const b = blo0.blBtn(tbTime,tbTime.id+nsTime[i],nsTime[i],"lightblue");
 													b.style.float = "left";		
@@ -8683,7 +8872,8 @@ const gc4BLS = function(){
 			}
 		}
 		const fn4setbackgroundColor = function(v,btnBoss){
-			const tb = blo0.blDiv(v,v.id+"tb4backgroundcolor","backgroundcolor0.11","blue");		
+			const tb = blo0.blDiv(v,v.id+"tb4backgroundcolor","backgroundcolor0.12","blue");	
+			tb.innerHTML = blo0.blTime(0);	
 			const static = blo0.blBtn(tb,tb.id+"Static","f.backgroundColor","gray");
 			static.style.float = "left"; 	
 			const val = blo0.blBtn(tb,tb.id+"val",f[n].backgroundColor,"lightgray");
@@ -8691,9 +8881,9 @@ const gc4BLS = function(){
 			const fn4Red = function(_tb,_val){
 				const tb = blo0.blDiv(_tb,_tb.id+"tb4Red","red","red");		
 				const v = blo0.blBtn(tb,tb.id+"v","red","gray");
-				const ws = [1,10,111,222];
+				const ws = [1,10,55,88,111,155,222,255];
 				for(i in ws){						
-						var b = blo0.blBtn(tb,tb.id+i,ws[i],"rgb("+ws[i]+",11,11)");
+						var b = blo0.blBtn(tb,tb.id + "red" + i,ws[i],"rgb("+ws[i]+",11,11)");
 						b.onclick = function(_i,_ls){
 							return function(){
 								f[n].backgroundColor = _ls[_i]+",0,0";
@@ -8706,10 +8896,21 @@ const gc4BLS = function(){
 			const fn4Green = function(_tb,_val){
 				const tb = blo0.blDiv(_tb,_tb.id+"tb4Green","green","green");		
 				const v = blo0.blBtn(tb,tb.id+"v","green","gray");
+				const ws = [1,10,55,88,111,155,222,255];
+				for(i in ws){						
+						var b = blo0.blBtn(tb,tb.id  + "red" + i,ws[i],"rgb(11,"+ws[i]+",11)");
+						b.onclick = function(_i,_ls){
+							return function(){
+								f[n].backgroundColor = "0," + _ls[_i]+",0";
+								btnBoss.click(); 
+							}
+						}(i,ws);
+				}
 			}(tb,val);
 			const fn4Blue = function(_tb,_val){
 				const tb = blo0.blDiv(_tb,_tb.id+"tb4Blue","blue","blue");		
 				const v = blo0.blBtn(tb,tb.id+"v","blue","gray");
+				const cp = blo0.blColorPicker(_tb,"cpTest","green");
 			}(tb,val);
 		} 
 	}

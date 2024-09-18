@@ -4,7 +4,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -46,7 +45,6 @@ import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.apache.poi.xwpf.usermodel.XWPFRun;
 import org.jaudiotagger.audio.mp3.MP3AudioHeader;
 import org.jaudiotagger.audio.mp3.MP3File;
-import org.json.JSONObject;
 
 public class FileUtil {
 
@@ -237,6 +235,19 @@ public class FileUtil {
 		return sb.toString();
 	}
 
+    public static boolean downloadFileByCurl(String url, String saveFilePath) {
+        String[] extractPicturesCmd = { "curl", url, "-o", saveFilePath };
+        try {
+            ExecuteCommand.executeCommand(extractPicturesCmd, null, new File("."), null);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (!new File(saveFilePath).exists()) {
+            return false;
+        }
+        System.out.println("Download file by curl success:" + saveFilePath);
+        return true;
+    }
 	public static void downloadFile(String url, String saveFilePath) {
 		try {
 			url = fixUrl(url);
@@ -291,6 +302,18 @@ public class FileUtil {
         if (file.startsWith("tts:")) {
             return saveTextToAudioFile(file);
         }
+        
+        // 剧本中是通过源码方式引用, file此时是js源码，直接保存到js文件中
+        if (file.startsWith("var") || file.startsWith("function")) {
+            String fileName = "plx_20240615151740.js";
+            try {
+                writeStringToFile(fileName, file);
+                System.out.println(fileName);
+                return fileName;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
         String fileName = file;
         if (fileName.contains("/")) {
@@ -301,6 +324,12 @@ public class FileUtil {
             long begintime = System.currentTimeMillis();
             System.out.println("Downloading file: " + file);
             FileUtil.downloadFile(file, saveFile);
+            // Try to download file by curl command.
+            if (!new File(saveFile).exists()) {
+                if (!downloadFileByCurl(file, saveFile)) {
+                    throw new IOException("Download file " + file + " failed!");
+                }
+            }
             long endtime = System.currentTimeMillis();
             System.out.println("Download file Time:" + (endtime - begintime));
         }
@@ -338,23 +367,30 @@ public class FileUtil {
     private static String savePlugInToPlugInFile(String strInput) throws IOException {
         // commentID:1234, or phthon_commentID:1234
         String commentID = strInput.substring(strInput.indexOf(":") + 1);
+
+        String fileName = "plx_" + commentID + ".js";
+        if (strInput.startsWith("phthon")) {
+            fileName = "plx_" + commentID + ".py";
+        }
+        String fullPath = System.getProperty("user.dir") + "/" + fileName;
+
+        /*
+        if (new File(fullPath).exists()) {
+            System.out.println("The file " + fullPath + " already exist!");
+            return fileName;
+        }*/
+
         String url = "https://api.github.com/repos/jeremyjia/Games/issues/comments/" + commentID;
         String resultString = NetAccessUtil.doGetOnGitHub(url, "");
         int s = resultString.indexOf("body");
         int e = resultString.indexOf("reactions");
         String plugInContentStr = resultString.substring(s + 7, e - 3);
 
-        String fileName = "plx_"+commentID + ".js";
-        if(strInput.startsWith("phthon")) {
-            fileName =  "plx_"+commentID + ".py";
-        }
-        String fullPath = System.getProperty("user.dir") + "/" + fileName;
-               
         FileWriter fw2 = new FileWriter(fullPath);
-        BufferedWriter bw = new BufferedWriter(fw2);    
+        BufferedWriter bw = new BufferedWriter(fw2);
         plugInContentStr = plugInContentStr.replace("\\r\\n", "\r\n");
-        plugInContentStr = plugInContentStr.replace("\\", "");
-        bw.write(plugInContentStr); 
+        plugInContentStr = plugInContentStr.replace("\\", "");  //TODO
+        bw.write(plugInContentStr);
         bw.close();
 
         System.out.println(plugInContentStr);
@@ -652,7 +688,12 @@ public class FileUtil {
         return fileName;
     }
 	public static void main(String[] args) {
-
+	    try {
+            downloadFileByCurl("https://littleflute.github.io/english/NewConceptEnglish/Book2/3.mp3", "3.mp3");
+        } catch (Exception e1) {
+            e1.printStackTrace();
+        }
+	    
 		String path = "C:\\jiaGameAll\\Games\\Spring\\target";
 		clearWorkSpace(path);
 		// 全局代理

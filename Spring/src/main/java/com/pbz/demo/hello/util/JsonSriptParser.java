@@ -6,6 +6,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
@@ -24,6 +25,9 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.imageio.ImageIO;
 import javax.script.Invocable;
@@ -65,9 +69,12 @@ public final class JsonSriptParser {
     private static ScriptEngine engine = mgr.getEngineByName("JavaScript");
     private static JSGraphEngine graphEngine = new JSGraphEngine();
     private static MusicNote mNote = new MusicNote();
+    private static Random random = new Random();
+    private static final Color[] COLORS = {Color.RED, Color.GREEN, Color.BLUE, Color.MAGENTA, Color.ORANGE, Color.PINK, Color.CYAN, Color.YELLOW};
     private static final String currentScript = "VAR_CURRENT_SCRIPT";
     public static final String current_Subtitle_Script = "VAR_CURRENT_SUBTITLE_SCRIPT";
-
+    public static HashMap<String, String> spriteScriptMap = new HashMap<>();  //防止精灵对象的脚本被重复加载
+   
     private static SubtitleImageService subtitleImageService = new SubtitleImageService();
     public static List<SubtitleModel> subtitleList = null;
     private static String titleOfLRC = "";
@@ -183,7 +190,9 @@ public final class JsonSriptParser {
             String outputFile = attrObj.getString("output");
             String opts = attrObj.optString("opts");
             script = FileUtil.downloadFileIfNeed(script);
-            inputFile = FileUtil.downloadFileIfNeed(inputFile);
+            if (!inputFile.startsWith("url-")) {
+                inputFile = FileUtil.downloadFileIfNeed(inputFile);
+            }
             List<String> cmds = new ArrayList<String>();
             if (isWindows) {
                 cmds.add("python");
@@ -204,7 +213,14 @@ public final class JsonSriptParser {
             }
             String[] commands = cmds.toArray(new String[] {});
             ExecuteCommand.executeCommandOnServer(commands);
-            strValue = outputFile;
+            if (outputFile.endsWith(".txt")) {
+                String filePath = System.getProperty("user.dir") + "/" + outputFile;
+                strValue = FileUtil.readAllBytes(filePath);
+                strValue = strValue.replace("n", "\\n");
+
+            } else {
+                strValue = outputFile;
+            }
         } else if ("svg".equalsIgnoreCase(type)) {
 
             JSONObject attrObj = valObj.getJSONObject("attribute");
@@ -247,6 +263,7 @@ public final class JsonSriptParser {
         MacroResolver.setProperty(currentScript, "");
         MacroResolver.setProperty(current_Subtitle_Script, "");
         MacroResolver.setProperty("VAR_BGAUDIO", "");
+        spriteScriptMap.clear();
         titleOfLRC = "";
 
         initMap(requestObj);
@@ -254,6 +271,9 @@ public final class JsonSriptParser {
         System.out.println("剧本版本:" + version);
         int width = requestObj.getInt("width");
         int height = requestObj.getInt("height");
+        MacroResolver.setProperty("VIDEO_WIDTH", String.valueOf(width));
+        MacroResolver.setProperty("VIDEO_HEIGHT", String.valueOf(height));
+        
         String audioFilePath = requestObj.optString("audio");
         if (audioFilePath == null || audioFilePath.trim().length() == 0) {
             audioFilePath = requestObj.optString("music");
@@ -372,7 +392,12 @@ public final class JsonSriptParser {
             }
         }
 
-        if (index == 0) {
+        //如果没有提供场景参数frames时index为0 ，此时生成默认的视频，只需要提供一些基本的参数，如视频宽，高，时间秒数，背景颜色等
+        if (index == 0) {            
+            if(time == null || time.trim().length() == 0) {
+                time = "10";
+                System.out.println("Warning: Not provide time attribute, will use the defult value 10 seconds.");
+            }
             createDefaultVideo(width, height, time, rate, bgColor);
         }
         String suffix = isWindows ? ".bat" : ".sh";
@@ -390,7 +415,11 @@ public final class JsonSriptParser {
         double dRate = Double.parseDouble(rate);
         long secondOfAudio = (long) ((double) index / dRate);
         if (secondOfAudio == 0) {
-            secondOfAudio = Long.parseLong(time);
+            if (index == 0) {
+                secondOfAudio = Long.parseLong(time);
+            } else {
+                throw new Exception("The rate " + dRate + " is large than the total frame times " + index);
+            }
         }
         secondOfAudio += 2;
         combineAudios(ffmpegPath, secondOfAudio);
@@ -403,6 +432,10 @@ public final class JsonSriptParser {
         }
 
         boolean bRunScript = false;
+        boolean hasOverlayVideo = false;        
+        if(requestObj.has("overlay")) {
+            hasOverlayVideo = true;
+        }
         String final_video_name = MacroResolver.getProperty("video_name");
         if (!new File(audioFile).exists()) {
             if (index == 0) {
@@ -420,11 +453,17 @@ public final class JsonSriptParser {
                     tmpAudioFile };
             ExecuteCommand.executeCommand(cutAudioCmd, null, new File("."), null);
 
+            String videoName = hasOverlayVideo? "TMP_"+final_video_name:final_video_name;
             // Combine silent video and audio to a final video
-            String[] cmds = { ffmpegPath, "-y", "-i", subtitle_video_name, "-i", tmpAudioFile, final_video_name };
+            String[] cmds = { ffmpegPath, "-y", "-i", subtitle_video_name, "-i", tmpAudioFile, videoName };
             bRunScript = ExecuteCommand.executeCommand(cmds, null, new File("."), null);
+            
+            //实现画中画效果
+            if(requestObj.has("overlay")) {
+                overlayVideo(requestObj.getJSONObject("overlay"), videoName, final_video_name);
+            }                        
         }
-
+        
         boolean bGif = true; // TODO
         if (bGif) {
             String[] createGifCmd = { ffmpegPath, "-y", "-i", final_video_name, "vFinal.gif" };
@@ -434,8 +473,55 @@ public final class JsonSriptParser {
         return bRunScript;
     }
 
+    //画中画API
+    private static void overlayVideo(JSONObject overlayObj, String sourceVideo, String outputVideo) throws Exception {
+        //python3 overlayVideo.py -i source.mp4 -v ov.mp4 -s 3 -e 18 -o out.mp4     
+        String script = overlayObj.getString("script"); //Python脚本     
+        String inputFile = sourceVideo; //背景视频    
+        String outputFile = outputVideo; //最终视频
+        String ov = overlayObj.getString("video");; //要叠加的小视频       
+        String left = overlayObj.getString("left");
+        String top = overlayObj.getString("top");
+        String start = overlayObj.getString("start");
+        String end = overlayObj.getString("end");
+        
+        script = FileUtil.downloadFileIfNeed(script);
+        List<String> cmds = new ArrayList<String>();
+        if (isWindows) {
+            cmds.add("python");
+        } else {
+            cmds.add("python3");
+        }
+        cmds.add(script);
+        cmds.add("-i");
+        cmds.add(inputFile);
+        
+        cmds.add("-v");
+        cmds.add(ov);
+        cmds.add("-s");
+        cmds.add(start);
+        cmds.add("-e");
+        cmds.add(end);
+        
+        if(!left.equalsIgnoreCase("-1")) {
+            cmds.add("-l");
+            cmds.add(left);    
+        }
+        if(!top.equalsIgnoreCase("-1")) {
+            cmds.add("-t");
+            cmds.add(top);    
+        }
+        
+        cmds.add("-o");
+        cmds.add(outputFile);
+
+        String[] commands = cmds.toArray(new String[] {});
+        ExecuteCommand.executeCommandOnServer(commands);       
+    }
+
     private static void createDefaultVideo(int width, int height, String time, String rate, String bgColor)
             throws Exception {
+        
         int t = Integer.parseInt(time);
         int r = Integer.parseInt(rate);
         Color colorBackground = getColor(bgColor);
@@ -716,11 +802,55 @@ public final class JsonSriptParser {
                     nFactor = Integer.parseInt(rate);
                 }
             }
+
+            // 进一步判断是否在要求的子集中
+            List<Integer> numbers = getValidframeNumbers(jsonObj, sf, ef, nFactor);
             if (num >= (sf * nFactor) && num <= (ef * nFactor)) {
-                superObjects.add(jsonObj);
+                if (numbers == null || numbers.size() == 0) {
+                    superObjects.add(jsonObj);
+                } else {
+                    if (numbers.contains(num)) {
+                        superObjects.add(jsonObj);
+                    }
+                }
             }
         }
         return superObjects;
+    }
+
+    private static List<Integer> getValidframeNumbers(JSONObject jsonObj, int start, int end, int nFactor) {
+        if (!jsonObj.has("frameSubset")) {
+            return null;
+        }
+
+        String rangeValue = jsonObj.getString("frameSubset");
+        String rangeArray[] = rangeValue.split(",");
+        String s = rangeArray[0].substring(1);
+        String e = rangeArray[1].substring(0, rangeArray[1].length() - 1);
+        int m = Integer.parseInt(s);
+        int n = Integer.parseInt(e);
+
+        if (m == 0 || n == 0) {
+            System.out.println("Parameter of frameSubset is zero, will follow up frameRange attrubute!");
+            return null;
+        }
+        List<Integer> list = new ArrayList<>();
+        int p = 0;
+        int q = 0;
+        // 收集每隔m帧画n帧(m,n)合法集合
+        for (int i = start; i <= end; i++) {
+            if (p < n) {
+                list.add(i * nFactor);
+                p++;
+            } else {
+                q++;
+                if (q >= m) {
+                    p = 0;
+                    q = 0;
+                }
+            }
+        }
+        return list;
     }
 
     private static void drawSupperObjects(JSONObject jObj, Graphics2D gp2d, int number) throws Exception {
@@ -778,29 +908,50 @@ public final class JsonSriptParser {
             Y = (float) (a * X * X + b * X + c);
         }
 
-        boolean bPrint = false;
-        if (actionObj.has("print")) {
-            bPrint = actionObj.getBoolean("print");
-        }
-        if (bPrint) {
-            // 绘制超级对象的脚印
-            for (int i = sfNum; i <= number; i++) {
+        // 绘制超级对象的足迹（脚印），可以定义脚印的图片或者简单绘制圆点
+        if (actionObj.has("footprint")) {
+            JSONObject footPrintObj = actionObj.getJSONObject("footprint");
+            String footPrintType = footPrintObj.getString("type");
+            JSONObject footPrintAttrObj = footPrintObj.getJSONObject("attribute");
+            String footSrc = footPrintAttrObj.getString("src");
+            int footWidthAttr = footPrintAttrObj.getInt("width");
+            int footHeightAttr = footPrintAttrObj.getInt("height");
+            int footDyAttr = footPrintAttrObj.getInt("dy");
+            int footStepAttr = footPrintAttrObj.getInt("step");
+            if (footStepAttr <= 0) {
+                footStepAttr = 1;
+            }
+            for (int i = sfNum; i <= number; i = i + footStepAttr) {
                 float printX = x1 + (i - sfNum) * step;
-                float printY;
-                if (actionTrace.toLowerCase().startsWith("function")) {
-                    printY = calTraceByJS(printX, actionTrace);
-                } else if (actionTrace.toLowerCase().startsWith("x")) {
-                    String xValue = actionTrace.substring(2);
-                    printX = Integer.parseInt(xValue);
-                    printY = y1 + (i - sfNum) * step;
-                } else {
-                    String parm[] = actionTrace.split("\\+");
-                    float a1 = Float.parseFloat(parm[0].substring(2, parm[0].indexOf("*")));
-                    float b1 = Float.parseFloat(parm[1].substring(0, parm[1].indexOf("*")));
-                    float c1 = Float.parseFloat(parm[2]);
-                    printY = (float) (a1 * printX * printX + b1 * printX + c1);
+                float printY = calYCoordinate(actionTrace, printX, i, x1, y1, sfNum, step);
+                float printX1 = x1 + (i + 1 - sfNum) * step;
+                float printY1 = calYCoordinate(actionTrace, printX1, i + 1, x1, y1, sfNum, step);
+
+                if ("circle".equalsIgnoreCase(footPrintType)) {
+                    gp2d.fillOval((int) printX, (int) printY, footWidthAttr, footHeightAttr);
+                } else if ("picture".equalsIgnoreCase(footPrintType)) {
+                    // 绘制脚印的图片，图片会根据运动轨迹的方向进行旋转
+                    double degrees;
+                    double dSlope;
+                    if (printX1 - printX == 0) {
+                        degrees = 90; // 斜率不存在
+                    } else {
+                        dSlope = (printY1 - printY) / (printX1 - printX);
+                        double radians = Math.atan(dSlope);
+                        degrees = Math.toDegrees(radians);
+                    }
+                    String footPic = FileUtil.downloadFileIfNeed(footSrc);
+                    File imgFile = new File(footPic);
+                    if (imgFile.exists()) {
+                        BufferedImage originalImage = ImageIO.read(imgFile);
+                        BufferedImage rotatedImage = ImageUtil.rotateImage(originalImage, 90 - degrees);
+                        int left = (int) printX;
+                        int top = (int) printY + footDyAttr;
+                        int w = footWidthAttr;
+                        int h = footHeightAttr;
+                        gp2d.drawImage(rotatedImage, left, top, w, h, null);
+                    }
                 }
-                gp2d.fillOval((int) printX, (int) printY, 6, 6);
             }
         }
 
@@ -875,6 +1026,23 @@ public final class JsonSriptParser {
         }
     }
 
+    private static float calYCoordinate(String actionTrace, float printX, int i, int x1, int y1, int sfNum, float step) throws Exception {
+        float printY;
+        if (actionTrace.toLowerCase().startsWith("function")) {
+            printY = calTraceByJS(printX, actionTrace);
+        } else if (actionTrace.toLowerCase().startsWith("x")) {
+            String xValue = actionTrace.substring(2);
+            printX = Integer.parseInt(xValue);
+            printY = y1 + (i - sfNum) * step;
+        } else {
+            String parm[] = actionTrace.split("\\+");
+            float a1 = Float.parseFloat(parm[0].substring(2, parm[0].indexOf("*")));
+            float b1 = Float.parseFloat(parm[1].substring(0, parm[1].indexOf("*")));
+            float c1 = Float.parseFloat(parm[2]);
+            printY = (float) (a1 * printX * printX + b1 * printX + c1);
+        }
+        return printY;
+    }
     private static float calTraceByJS(float x, String actionTrace) throws Exception {
         engine.eval(actionTrace);
         Invocable invocable = (Invocable) engine;
@@ -914,7 +1082,8 @@ public final class JsonSriptParser {
                 strSubtitle = FileUtil.ReplaceString(strSubtitle, regex, target);
             }
         }
-
+        
+        //绘制歌曲标题，如果LRC中有定义的话
         if (titleOfLRC.trim().length() > 0) {
             gp2d.setColor(new Color(255, 169, 0));
             gp2d.setFont(new Font("黑体", Font.BOLD, 50));
@@ -924,6 +1093,14 @@ public final class JsonSriptParser {
                 y += gp2d.getFontMetrics().getHeight();
             }
         }
+        
+        //随机绘制字幕文字
+        if (attributeObj.has("random") && "true".equalsIgnoreCase(attributeObj.getString("random"))) {
+            for(int i=0; i<10;i++) {
+                drawRandomWord(gp2d, strSubtitle);   
+            }
+        } 
+        //固定的位置绘制字幕
         int x1 = attributeObj.getInt("x1");
         int y1 = attributeObj.getInt("y1");
         float fSize = attributeObj.getFloat("size");
@@ -937,6 +1114,7 @@ public final class JsonSriptParser {
         Font font = new Font("黑体", Font.BOLD, (int) fSize);
         gp2d.setFont(font);
         gp2d.drawString(strSubtitle, x1, y1);
+
     }
 
     private static String getSubTitleByFrame(List<SubtitleModel> ls, int number) {
@@ -1020,6 +1198,16 @@ public final class JsonSriptParser {
     private static void drawGraphic(JSONObject jObj, Graphics2D gp2d) {
         String graphicType = jObj.getString("graphic");
         JSONObject attrObj = jObj.getJSONObject("attribute");
+
+        if ("sprite".equalsIgnoreCase(graphicType)) {
+            try {
+                drawSpriteObject(attrObj, gp2d);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+        
         int left = attrObj.getInt("left");
         int top = attrObj.getInt("top");
         String c = attrObj.getString("color");
@@ -1067,9 +1255,63 @@ public final class JsonSriptParser {
             gp2d.setFont(new Font("黑体", Font.BOLD, 30));
 
             String note = attrObj.getString("note");
-            float time = attrObj.getFloat("time");
-            int tone = attrObj.getInt("tone");
-            mNote.draw_1_note(gp2d, left, top, note, time, tone);
+            if (note.length() == 1) {
+              //绘制单音符
+                float time = attrObj.getFloat("time");
+                int tone = attrObj.getInt("tone");
+                mNote.draw_1_note(gp2d, left, top, note, time, tone);
+            } else {
+                // "note": "1/2/"
+                int dx = 25;
+                String regexPattern1 = "(\\d+)/(\\d+)/"; // 1/2/
+                String regexPattern2 = "(\\d+)/(\\d+)//(\\d+)//"; // 1/2//3//
+                String regexPattern3 = "(\\d+)//(\\d+)//(\\d+)/"; // 1//2//3/
+                String regexPattern4 = "(\\d+)//(\\d+)//(\\d+)//(\\d+)//"; // 1//2//3//4//
+                Matcher matcher1 = Pattern.compile(regexPattern1).matcher(note);
+                Matcher matcher2 = Pattern.compile(regexPattern2).matcher(note);
+                Matcher matcher3 = Pattern.compile(regexPattern3).matcher(note);
+                Matcher matcher4 = Pattern.compile(regexPattern4).matcher(note);
+
+                if (matcher4.find()) {
+                    System.out.println("matcher4");
+                    String note1 = matcher4.group(1);
+                    String note2 = matcher4.group(2);
+                    String note3 = matcher4.group(3);
+                    String note4 = matcher4.group(4);
+                    mNote.draw_1_note(gp2d, left, top, note1, (float) 0.25, 0);
+                    mNote.draw_1_note(gp2d, left + dx, top, note2, (float) 0.25, 0);
+                    mNote.draw_1_note(gp2d, left + dx * 2, top, note3, (float) 0.25, 0);
+                    mNote.draw_1_note(gp2d, left + dx * 3, top, note4, (float) 0.25, 0);
+
+                } else if (matcher3.find()) {
+                    System.out.println("matcher3");
+                    String note1 = matcher3.group(1);
+                    String note2 = matcher3.group(2);
+                    String note3 = matcher3.group(3);
+                    mNote.draw_1_note(gp2d, left, top, note1, (float) 0.25, 0);
+                    mNote.draw_1_note(gp2d, left + dx, top, note2, (float) 0.25, 0);
+                    mNote.draw_1_note(gp2d, left + dx * 2, top, note3, (float) 0.5, 0);
+
+                } else if (matcher2.find()) {
+                    System.out.println("matcher2");
+                    String note1 = matcher2.group(1);
+                    String note2 = matcher2.group(2);
+                    String note3 = matcher2.group(3);
+                    mNote.draw_1_note(gp2d, left, top, note1, (float) 0.5, 0);
+                    mNote.draw_1_note(gp2d, left + dx, top, note2, (float) 0.25, 0);
+                    mNote.draw_1_note(gp2d, left + dx * 2, top, note3, (float) 0.25, 0);
+
+                } else if (matcher1.find()) {
+                    System.out.println("matcher1");
+                    String note1 = matcher1.group(1);
+                    String note2 = matcher1.group(2);
+                    mNote.draw_1_note(gp2d, left, top, note1, (float) 0.5, 0);
+                    mNote.draw_1_note(gp2d, left + dx, top, note2, (float) 0.5, 0);
+                } else {
+                    gp2d.drawString("NOT SUPPORT!", left, top); // TODO待定需求
+                }
+            }
+
         } else if ("arc".equalsIgnoreCase(graphicType)) {
             gp2d.setColor(color);
             gp2d.setFont(new Font("黑体", Font.BOLD, 30));
@@ -1081,7 +1323,39 @@ public final class JsonSriptParser {
             int dh = attrObj.getInt("dh"); // 控制圆弧与音符头顶的距离
             int dy = attrObj.getInt("dy"); // 控制圆弧的弯曲程度
             mNote.draw_1_arc(gp2d, x1, y1, x2, y2, dh, dy);
+        } 
+    }
+
+    private static void drawSpriteObject(JSONObject attributeObj, Graphics2D gp2d) throws Exception {
+        String scriptKey = attributeObj.getString("script");
+        boolean isReLoadScript = false;
+
+        String spriteScriptFile = spriteScriptMap.get(scriptKey);
+        if (spriteScriptFile == null || spriteScriptFile.trim().equalsIgnoreCase("")) {
+            isReLoadScript = true;
         }
+
+        String functionName = "animateFrame";
+        if (attributeObj.has("function")) {
+            functionName = attributeObj.getString("function");
+        }
+
+        graphEngine.setGraphics(gp2d);
+        engine.put("document", graphEngine);
+        if (isReLoadScript) {
+            StringBuffer preDefined = new StringBuffer();
+            preDefined.append("function Image() { return document.getImageObj()}");
+            engine.eval(preDefined.toString());
+
+            String striptFile = FileUtil.downloadFileIfNeed(scriptKey);
+            spriteScriptMap.put(scriptKey, striptFile);
+
+            File f = new File(striptFile);
+            Reader r = new InputStreamReader(new FileInputStream(f));
+            engine.eval(r);
+        }
+        Invocable invoke = (Invocable) engine;
+        invoke.invokeFunction(functionName, new Object[] {});
     }
 
     private static Color getColor(String color) {
@@ -1155,6 +1429,25 @@ public final class JsonSriptParser {
 
     }
 
+    private static void drawRandomWord(Graphics2D g2d, String word) {
+        int fontSize = random.nextInt(20) + 20; // 随机字体大小，范围 20-40        
+        int width = Integer.parseInt(MacroResolver.getProperty("VIDEO_WIDTH"));
+        int height = Integer.parseInt(MacroResolver.getProperty("VIDEO_HEIGHT"));
+        int x = random.nextInt(width);
+        int y = random.nextInt(height);
+        Color color = COLORS[random.nextInt(COLORS.length)];
+        int rotationDegree = random.nextInt(360); // 随机旋转角度，范围 0-360
+
+        Font font = new Font("Arial", Font.BOLD, fontSize);//黑体，Arial
+        g2d.setFont(font);
+        g2d.setColor(color);
+        AffineTransform originalTransform = g2d.getTransform();
+        AffineTransform transform = new AffineTransform();
+        transform.rotate(Math.toRadians(rotationDegree), x, y);
+        g2d.setTransform(transform);
+        g2d.drawString(word, x, y);
+        g2d.setTransform(originalTransform); // 恢复原始变换
+    }
     // 根据剧本, 调用POI-TLd的API生成Word文档
     public static Map<String, Object> createDataMapforDocTemplate(String scriptFile) throws Exception {
 
