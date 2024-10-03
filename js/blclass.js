@@ -1,5 +1,5 @@
 // file: blclass.js   
-var g_ver_blClass = "CBlClass_bv1.6.552"
+var g_ver_blClass = "CBlClass_bv1.7.11"
 
 function myAjaxCmd(method, url, data, callback){
 	const getToken = function () {
@@ -709,6 +709,17 @@ function CBlClass ()
 				for(i in o.ls){
 					ctx.fillRect(o.ls[i].x+x,o.ls[i].y+y,5,5);
 				}
+				ctx.beginPath(); 	
+				if(time%5==0){
+				ctx.moveTo(o.ls[0].x+x,o.ls[0].y+y); 
+				ctx.lineTo(o.ls[2].x+x,o.ls[2].y+y);
+				}	
+				else{
+				ctx.moveTo(o.ls[1].x+x,o.ls[1].y+y); 
+				ctx.lineTo(o.ls[2].x+x,o.ls[2].y+y);
+				}
+				ctx.strokeStyle = "rgb(122,11,22)";
+				ctx.stroke();
 
 				`;
 			}
@@ -737,6 +748,7 @@ function CBlClass ()
 			var bRun = false;
 			var fps = 1;
 			var time = 5; //added by jeremyjia
+			var m_bWebsiteAccessible = false;
 			var n = 0; 
 			var t1 = Date.now();
 			var t2 = Date.now();
@@ -795,6 +807,9 @@ function CBlClass ()
 			o.getVideoTime = function(){
 				return time;
 			}
+			o.getServerStatus = function(){
+				return m_bWebsiteAccessible;
+			}
 			o.getVP = function(){ return vp;}
 			o.getFrameNo = function(l,nf){
 				var nr = 0;
@@ -851,14 +866,10 @@ function CBlClass ()
 					// 示例使用
 					isWebsiteAccessible('http://localhost:8080/')
 					.then(isAccessible => {
-						if (isAccessible) {
-							ctx.fillText("server_status: ok! ", _x,_y);
-						} else {
-							ctx.fillText("server_status:  error!",_x,_y);
-						}
+						m_bWebsiteAccessible = isAccessible; //不在此处绘图，否则会闪烁
 					});
 					
-				}(x1,y1+55);
+				}();
 			}
 			return o;
 		}();
@@ -2410,7 +2421,7 @@ function CBlClass ()
         }
         return r;
     }
-	this.blColorPicker = function(oBoss,id,bkClr){
+	this.blColorPicker = function(oBoss,id,bkClr,oCaller){
 		
 		let r = '';
 		r += '<h2>颜色选择器</h2>';
@@ -2428,10 +2439,13 @@ function CBlClass ()
 		if(!o){
 			o = document.createElement("div");
 			o.id = id;
-			o.innerHTML = r; 
+			o.innerHTML = r;  
+			o.style.backgroundColor=bkClr?bkClr:"gray";
+			if(oBoss!=null)oBoss.appendChild(o);
 
-			document.addEventListener('DOMContentLoaded', function() {
-				console.log(blo0.blTime(0) + " xddbg");
+
+			//xddbg11
+			console.log(blo0.blTime(0) + " xddbg");
 				const redSlider = document.getElementById('red' + id);
 				const greenSlider = document.getElementById('green' + id);
 				const blueSlider = document.getElementById('blue' + id);
@@ -2441,8 +2455,9 @@ function CBlClass ()
 				colorDisplay.style.height   = "100px" ;
 				colorDisplay.style.border   = '1px solid #000';
 				colorDisplay.style.marginTop = "20px";
-	
-	
+				blueSlider.value = 115;
+				updateColor();
+
 				function updateColor() {
 					const red = redSlider.value;
 					const green = greenSlider.value;
@@ -2451,16 +2466,15 @@ function CBlClass ()
 	
 					colorDisplay.style.backgroundColor = rgbColor;
 					colorCode.textContent = `RGB: ${red}, ${green}, ${blue}`;
+					if(oCaller.setBKColor){
+						oCaller.setBKColor(red, green, blue);
+					}
 				}
 	
 				redSlider.addEventListener('input', updateColor);
 				greenSlider.addEventListener('input', updateColor);
 				blueSlider.addEventListener('input', updateColor);
-			});
-
-			
-			o.style.backgroundColor=bkClr?bkClr:"gray";
-			if(oBoss!=null)oBoss.appendChild(o);
+			//xddbg11
 		}
 		return o;
 	}
@@ -7009,7 +7023,8 @@ const gc4SoEditor = function(){
 	var mx = 50,my = 50; 
 	var ex1,ey1,ex2,ey2;
 	const _C4SoEditor = function(){ 
-		
+		var soFPS = 1;
+		var runStartTime = 0, runNowTime = 0;
 		var nTick = 0;
 		var vCanStatus = null;
 		var bRunScript = false; 
@@ -7118,6 +7133,14 @@ const gc4SoEditor = function(){
 					"color": "cyan"
 				}, 
 				{
+					"id":1.1,
+					"name":"fpsFrmTa",
+					"clickOnMe": function(d){
+						soFPS = blo0.blGetTa().value;	 
+					},
+					"color": "darkGray"
+				}, 
+				{
 					"id":2,
 					"name":"2server",
 					"clickOnMe": function(d){ 
@@ -7160,10 +7183,12 @@ const gc4SoEditor = function(){
 				},
 				{
 					"id":5,
-					"name":"run", 
+					"name":"runSo", 
 					"clickOnMe": function(d){
 						bRunScript = bRunScript?false:true;
 						d.innerHTML = bRunScript;
+						runStartTime = bRunScript ?  Date.now() : 0;
+						if(bRunScript) nTick = 0;
 					},
 					"color": "green",
 					"float": "left"
@@ -7183,11 +7208,17 @@ const gc4SoEditor = function(){
 		this.drawEffect = function(cvs){
 			osubo.showSubObjects(cvs);
 			var ctx = cvs.getContext("2d");
-			nTick++;
+			
 			ctx.fillText("soe1: nTick = " + nTick,x1,y1 + 10); 
 			
+			runNowTime = Date.now();
+			if(runNowTime>runStartTime +1000/soFPS) {
+				runStartTime = runNowTime;
+				nTick++;
+			}
 			ctx.fillStyle = "green";
-			ctx.fillText("soe2",x2,y2);
+			let ss = "soFPS = " + soFPS + " runStartTime:" + runStartTime  + " runNowTime:" + runNowTime;
+			ctx.fillText(ss,x2,y2);
  
 			_2RunScript(cvs);
 		}
@@ -7393,7 +7424,16 @@ const gc4BLS = function(){
 			ctx.fillStyle = "purple";
 			ctx.font = "10px Arial";
 			var s = _makeDbgMsgInFrame();
-			ctx.fillText(s, x1,y1+30);		
+			ctx.fillText(s, x1,y1+30);
+			
+			ctx.fillStyle = "rgb(200,111,1)";
+			ctx.font = "20px Arial";
+			if(blsTimer.getServerStatus() == true){
+				ctx.fillText("server_status: OK! ", x1,y1+70);
+			}else{
+				ctx.fillText("server_status: Not connected! ", x1,y1+70);
+			}
+			
 		}();
 		ctx.fillStyle = oldStyle;
 		blsAOI.setTargetXY(x1,y1,x2,y2);
@@ -7456,8 +7496,13 @@ const gc4BLS = function(){
 								ls.push(o);
 								var o = {};
 								o.id = 12;
-								o.name = "j72_4_4.mp3";
+								o.name = "j72_4_4";
 								o.src = "https://littleflute.github.io/gt1/mp3/j72_4_4.mp3";
+								ls.push(o);
+								var o = {};
+								o.id = 13;
+								o.name = "colorDream";
+								o.src = "https://github.com/littleflute/Songs/releases/download/%E5%BD%A9%E8%89%B2%E7%9A%84%E6%A2%A6/littleflute.flac.mp3";
 								ls.push(o);
 								return ls;
 							}(); 
@@ -7495,7 +7540,7 @@ const gc4BLS = function(){
 					{
 						"name":"rate",
 						"fn4ui": function(v){ 
-							const fs = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,25,60,72,76,80,104];
+							const fs = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,25,30,60,72,76,80,104];
 							const tb = blo0.blDiv(v,v.id+"tb","tb","Violet"); 
 							for(i in fs){
 								const b = blo0.blBtn(tb,tb.id+i,fs[i],"Fuchsia");
@@ -7608,6 +7653,32 @@ const gc4BLS = function(){
 															lsso.updateIdx(l,i);
 														},
 														"color": "Teal",
+														"float": "right"
+													},
+													{
+														"id":7,
+														"name": "redLight",
+														"fnSet": function(l,i){ 
+															l[i]  = {
+																"type": "circle",
+																"attribute": {
+																	"x1": 50,
+																	"y1": 400,
+																	"x2": 40,
+																	"y2": 40,
+																	"size": 5,
+																	"color": "200,0,0",
+																	"name": "红灯"
+																},
+																"frameRange": "(1,100)",
+																"frameSubset": "(2,1)",
+																"action": {
+																	"trace": "function trace(x) { return 400; }",
+																	"step": 0
+																}
+															};
+														},
+														"color": "red",
 														"float": "right"
 													},
 												];
@@ -7775,6 +7846,47 @@ const gc4BLS = function(){
 				lsFrame.push(f); 
 				tabFrames.refreshFrames(); 
 			 }
+			 const addMxNFrames = function(){
+				const MxNFrames = blo0.blBtn(tbFrames,tbFrames.id+"MxNFrames","+MxNFromTA","lightgreen");
+				MxNFrames.style.float = "left";
+				MxNFrames.style.color = "white";
+				MxNFrames.onclick = function(){
+					let a = blo0.blGetTa().value;
+					if(a[0]=="f"&&a[1]=="s"&&a[2]==":"){
+						let b = a.split(":");
+						let mnc = b[1].split(";");
+						let c = mnc[0];
+						let d = c.split("x");
+						let m = d[0];
+						let n = d[1];
+						let bkRGB = mnc[1];
+						for(var i = 0; i < m ; i ++){
+							var f = {};
+							f.time = parseInt(n);
+							f.backgroundColor = bkRGB; 
+							f.objects = [];
+							f.objects.push(_newObject("musicNote","1/2/",111+i*10,55+i*10,155,111,25,"0,200,0"));
+							f.objects.push(_newObject("line","1/2/",111+i*10,55+i*10,155,111,25,"220,11,0"));
+							
+							lsFrame.push(f); 
+						}
+						tabFrames.refreshFrames(); 
+					}
+					else{
+						blo0.blGetTa().value = "fs:5x1;213,11,22";
+					}	
+
+				}
+				const backDoor4Frame = blo0.blBtn(tbFrames,"idBackDoor4Frame","backDoor4Frame","gray");
+				backDoor4Frame.style.float = "left";
+				backDoor4Frame.style.color = "white";
+				backDoor4Frame.f = lsFrame;
+				backDoor4Frame.onclick = function(){
+					blo0.blGetTa().value = "const b = bl$('idBackDoor4Frame'); \
+						b.onclick = function(){alert(this.id)};"
+				}
+
+			 }();
 			 
 			 const blsPlay = blo0.blBtn(tbFrames,tbFrames.id+"btnBlsPlay",blsTimer.isPlaying()?"blsStop":"blsPlay","green");
 			 blsPlay.style.float = "right";
@@ -8191,7 +8303,7 @@ const gc4BLS = function(){
 		}
 	}
 
-	const _newObject = function(_oType,x1,y1,x2,y2,size,color){ 
+	const _newObject = function(_oType,sText,x1,y1,x2,y2,size,color){ 
 		const osDefine = [
 			{
 				"id": "id_4_line",
@@ -8327,7 +8439,7 @@ const gc4BLS = function(){
 				"type": "musicNote",
 				"makeData": function(r,x1,y1,x2,y2,size,color){ 
 
-					var v = blo0.blGetTa().value.split(','); 
+					var v = sText.split(',');//blo0.blGetTa().value.split(','); 
 
 					r.graphic 			= "musicNote"; 
 					var a = {};
@@ -8874,44 +8986,17 @@ const gc4BLS = function(){
 		const fn4setbackgroundColor = function(v,btnBoss){
 			const tb = blo0.blDiv(v,v.id+"tb4backgroundcolor","backgroundcolor0.12","blue");	
 			tb.innerHTML = blo0.blTime(0);	
-			const static = blo0.blBtn(tb,tb.id+"Static","f.backgroundColor","gray");
+			const static = blo0.blBtn(tb,"a123jia","f.backgroundColor","gray");
 			static.style.float = "left"; 	
-			const val = blo0.blBtn(tb,tb.id+"val",f[n].backgroundColor,"lightgray");
-			val.style.float = "left"; 
-			const fn4Red = function(_tb,_val){
-				const tb = blo0.blDiv(_tb,_tb.id+"tb4Red","red","red");		
-				const v = blo0.blBtn(tb,tb.id+"v","red","gray");
-				const ws = [1,10,55,88,111,155,222,255];
-				for(i in ws){						
-						var b = blo0.blBtn(tb,tb.id + "red" + i,ws[i],"rgb("+ws[i]+",11,11)");
-						b.onclick = function(_i,_ls){
-							return function(){
-								f[n].backgroundColor = _ls[_i]+",0,0";
-								btnBoss.click(); 
-							}
-						}(i,ws);
+			const fn4ColorPicker = function(_tb){
+				const tb = blo0.blDiv(_tb,_tb.id+"tb4Blue","blueDiv","blue");		
+				tb.setBKColor = function(r,g,b){
+					let s = r + "," + g +"," + b;
+					console.log(blo0.blTime(0) + " tb.fn : rgb = " + r + "," + g +"," + b);
+					f[n].backgroundColor = s;
 				}
-				
-			}(tb,val);
-			const fn4Green = function(_tb,_val){
-				const tb = blo0.blDiv(_tb,_tb.id+"tb4Green","green","green");		
-				const v = blo0.blBtn(tb,tb.id+"v","green","gray");
-				const ws = [1,10,55,88,111,155,222,255];
-				for(i in ws){						
-						var b = blo0.blBtn(tb,tb.id  + "red" + i,ws[i],"rgb(11,"+ws[i]+",11)");
-						b.onclick = function(_i,_ls){
-							return function(){
-								f[n].backgroundColor = "0," + _ls[_i]+",0";
-								btnBoss.click(); 
-							}
-						}(i,ws);
-				}
-			}(tb,val);
-			const fn4Blue = function(_tb,_val){
-				const tb = blo0.blDiv(_tb,_tb.id+"tb4Blue","blue","blue");		
-				const v = blo0.blBtn(tb,tb.id+"v","blue","gray");
-				const cp = blo0.blColorPicker(_tb,"cpTest","green");
-			}(tb,val);
+				const cp = blo0.blColorPicker(_tb,"cpTest","green",tb);
+			}(tb);
 		} 
 	}
 	const _objCmd = function(){
@@ -8950,16 +9035,16 @@ const gc4BLS = function(){
 			this.upObjCmd = function(x,y,x0,y0,os){
 				if(bDownCmd){
 					if("id_4_objLine"==type){
-						os.push(_newObject("line",x1-x0,y1-y0,x2-x0,y2-y0,5.5,"0,200,0"));
+						os.push(_newObject("line","sText",x1-x0,y1-y0,x2-x0,y2-y0,5.5,"0,200,0"));
 					}	
 					if("id_4_objText"==type){
-						os.push(_newObject("text",x1-x0,y1-y0,x2-x0,y2-y0,25,"0,200,0"));
+						os.push(_newObject("text","sText",x1-x0,y1-y0,x2-x0,y2-y0,25,"0,200,0"));
 					}	 
-					if("id_4_objMusicNote"==type){
-						os.push(_newObject("musicNote",x1-x0,y1-y0,x2-x0,y2-y0,25,"0,200,0"));
+					if("id_4_objMusicNote"==type){ 
+						os.push(_newObject("musicNote",blo0.blGetTa().value,x1-x0,y1-y0,x2-x0,y2-y0,25,"0,200,0"));
 					}	
 					if("id_4_objSprite"==type){
-						os.push(_newObject("sprite",x1-x0,y1-y0,x2-x0,y2-y0,25,"210,200,0"));
+						os.push(_newObject("sprite","sText",x1-x0,y1-y0,x2-x0,y2-y0,25,"210,200,0"));
 					}	
 					if("id_4_objEdit"==type){
 						for(i in os){
