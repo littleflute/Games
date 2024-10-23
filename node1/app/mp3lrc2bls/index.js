@@ -1,4 +1,4 @@
-const tagMp3Lrc2Bls = "mp3lrc2bls/index.js bv0.22";  
+const tagMp3Lrc2Bls = "mp3lrc2bls/index.js bv0.33";  
 const fs = require('fs');
 const l = require('../../logger'); 
 l.tag1(tagMp3Lrc2Bls,"-----------tagMp3Lrc2Bls------------------")
@@ -7,29 +7,36 @@ var e = {};
 module.exports = e;
  
 e.newBls = function(req,res){
+    let q = req.query; 
     res.status(200); 
     
+    const mp3URL = q.mp3; 
+    const lrcURL = q.lrc; 
+
     let r = {};
     r.tag = tagMp3Lrc2Bls;
     r.time = Date();
-    const filePath = './public/v1.json';
+    r.mp3 = q.mp3;
+    r.lrc = q.lrc;
+    r.bls = q.bls;
+    const filePath = './public/'+q.bls+'.json';
     const content = u.makeBls(1920,1040,115,"1",
-        "https://files.21voa.com/audio/202410/spanish-scientist-uses-bacteria-to-repair-18th-century-artworks.mp3",
+        mp3URL,
         [
             {
                 "number": "1",
-                "time": "115",
+                "time": "481",
                 "objects": [
                     {
                         "text": "newBls.frame[0].text " + r.time,
                         "x": 80,
                         "y": 320,
                         "size": 60,
-                        "color": "160,32,240",
+                        "color": "55,11,123",
                         "layer": 2
                     }
                 ],
-                "backgroundColor": "255,149,55"
+                "backgroundColor": "111,11,222"
             }
         ],
         [
@@ -37,7 +44,7 @@ e.newBls = function(req,res){
                 "type": "subtitle",
                 "frameRange": "(1,115)",
                 "attribute": {
-                    "script": "https://www.21voa.com/static/lrc/spanish-scientist-uses-bacteria-to-repair-18th-century-artworks.lrc",
+                    "script": lrcURL,
                     "x1": 20,
                     "y1": 670,
                     "size": 30,
