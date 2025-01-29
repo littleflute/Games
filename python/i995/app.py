@@ -1,4 +1,5 @@
 from flask import Flask, render_template, request
+import configparser
 from wordcloud import WordCloud
 import matplotlib.pyplot as plt
 from io import BytesIO
@@ -7,9 +8,14 @@ from flask import Flask, jsonify
 import cv2
 import os
 import numpy as np
-
+import drawAKlineModule as dkl
+import plxRealDataKline as dklm
 
 app = Flask(__name__)
+
+global_plugin_data = {
+    "plunginid": 1
+}
 
 @app.route('/')
 def index():
@@ -43,12 +49,26 @@ def get_message():
 
 
 @app.route('/get_image_data', methods=['GET'])
-def get_data():
+def get_image_data():
     param1 = request.args.get('param1', '0.8')
     param2 = request.args.get('param2', '100') #blue
     print(param1+'_'+param2)
-    filename='test.jpg'
-    image_path = os.path.join(app.static_folder, filename)
+   
+    image_folder_path = app.root_path
+    pluginId = global_plugin_data['plunginid']
+    
+    if pluginId == 1:      
+        filename = dkl.generate_kline_picture()
+    elif pluginId == 2:      
+        filename = dkl.generate_last_column_kline_picture()
+    elif pluginId == 3:
+         filename = dklm.generate_kline_real_data_picture()   
+    else:
+        image_folder_path = app.static_folder
+        filename='test.jpg'
+        print("Use default cat image!")
+
+    image_path = os.path.join(image_folder_path, filename)
     img = cv2.imread(image_path)
     image = np.power(img, float(param1))
     #将图片转换为NumPy数组
@@ -62,6 +82,29 @@ def get_data():
     print(img_str)
     return f'<img src="data:image/png;base64,{img_str}">'
 
+
+@app.route('/get_plugin_data', methods=['GET'])
+def get_plugin_data():
+    return jsonify(global_plugin_data)
+    
+@app.route('/update_plugin_data', methods=['POST'])
+def update_plugin_data():
+    new_data = request.get_json()    
+    global global_plugin_data
+    global_plugin_data.update(new_data)
+    
+    return jsonify({"message": "Data updated successfully", "update_plugin_data": global_plugin_data})
+    
+
+
+def load_config():
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+    global_data = {
+        "plunginid": config.get('plugin', 'id'),
+    }
+    return global_data
+    
 def numpy_to_base64(image_np): 
     data = cv2.imencode('.jpg', image_np)[1]
     image_bytes = data.tobytes()
@@ -69,4 +112,6 @@ def numpy_to_base64(image_np):
     return image_base4
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    
+    global_plugin_data = load_config()
+    app.run(debug=True, port=5000,use_reloader=False, threaded=True)
