@@ -1,13 +1,7 @@
 <!-- 
 升级这个代码，
-播放时 ：
-
-以30FPS运行
-
-每个场景持续30帧（约1秒）
-
-没有正确切换场景并更新画布
-
+  
+  生成一个Note js服务程序，让 genVideo 按钮可以生成 数据的视频。
 返回升级后完整可运行代码 
 -->
 
@@ -17,7 +11,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Video Editor</title>
-    <style>
+    <style> 
+        .debug-info {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 255, 255, 0.8);
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            pointer-events: none;
+        }
+        #id_4_myDraw_code_TA {
+            width: 100%;
+            height: 120px;
+            margin: 10px 0;
+            font-family: monospace;
+            resize: vertical;
+        }
+        #id4Delete {
+            background: #ff4444;
+            color: white;
+        }
+        #color-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1001;
+        }
+        #color-modal .modal-content {
+            background: white;
+            padding: 20px;
+            width: 260px;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border-radius: 8px;
+        }
+        #color-modal .color-controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+    .control-point.line-endpoint {
+            background: #ff9900;
+        }
+    .selected-element {
+        outline: 2px dashed #ff0000;
+        outline-offset: 2px;
+    }
+    .control-point {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        background: #fff;
+        border: 2px solid #2196F3;
+        border-radius: 50%;
+        pointer-events: none;
+    }
     .scene-duration-control {
         display: inline-flex;
         align-items: center;
@@ -80,12 +138,14 @@
         }
         .modal-content {
             position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
             background: white;
             padding: 35px 20px 20px;
             width: 60%;
             max-height: 70vh;
             overflow: auto;
-            transform: translate(-50%, -50%);
         }
         .close {
             position: absolute;
@@ -144,9 +204,41 @@
             color: #666;
             font-style: italic;
         }
+        pre {outline: 1px solid #ccc; padding: 5px; margin: 5px; }
+        .string { color: green; }
+        .number { color: darkorange; }
+        .boolean { color: blue; }
+        .null { color: magenta; }
+        .key { color: red; }
     </style>
 </head>
 <body>
+    <script src="https://littleflute.github.io/JavaScript/w3.js" ></script>
+    <script src="https://littleflute.github.io/Games/js/blclass.js" ></script> 
+    <div id="color-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">元素属性设置</div>
+            <span class="close">&times;</span>
+            <div style="margin: 15px 0;">
+                <label>颜色设置：</label>
+                <input type="color" id="color-picker" style="width: 100%; height: 40px;">
+            </div>
+            <div>
+                <div class="code-hint">
+                    自定义绘制函数（直接写函数体代码，可用参数：ctx, element）<br>
+                    示例：<br>
+                    <div id="id_4_myDraw_code_Examples"></div>>
+                </div>
+                <textarea id="id_4_myDraw_code_TA" 
+                    placeholder="ctx.fillStyle = 'red';\n// 在此输入绘制代码..."></textarea>
+            </div>
+            <div class="color-controls">
+                <button id="confirm-color">应用</button>
+                <button id="cancel-color">取消</button>
+            </div>
+        </div>
+    </div>
+
     <div id="toolbar">
         <button id="addScene">Add Scene</button>
         <button id="delete-scene">Delete Scene</button>
@@ -163,6 +255,7 @@
         <button id="id4Circle">Circle</button>
         <button id="id4Rectangle">Rectangle</button>
         <button id="id4Triangle">Triangle</button>
+        <button id="id4Delete">Delete</button>
     </div> 
 
     <div id="id4SceneToolbar" class="c_floating_toolbar" style="top:100px;">
@@ -178,6 +271,8 @@
             <input type="range" id="fpsRange" min="1" max="100" value="1">
             <input type="number" id="fpsInput" min="1" max="100" value="1">
         </div>
+        <input type="file" id="importFile" accept=".json" hidden>
+        <button onclick="document.getElementById('importFile').click()">Import</button>
         <button id="export">Export</button>
         <button id="id4_create_video">genVideo</button> 
     </div>
@@ -194,26 +289,201 @@
             </div>
         </div>
     </div>
-    <!-- 修改导出模态结构 -->
+    
     <div id="export-modal" class="modal">
         <div class="modal-content">
             <div class="modal-header">Export Settings</div>
             <span class="close">&times;</span>
             <div class="generate-controls">
                 <button id="id4generateVideo">生成视频</button>
+                <button id="saveJson">保存为JSON</button>
                 <span id="generation-status"></span>
             </div>
             <pre id="export-json"></pre>
         </div>
     </div>
 
+
     <div id="id4Status">status:</div>
 
-    <script> 
-    // 初始化配置
-    const DEFAULT_FPS = 30;
-    const FRAME_DURATION = 30;
-    let tempElement = null; // 用于存储临时图形
+    <script>
+    document.getElementById('addScene').addEventListener('click', () => {
+    // 暂停播放状态
+    if (isPlaying) togglePlayback();
+    
+    // 创建新场景并重置状态
+    const newScene = createScene();
+    scenes.splice(currentSceneIndex + 1, 0, newScene);
+    currentSceneIndex++;
+    
+    // 更新所有相关状态
+    updateSceneDurations();
+    updateSceneSelector();
+    sceneFrameCount = 0;
+    
+    // 重置音频状态
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+        audioPausePosition = 0;
+    }
+    
+    drawScene();
+});
+    // 修改后的播放控制函数
+let animationFrameId = null;
+        // 新增音频相关全局变量
+        let projectAudioURL = null;
+        let currentAudio = null;
+        let audioStartTime = 0;
+        let audioPausePosition = 0;
+
+        document.getElementById('importFile').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+        try {
+            // 预验证JSON格式
+            const rawData = event.target.result;
+            if (!validateJSON(rawData)) {
+                throw new Error('Invalid JSON format');
+            }
+            
+            const data = JSON.parse(rawData);
+            loadProject(data);
+            alert('项目导入成功！');
+        } catch (error) {
+            console.error('导入失败:', error);
+            alert(`文件解析失败：${error.message}`);
+        }
+    };
+    reader.readAsText(file);
+});
+
+// JSON格式验证函数
+function validateJSON(jsonString) {
+    try {
+        JSON.parse(jsonString);
+        return true;
+    } catch (e) {
+        // 生成友好的错误提示
+        const errorLine = jsonString.split('\n')[e.message.match(/line (\d+)/)?.[1]-1];
+        console.error(`JSON格式错误：
+            行号：${e.message.match(/line (\d+)/)?.[1]}
+            列号：${e.message.match(/column (\d+)/)?.[1]}
+            错误上下文：${errorLine?.substring(0, 50)}...
+        `);
+        return false;
+    }
+}
+
+function loadProject(data) {
+    // 暂停当前播放
+    if (isPlaying) togglePlayback();
+    
+    // 重置所有状态
+    scenes = [];
+    currentSceneIndex = 0;
+    sceneFrameCount = 0;
+    previousScenesFrames = 0;
+    totalFrames = 0;
+    
+    // 原有加载逻辑...
+    projectAudioURL = data.audio || null;
+    
+    // 深拷贝场景数据
+    data.scenes.forEach(scene => {
+        const newScene = {
+            ...scene,
+            elements: scene.elements.map(element => ({...element}))
+        };
+        scenes.push(newScene);
+    });
+
+    // 更新所有依赖状态
+    updateSceneDurations();
+    updateSceneSelector();
+    drawScene();
+}
+        let previousScenesFrames = 0;  // 当前场景之前的总帧数
+        let sceneFrameCount = 0;       // 当前场景内的帧数
+        let totalFrames = 0;           // 所有场景总帧数（自动计算）
+// 更新场景持续时间相关数据
+function updateSceneDurations() {
+    totalFrames = scenes.reduce((sum, scene) => sum + scene.duration, 0);
+    previousScenesFrames = scenes.slice(0, currentSceneIndex).reduce((sum, scene) => sum + scene.duration, 0);
+}
+        // 新增颜色编辑相关变量
+        const colorModal = document.getElementById('color-modal');
+        const colorPicker = document.getElementById('color-picker');
+        const confirmColorBtn = document.getElementById('confirm-color');
+        const cancelColorBtn = document.getElementById('cancel-color');
+      
+        // 删除元素时需要更新绘制
+function deleteSelectedElement() {
+    if (selectedElement) {
+        const currentScene = scenes[currentSceneIndex];
+        const index = currentScene.elements.indexOf(selectedElement);
+        if (index !== -1) {
+            currentScene.elements.splice(index, 1);
+            selectedElement = null;
+            drawScene(); // 直接调用无需参数
+        }
+    }
+}
+
+
+        // 初始化删除按钮事件
+        document.getElementById('id4Delete').addEventListener('click', deleteSelectedElement);
+
+        // 添加键盘删除支持
+        document.addEventListener('keydown', (e) => {
+            if ((e.key === 'Delete' || e.key === 'Backspace') && selectedElement) {
+                deleteSelectedElement();
+            }
+        });
+        // 初始化颜色编辑模态拖动
+        enableDrag(colorModal.querySelector('.modal-content'));
+
+        // 颜色确认按钮
+        confirmColorBtn.addEventListener('click', () => {
+            if (selectedElement) {
+                selectedElement.color = colorPicker.value;
+                // 构建自定义函数字符串 
+                selectedElement.myDraw = document.getElementById('id_4_myDraw_code_TA').value;
+                drawScene();
+            }
+            colorModal.style.display = 'none';
+        });
+
+        // 颜色取消按钮
+        cancelColorBtn.addEventListener('click', () => {
+            colorModal.style.display = 'none';
+        });
+
+        // 关闭颜色模态
+        colorModal.querySelector('.close').addEventListener('click', () => {
+            colorModal.style.display = 'none';
+        });
+
+        // 点击外部关闭颜色模态
+        window.addEventListener('click', (e) => {
+            if (e.target === colorModal) {
+                colorModal.style.display = 'none';
+            }
+        });
+
+
+        let selectedElement = null;
+        let selectedControl = null;
+        let isDraggingElement = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        const DEFAULT_FPS = 30;
+        const FRAME_DURATION = 30;
+        let tempElement = null; // 用于存储临时图形
 
     function getCanvasCoordinates(clientX, clientY) {
             const rect = canvas.getBoundingClientRect();
@@ -226,32 +496,70 @@
     }
 
  
-// 事件处理初始化
-function initCanvasEvents() {
-            const handleStart = (x, y) => {
-                if (!currentShape) return;
-                isDrawing = true;
-                startX = x;
-                startY = y;
-            };
+    // 事件处理初始化
+    function initCanvasEvents() {
+        const handleStart = (x, y) => { 
+            const pos = {x, y};
+            // 点击空白处取消选择
+            const hit = detectHit(pos.x, pos.y);
+            if (!hit) {
+                selectedElement = null;
+                drawScene();
+            }
+            // 优先处理元素选择
+            if (!currentShape) {
+                const hit = detectHit(pos.x, pos.y);
+                if (hit) {
+                    selectedElement = hit.element;
+                    selectedControl = hit.control;
+                    isDraggingElement = true;
+                    dragStartX = pos.x;
+                    dragStartY = pos.y;
+                    drawScene();
+                    return;
+                }
+            }
+            if (!currentShape) return;
+            isDrawing = true;
+            startX = x;
+            startY = y;
+        };
 
-            const handleMove = (x, y) => {
-                if (!isDrawing) return;
-                tempElement = createTempElement(x, y);
-                drawSceneWithTemp();
-            };
-
-            const handleEnd = (x, y) => {
-                if (!isDrawing) return;
-                isDrawing = false;
+        const handleMove = (x, y) => {
+            const pos = {x, y};
+            // 处理元素拖拽
+            if (isDraggingElement && selectedElement) {
+                const dx = pos.x - dragStartX;
+                const dy = pos.y - dragStartY;
                 
-                if (tempElement) {
+                updateElementPosition(selectedElement, selectedControl, dx, dy);
+            
+                dragStartX = pos.x;
+                dragStartY = pos.y;
+                drawScene();
+                return;
+            }
+            if (!isDrawing) return;
+            tempElement = createTempElement(x, y);
+            drawSceneWithTemp();
+        };
+
+        const handleEnd = (x, y) => {
+            isDraggingElement = false;
+            selectedControl = null;
+            if (!isDrawing) return;
+            isDrawing = false;
+                
+            if (tempElement) {
                     tempElement.color = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
                     scenes[currentSceneIndex].elements.push(tempElement);
                     tempElement = null;
-                }
-                drawScene();
-            };
+            }
+            drawScene({
+                global: globalFrameCount,
+                scene: sceneFrameCount
+            });
+        };
 
             // 事件处理器
             const eventHandler = {
@@ -272,6 +580,81 @@ function initCanvasEvents() {
                 }
             };
 
+        // 双击事件处理
+        canvas.addEventListener('dblclick', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            const x = (e.clientX - rect.left) * scaleX;
+            const y = (e.clientY - rect.top) * scaleY;
+            
+            const hit = detectHit(x, y);
+            if (hit && hit.element) {
+                selectedElement = hit.element;
+                colorPicker.value = selectedElement.color || '#000000';
+                // 解析现有自定义函数
+                const funcStr = selectedElement.myDraw || '';
+                const match = funcStr.match(/function\s*\(.*?\)\s*{([\s\S]*)}/);
+                const ta = document.getElementById('id_4_myDraw_code_TA');
+                ta.value = funcStr;
+                const _setExamples = function(){
+                    const tb = document.getElementById("id_4_myDraw_code_Examples");
+                    tb.innerHTML = "";
+                    const exs = [
+                        {
+                            "funBody":`// 在中心添加文字 
+                                        ctx.fillStyle = 'black';
+                                        ctx.font = '14px Arial';
+                                        ctx.textAlign = 'center';
+                                        ctx.fillText('Hello', element.x, element.y);`
+                        },
+                        {
+                            "funBody":`//  
+                                        ctx.fillStyle = 'gold';
+                                        ctx.beginPath();
+                                        ctx.arc(element.x, element.y, 10, 0, Math.PI*2);
+                                        ctx.fill();`
+                        }, {
+                    "funBody":`// 旋转矩形动画
+                                ctx.translate(element.x + element.width/2, element.y + element.height/2);
+                                ctx.rotate(frameNumber * Math.PI / 30);
+                                ctx.fillStyle = 'hsl(' + (frameNumber * 2) + ', 100%, 50%)';
+                                ctx.fillRect(-element.width/2, -element.height/2, element.width, element.height);`
+                },
+                {
+                    "funBody":`// 脉冲圆效果
+                                const pulse = Math.abs(Math.sin(frameNumber * 0.1)) * 20;
+                                ctx.beginPath();
+                                ctx.arc(element.x, element.y, element.radius + pulse, 0, Math.PI*2);
+                                ctx.fillStyle = element.color;
+                                ctx.fill();`
+                },
+                {
+                    "funBody":`// 文字帧计数器
+                                ctx.fillStyle = 'black';
+                                ctx.font = '20px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText('Frame: ' + frameNumber, element.x, element.y);`
+                }
+                    ];
+                    let n = 0;
+                    for(i in exs){
+                        n++;
+                        var btn= blo0.blBtn(tb,tb.id+"exampeCode"+n,n,blGrey[4]);
+                        btn.onclick = function(_btn,_s,_i){
+                            return function(){
+                                ta.value = _s[_i].funBody;
+                            }
+                        }(btn,exs,i);
+
+                    }
+
+
+                }();
+                colorModal.style.display = 'block';
+            }
+        });
+
             // 绑定事件
             canvas.addEventListener('mousedown', eventHandler.start);
             canvas.addEventListener('mousemove', eventHandler.move);
@@ -286,8 +669,11 @@ function initCanvasEvents() {
                 eventHandler.move(e);
             }, { passive: false });
             canvas.addEventListener('touchend', eventHandler.end);
-        }
-
+    }
+    // 新增元素位置更新函数
+    function updateElementPosition(element, control, dx, dy) {
+        ShapeEditor.updateElement(element, control, dx, dy);
+    }
 function enableDrag(modalContent) {
     const header = modalContent.querySelector('.modal-header');
     let isDragging = false;
@@ -309,8 +695,14 @@ function enableDrag(modalContent) {
         const deltaX = clientX - startX;
         const deltaY = clientY - startY;
         
-        modalContent.style.left = `${initialX + deltaX}px`;
-        modalContent.style.top = `${initialY + deltaY}px`;
+        // 计算新位置并限制在窗口内
+        const newX = initialX + deltaX;
+        const newY = initialY + deltaY;
+        const maxX = window.innerWidth - modalContent.offsetWidth;
+        const maxY = window.innerHeight - modalContent.offsetHeight;
+        
+        modalContent.style.left = `${Math.max(0, Math.min(newX, maxX))}px`;
+        modalContent.style.top = `${Math.max(0, Math.min(newY, maxY))}px`;
         modalContent.style.transform = 'none';
     };
 
@@ -339,6 +731,18 @@ function enableDrag(modalContent) {
     document.addEventListener('mouseup', stopDrag);
     document.addEventListener('touchend', stopDrag);
 }
+// 新增碰撞检测函数
+function detectHit(x, y) {
+    const currentScene = scenes[currentSceneIndex];
+    for (let i = currentScene.elements.length - 1; i >= 0; i--) {
+        const element = currentScene.elements[i];
+        const control = ShapeEditor.hitTest(element, x, y);
+        if (control) {
+            return { element, control };
+        }
+    }
+    return null;
+}
  // 初始化模态拖动
         const exportModalContent = document.querySelector('#export-modal .modal-content');
         const videoModalContent = document.querySelector('.c_video_modal_content');
@@ -364,25 +768,94 @@ fpsInput.value = DEFAULT_FPS;
         // 初始化模态窗口交互
         const modal = document.getElementById('export-modal');
         const closeBtn = modal.querySelector('.close');
+        const exportJson = document.getElementById('export-json');
         
         // 导出按钮点击处理
         document.getElementById('export').addEventListener('click', () => {
-            const currentFPS = parseInt(fpsInput.value) || 1;
-            const exportData = {
-                scenes: scenes.map(scene => ({
-                    ...scene,
-                    elements: scene.elements.map(element => ({...element}))
-                })),
-                fps: currentFPS
-            };
-            const exportJson = document.getElementById('export-json');
-            exportJson.textContent = JSON.stringify(exportData, null, 2);
+            const exportData = getExportData();
+            exportJson.innerHTML = syntaxHighlight(exportData); // 添加语法高亮 
+            
+            // 强制重置位置
+            const modalContent = document.querySelector('#export-modal .modal-content');
+            modalContent.style.left = '50%';
+            modalContent.style.top = '50%';
+            modalContent.style.transform = 'translate(-50%, -50%)';
+            
             modal.style.display = 'block';
-            // 重置位置到屏幕中央
-            exportModalContent.style.left = '50%';
-            exportModalContent.style.top = '50%';
-            exportModalContent.style.transform = 'translate(-50%, -50%)';
         });
+// 添加JSON语法高亮显示
+function syntaxHighlight(json) {
+    if (typeof json != 'string') {
+        json = JSON.stringify(json, null, 2);
+    }
+    json = json.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, 
+        function (match) {
+            let cls = 'number';
+            if (/^"/.test(match)) {
+                if (/:$/.test(match)) {
+                    cls = 'key';
+                } else {
+                    cls = 'string';
+                }
+            } else if (/true|false/.test(match)) {
+                cls = 'boolean';
+            } else if (/null/.test(match)) {
+                cls = 'null';
+            }
+            return '<span class="' + cls + '">' + match + '</span>';
+        });
+}
+
+        document.getElementById('saveJson').addEventListener('click', () => {
+            const exportData = getExportData();
+            saveAsJson(exportData);
+        });
+        function getExportData() {
+    return {
+        meta: {
+            version: "2.0",
+            created: new Date().toISOString(),
+            totalFrames: totalFrames,
+            totalScenes: scenes.length
+        },
+        audio: projectAudioURL,  // 自动包含默认音频
+        scenes: scenes.map(scene => ({
+            ...scene,
+            elements: scene.elements.map(element => ({
+                ...element,
+                myDraw: element.myDraw ? element.myDraw.toString() : null
+            }))
+        })),
+        fps: parseInt(fpsInput.value) || 30
+    };
+}
+
+
+// 新增保存功能实现
+function saveAsJson(data) {
+    try {
+        const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+        const url = URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `video-project-${new Date().toISOString().replace(/[:.]/g,'-')}.json`;
+        
+        document.body.appendChild(a);
+        a.click();
+        
+        // 清理资源
+        setTimeout(() => {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
+        
+    } catch (e) {
+        console.error('保存失败:', e);
+        alert('JSON保存失败，请检查控制台');
+    }
+}
 
         // 关闭模态窗口处理
         closeBtn.addEventListener('click', () => {
@@ -404,6 +877,88 @@ fpsInput.value = DEFAULT_FPS;
                     case 'triangle': return this.triangleHitTest(element, x, y);
                 }
                 return null;
+            }
+            static updateElement(element, control, dx, dy) {
+                switch(element.type) {
+                    case 'rectangle':
+                        this.updateRectangle(element, control, dx, dy);
+                        break;
+                    case 'circle':
+                        this.updateCircle(element, control, dx, dy);
+                        break;
+                    case 'line':
+                        this.updateLine(element, control, dx, dy);
+                        break;
+                    case 'triangle':
+                        this.updateTriangle(element, control, dx, dy);
+                        break;
+                }
+            }
+            static updateCircle(circle, control, dx, dy) {
+                switch(control) {
+                    case 'move':
+                        circle.x += dx;
+                        circle.y += dy;
+                        break;
+                    case 'radius':
+                        circle.radius += Math.hypot(dx, dy) * (dx > 0 ? 1 : -1);
+                        break;
+                }
+            }
+            static updateLine(line, control, dx, dy) {
+                switch(control) {
+                    case 'start':
+                        line.x1 += dx;
+                        line.y1 += dy;
+                        break;
+                    case 'end':
+                        line.x2 += dx;
+                        line.y2 += dy;
+                        break;
+                    case 'move':
+                        line.x1 += dx;
+                        line.y1 += dy;
+                        line.x2 += dx;
+                        line.y2 += dy;
+                        break;
+                }
+            }
+
+            static updateTriangle(tri, control, dx, dy) {
+                tri.x1 += dx;
+                tri.y1 += dy;
+                tri.x2 += dx;
+                tri.y2 += dy;
+                tri.x3 += dx;
+                tri.y3 += dy;
+            }
+            static updateRectangle(rect, control, dx, dy) {
+                switch(control) {
+                    case 'move':
+                        rect.x += dx;
+                        rect.y += dy;
+                        break;
+                    case 'nw':
+                        rect.x += dx;
+                        rect.y += dy;
+                        rect.width -= dx;
+                        rect.height -= dy;
+                        break;
+                    case 'ne':
+                        rect.y += dy;
+                        rect.width += dx;
+                        rect.height -= dy;
+                        break;
+                    case 'sw':
+                        rect.x += dx;
+                        rect.width -= dx;
+                        rect.height += dy;
+                        break;
+                    case 'se':
+                        rect.width += dx;
+                        rect.height += dy;
+                        break;
+                }
             }
 
             static rectHitTest(rect, x, y) {
@@ -438,7 +993,23 @@ fpsInput.value = DEFAULT_FPS;
                 return null;
             }
 
+            // 修改后的线条碰撞检测
             static lineHitTest(line, x, y) {
+                const threshold = 8;
+                
+                // 检测起点
+                if (Math.abs(x - line.x1) < threshold && 
+                    Math.abs(y - line.y1) < threshold) {
+                    return 'start';
+                }
+                
+                // 检测终点
+                if (Math.abs(x - line.x2) < threshold && 
+                    Math.abs(y - line.y2) < threshold) {
+                    return 'end';
+                }
+                
+                // 检测线段本身
                 const d = this.pointToLineDistance(x, y, line);
                 return d < 5 ? 'move' : null;
             }
@@ -581,14 +1152,15 @@ fpsInput.value = DEFAULT_FPS;
             document.getElementById('sceneDuration').value = scenes[currentSceneIndex]?.duration || FRAME_DURATION;
         }
              
-       // 监听持续时间输入变化
-       document.getElementById('sceneDuration').addEventListener('change', function() {
-            const duration = parseInt(this.value) || 1;
-            if (scenes[currentSceneIndex]) {
-                scenes[currentSceneIndex].duration = duration;
-                updateSceneSelector();
-            }
-        });
+      // 在相关操作后更新帧数计算
+document.getElementById('sceneDuration').addEventListener('change', function() {
+    const duration = Math.max(1, parseInt(this.value) || 1);
+    scenes[currentSceneIndex].duration = duration;
+    updateSceneDurations();
+    sceneFrameCount = Math.min(sceneFrameCount, duration); // 保持当前帧数有效
+    drawScene();
+});
+
         // 创建临时元素
         function createTempElement(endX, endY) {
             const base = { type: currentShape, color: '#FF000080' };
@@ -624,7 +1196,8 @@ fpsInput.value = DEFAULT_FPS;
         }
 
         // 图形元素绘制函数
-        function drawElement(element) {
+        function drawElement(element, frameNumber = 0) {
+            // 原始绘制逻辑
             ctx.fillStyle = element.color;
             ctx.strokeStyle = element.color;
             ctx.lineWidth = 2;
@@ -653,8 +1226,23 @@ fpsInput.value = DEFAULT_FPS;
                     ctx.fill();
                     break;
             }
+
+            // 执行自定义绘制函数
+            if (element.myDraw) {
+                try {
+                    const customDraw = new Function('ctx', 'element', 'frameNumber',element.myDraw);
+                    customDraw(ctx, element,frameNumber);
+                } catch (e) {
+                    console.error('Custom draw element.myDraw:', element.myDraw);
+                    console.error('Custom draw error:', e);
+                }
+            }
+
+            // 绘制选中状态
+            if (element === selectedElement) {
+                drawSelection(element);
+            }
         }
-        
 function drawSceneWithTemp() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
@@ -692,46 +1280,108 @@ function drawSceneWithTemp() {
             }
         }
 
-        // 优化后的场景绘制函数
-function drawScene() {
+
+        function drawScene() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!scenes[currentSceneIndex]) return;
     
     const currentScene = scenes[currentSceneIndex];
     ctx.fillStyle = currentScene.background;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 计算实际全局位置
+    const globalPosition = previousScenesFrames + sceneFrameCount;
     
+    // 绘制调试信息
+    ctx.fillStyle = 'black';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText(
+        `Global: ${globalPosition}/${totalFrames} | ` +
+        `Scene: ${currentSceneIndex + 1}/${scenes.length} | ` +
+        `Frame: ${sceneFrameCount}/${currentScene.duration}`,
+        canvas.width/2, 
+        20
+    );
+
     currentScene.elements.forEach(element => {
-        ctx.fillStyle = element.color;
-        ctx.strokeStyle = element.color;
-        ctx.lineWidth = 2;
-        
-        switch(element.type) {
-            case 'rectangle':
-                ctx.fillRect(element.x, element.y, element.width, element.height);
-                break;
-            case 'circle':
-                ctx.beginPath();
-                ctx.arc(element.x, element.y, element.radius, 0, Math.PI * 2);
-                ctx.fill();
-                break;
-            case 'line':
-                ctx.beginPath();
-                ctx.moveTo(element.x1, element.y1);
-                ctx.lineTo(element.x2, element.y2);
-                ctx.stroke();
-                break;
-            case 'triangle':
-                ctx.beginPath();
-                ctx.moveTo(element.x1, element.y1);
-                ctx.lineTo(element.x2, element.y2);
-                ctx.lineTo(element.x3, element.y3);
-                ctx.closePath();
-                ctx.fill();
-                break;
+        drawElement(element, sceneFrameCount);
+        if (element === selectedElement) {
+            drawSelection(element);
         }
     });
 }
+
+
+        // 新增选中状态绘制函数
+function drawSelection(element) {
+    ctx.save();
+    ctx.strokeStyle = '#ff0000';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([5, 5]);
+    
+    switch(element.type) {
+        case 'rectangle':
+            ctx.strokeRect(element.x-2, element.y-2, element.width+4, element.height+4);
+            drawControlPoints([
+                [element.x, element.y], // NW
+                [element.x + element.width, element.y], // NE
+                [element.x, element.y + element.height], // SW
+                [element.x + element.width, element.y + element.height], // SE
+                [element.x + element.width/2, element.y + element.height/2] // Center
+            ]);
+            break;
+        case 'circle':
+            ctx.beginPath();
+            ctx.arc(element.x, element.y, element.radius + 2, 0, Math.PI*2);
+            ctx.stroke();
+            drawControlPoints([
+                [element.x + element.radius, element.y], // Radius
+                [element.x, element.y] // Center
+            ]);
+            break;
+        case 'line':
+            ctx.beginPath();
+            ctx.moveTo(element.x1, element.y1);
+            ctx.lineTo(element.x2, element.y2);
+            ctx.stroke();
+            drawControlPoints([
+                    [element.x1, element.y1], // 起点
+                    [element.x2, element.y2]  // 终点
+                ], 'line-endpoint');
+            break;
+        case 'triangle':
+            ctx.beginPath();
+            ctx.moveTo(element.x1, element.y1);
+            ctx.lineTo(element.x2, element.y2);
+            ctx.lineTo(element.x3, element.y3);
+            ctx.closePath();
+            ctx.stroke();
+            drawControlPoints([
+                [(element.x1 + element.x2 + element.x3)/3, 
+                 (element.y1 + element.y2 + element.y3)/3] // Center
+            ]);
+            break;
+    }
+    
+    ctx.restore();
+}
+        // 修改后的控制点绘制
+        function drawControlPoints(points, cssClass = '') {
+            const originalFill = ctx.fillStyle;
+            
+            points.forEach(([x, y]) => {
+                ctx.beginPath();
+                ctx.arc(x, y, 6, 0, Math.PI*2);
+                ctx.fillStyle = cssClass === 'line-endpoint' ? '#ff9900' : '#2196F3';
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            });
+            
+            ctx.fillStyle = originalFill;
+        }
 
         // 新增视频模态控制逻辑
         const videoModal = document.getElementById('id4_video_modal');
@@ -805,67 +1455,130 @@ function drawScene() {
             }  
         }
 
-        function togglePlayback() {
-            if (!isPlaying) {
-                if (scenes.length === 0) return; 
-                const fps = parseInt(fpsInput.value) || DEFAULT_FPS;
-
-                const intervalTime = 1000 / fps;
-                
-                let currentFrameCount = 0;
-                let lastTime = performance.now();
-
-                function playFrame() {
-                    if (!isPlaying) return;
-                    
-                    const now = performance.now();
-                    const elapsed = now - lastTime;
-                    
-                    if (elapsed >= intervalTime) {
-                        const currentScene = scenes[currentSceneIndex];
-                        currentFrameCount++;
-                        
-                        // 场景切换逻辑
-                        if (currentFrameCount >= currentScene.duration) {
-                            currentSceneIndex = (currentSceneIndex + 1) % scenes.length;
-                            currentFrameCount = 0;
-                            updateSceneSelector();
-                        }
-                        
-                        drawScene();
-                        lastTime = now - (elapsed % intervalTime);
-                    }
-                    requestAnimationFrame(playFrame);
-                } 
-                isPlaying = true;
-                playPauseBtn.textContent = 'Pause';
-                requestAnimationFrame(playFrame);
-            } else { 
-                isPlaying = false;
-                playPauseBtn.textContent = 'Play';
+        
+function togglePlayback() {
+    if (!isPlaying) {
+        const fps = parseInt(fpsInput.value) || DEFAULT_FPS;
+        const intervalTime = 1000 / fps;
+        
+        // 音频控制逻辑
+        if (projectAudioURL) {
+            if (!currentAudio) {
+                currentAudio = new Audio(projectAudioURL);
+                currentAudio.currentTime = audioPausePosition;
             }
+            
+            // 添加时间更新监听器
+            currentAudio.addEventListener('timeupdate', syncAnimationWithAudio);
+            
+            const playPromise = currentAudio.play();
+            playPromise.catch(error => {
+                console.error('音频播放失败:', error);
+                alert('音频播放需要用户交互，请先点击页面任意位置');
+            });
         }
 
-        document.getElementById('addScene').addEventListener('click', () => {
-            scenes.push(createScene());
-            currentSceneIndex = scenes.length - 1;
-            updateSceneSelector();
-            drawScene();
-        });
+        let lastTime = performance.now();
+        
+        function playFrame(timestamp) {
+            if (!isPlaying) return;
 
-        document.getElementById('sceneSelector').addEventListener('change', (e) => {
-            currentSceneIndex = e.target.value;
-            drawScene();
-        });
+            const elapsed = timestamp - lastTime;
+            
+            if (elapsed >= intervalTime) {
+                // 如果没有音频时使用普通帧推进
+                if (!currentAudio) {
+                    sceneFrameCount++;
+                    if (sceneFrameCount >= scenes[currentSceneIndex].duration) {
+                        if (currentSceneIndex >= scenes.length - 1) {
+                            togglePlayback();
+                            return;
+                        }
+                        currentSceneIndex++;
+                        sceneFrameCount = 0;
+                        updateSceneDurations();
+                        updateSceneSelector();
+                    }
+                }
+
+                drawScene();
+                lastTime = timestamp - (elapsed % intervalTime);
+            }
+            animationFrameId = requestAnimationFrame(playFrame);
+        }
+        
+        isPlaying = true;
+        playPauseBtn.textContent = 'Pause';
+        animationFrameId = requestAnimationFrame(playFrame);
+    } else {
+        // 暂停逻辑
+        if (currentAudio) {
+            currentAudio.pause();
+            currentAudio.removeEventListener('timeupdate', syncAnimationWithAudio);
+            audioPausePosition = currentAudio.currentTime;
+        }
+        
+        isPlaying = false;
+        playPauseBtn.textContent = 'Play';
+        
+        if (animationFrameId) {
+            cancelAnimationFrame(animationFrameId);
+            animationFrameId = null;
+        }
+        drawScene();
+    }
+}
+
+
+function syncAnimationWithAudio() {
+    const currentTime = currentAudio.currentTime;
+    const targetFrame = Math.floor(currentTime * fpsInput.value);
+    
+    let accumulatedFrames = 0;
+    for (let i = 0; i < scenes.length; i++) {
+        if (accumulatedFrames + scenes[i].duration > targetFrame) {
+            currentSceneIndex = i;
+            sceneFrameCount = targetFrame - accumulatedFrames;
+            break;
+        }
+        accumulatedFrames += scenes[i].duration;
+    }
+    
+    updateSceneDurations();
+    updateSceneSelector();
+    drawScene();
+}
+
+
+
+document.getElementById('sceneSelector').addEventListener('change', (e) => {
+    if (isPlaying) togglePlayback();
+    currentSceneIndex = parseInt(e.target.value);
+    sceneFrameCount = 0;
+    updateSceneDurations();
+    drawScene();
+});
+
+
+        // 修改后的场景切换事件处理
+document.getElementById('sceneSelector').addEventListener('change', (e) => {
+    currentSceneIndex = parseInt(e.target.value);
+    updateSceneDurations(); // 更新帧数计算
+    sceneFrameCount = 0;    // 重置当前场景帧数
+    drawScene();            // 直接调用无需参数
+});
+
 
         document.getElementById('delete-scene').addEventListener('click', () => {
-            if (scenes.length > 1) {
-                scenes.splice(currentSceneIndex, 1);
-                currentSceneIndex = Math.max(0, currentSceneIndex - 1);
-                updateSceneSelector();
-                drawScene();
-            }
-        });
+    if (scenes.length > 1) {
+        scenes.splice(currentSceneIndex, 1);
+        currentSceneIndex = Math.max(0, currentSceneIndex - 1);
+        updateSceneDurations();
+        sceneFrameCount = 0;
+        updateSceneSelector();
+        drawScene();
+    }
+});
 
         document.getElementById('id4Forest').addEventListener('click', () => {
             if (scenes.length === 0) return;
@@ -984,16 +1697,27 @@ function handleMove(x, y) {
         ctx.restore();
     }
 }
-// 初始化函数保持原有逻辑
-function init() {
+
+
+// 初始化时需要更新帧数计算
+function init() {    
     initCanvas();
     scenes = [createScene()];
     currentSceneIndex = 0;
+    
+    // 设置默认音频
+    projectAudioURL = "https://littleflute.github.io/english/NewConceptEnglish/Book2/1.mp3";
+    
+    updateSceneDurations();
     updateSceneSelector();
     drawScene();
     initCanvasEvents();
+    
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio = null;
+    }
 }
-
 
         document.getElementById('id4generateVideo').addEventListener('click', async () => {
             const statusElement = document.getElementById('generation-status');
