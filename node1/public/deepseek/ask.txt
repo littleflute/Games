@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>微信封面编辑器 - 完整版</title>
+    <style>
+        :root {
+            --primary-color: #07c160;
+            --bg-color: #f5f5f5;
+        }
+        body {
+            font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+            padding: 20px;
+            background: var(--bg-color);
+            min-width: 320px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .editor-panel {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-top: 20px;
+        }
+        canvas {
+            border: 2px dashed #ddd;
+            margin: 20px 0;
+            background: repeating-conic-gradient(#f8f9fa 0% 25%, white 0% 50%) 50%/20px 20px;
+        }
+        .toolbar {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .control-group {
+            background: #f8f9fa;
+            padding: 18px;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+        input[type="text"], 
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin: 6px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin: 4px;
+        }
+        button:hover {
+            background: #05964a;
+            transform: translateY(-1px);
+        }
+        .alert {
+            padding: 10px;
+            background: #fff3cd;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+        .control-point {
+        width: 10px;
+        height: 10px;
+        background: #fff;
+        border: 2px solid #07c160;
+        position: absolute;
+        pointer-events: all;
+    }
+    .rotate-handle {
+        width: 16px;
+        height: 16px;
+        top: -40px;
+        background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 24 24" fill="%2307c160"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>') center/contain no-repeat;
+    }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎨 微信封面编辑器</h1>
+        <div class="alert" id="alertBox"></div>
+        
+        <div class="editor-panel">
+            <div class="toolbar">
+                <!-- 图片控制 -->
+                <div class="control-group">
+                    <h3>🖼️ 图片操作</h3>
+                    <input type="file" id="imageUpload" accept="image/*" hidden>
+                    <button onclick="document.getElementById('imageUpload').click()">
+                        上传图片
+                    </button>
+                    <button onclick="resetBackground()">移除背景</button>
+                </div>
+
+                <!-- 文字控制 -->
+                <div class="control-group">
+                    <h3>✍️ 文字编辑</h3>
+                    <input type="text" id="textContent" placeholder="输入文字内容">
+                    <div style="margin: 10px 0">
+                        <label>颜色：</label>
+                        <input type="color" id="textColor" value="#2d2d2d">
+                        <label>大小：</label>
+                        <input type="number" id="fontSize" value="36" min="24" max="72" step="2">
+                    </div>
+                    <button onclick="addTextLayer()">添加文字</button>
+                    <button onclick="clearAllText()">清除文字</button>
+                </div>
+
+                <!-- 输出控制 -->
+                <div class="control-group">
+                    <h3>📥 输出设置</h3>
+                    <button onclick="exportImage()">下载封面 (900×383)</button>
+                    <button onclick="toggleGrid()">切换参考线</button>
+                </div>
+            </div>
+
+            <!-- 画布区域 -->
+            <canvas id="editorCanvas" width="900" height="383"></canvas>
+        </div>
+    </div>
+
+<script>
+// 初始化状态
+const editorState = {
+    canvas: document.getElementById('editorCanvas'),
+    ctx: null,
+    backgroundImage: null,
+    textLayers: [],
+    showGrid: true,
+    selectedTextIndex: -1,  // 新增：当前选中的文字索引
+    dragging: false,        // 新增：拖拽状态
+    transformType: null, // 'move', 'rotate', 'resize'
+    controlPoints: [],
+    initialMousePos: { x: 0, y: 0 },
+    initialTextState: null
+};
+
+const textPrototype = {
+    content: "",
+    color: "#2d2d2d",
+    fontSize: 36,
+    position: { x: 450, y: 300 },
+    rotation: 0,
+    scale: 1,
+    offset: { x: 0, y: 0 }
+};
+// 系统初始化
+(function init() {
+    editorState.ctx = editorState.canvas.getContext('2d');
+    initEventListeners();
+    redrawCanvas();
+})();
+
+
+
+// 事件监听
+function initEventListeners() {
+    // 图片上传
+    document.getElementById('imageUpload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && file.type.startsWith('image/')) {
+            loadImageFile(file);
+        }
+    });
+
+    // 快捷键支持
+    document.addEventListener('keydown', (e) => {
+        if (e.ctrlKey && e.key === 'z') {
+            undoLastAction();
+        }
+    });
+
+    
+    const canvas = editorState.canvas;
+    canvas.addEventListener('mousedown', handleCanvasMouseDown);
+    canvas.addEventListener('mousemove', handleCanvasMouseMove);
+    canvas.addEventListener('mouseup', handleCanvasMouseUp);
+    canvas.addEventListener('mouseleave', handleCanvasMouseUp);
+    // 新增属性实时更新
+    document.getElementById('textColor').addEventListener('change', updateSelectedText);
+    document.getElementById('fontSize').addEventListener('input', updateSelectedText);
+    canvas.addEventListener('dblclick', handleDoubleClick);
+}
+
+function handleDoubleClick(e) {
+    const pos = getCanvasMousePos(e);
+    editorState.textLayers.forEach((text, index) => {
+        if (isPointInText(pos, text)) {
+            editorState.selectedTextIndex = index;
+            document.getElementById('textContent').value = text.content;
+            document.getElementById('textContent').focus();
+            redrawCanvas();
+        }
+    });
+}
+
+
+function handleCanvasMouseDown(e) {
+    const pos = getCanvasMousePos(e);
+    
+    // 检测控制点点击
+    editorState.controlPoints.forEach(point => {
+        if (isPointInControl(pos, point)) {
+            editorState.transformType = point.type;
+            editorState.initialMousePos = pos;
+            editorState.initialTextState = {...editorState.textLayers[editorState.selectedTextIndex]};
+            return;
+        }
+    });
+    function isPointInControl(pos, control) {
+    const ctx = editorState.ctx;
+    ctx.save();
+    ctx.translate(text.position.x, text.position.y);
+    ctx.rotate(text.rotation);
+    const point = ctx.isPointInPath(control.region, pos.x, pos.y);
+    ctx.restore();
+    return point;
+}
+
+// 实时更新文字属性
+document.getElementById('textColor').addEventListener('input', function() {
+    if (editorState.selectedTextIndex >= 0) {
+        editorState.textLayers[editorState.selectedTextIndex].color = this.value;
+        redrawCanvas();
+    }
+});
+    // 检测文字主体点击
+    editorState.textLayers.forEach((text, index) => {
+        if (isPointInText(pos, text)) {
+            editorState.selectedTextIndex = index;
+            editorState.transformType = 'move';
+            editorState.initialMousePos = pos;
+            editorState.initialTextState = {...text};
+        }
+    });
+    
+    redrawCanvas();
+}
+document.getElementById('fontSize').addEventListener('input', function() {
+    if (editorState.selectedTextIndex >= 0) {
+        const text = editorState.textLayers[editorState.selectedTextIndex];
+        text.fontSize = parseInt(this.value);
+        text.scale = 1; // 重置缩放比例
+        redrawCanvas();
+    }
+});
+function handleCanvasMouseMove(e) {
+    if (!editorState.transformType) return;
+    
+    const currentText = editorState.textLayers[editorState.selectedTextIndex];
+    const pos = getCanvasMousePos(e);
+    const delta = {
+        x: pos.x - editorState.initialMousePos.x,
+        y: pos.y - editorState.initialMousePos.y
+    };
+
+    switch(editorState.transformType) {
+        case 'move':
+            currentText.position.x = editorState.initialTextState.position.x + delta.x;
+            currentText.position.y = editorState.initialTextState.position.y + delta.y;
+            break;
+            
+        case 'rotate':
+            const center = currentText.position;
+            const angle = Math.atan2(pos.y - center.y, pos.x - center.x);
+            currentText.rotation = angle - Math.PI/2;
+            break;
+            
+        case 'resize':
+            const scaleDelta = delta.x / 100;
+            currentText.scale = Math.max(0.5, editorState.initialTextState.scale + scaleDelta);
+            currentText.fontSize = editorState.initialTextState.fontSize * currentText.scale;
+            break;
+    }
+    
+    redrawCanvas();
+}
+
+function drawText(text) {
+    const ctx = editorState.ctx;
+    ctx.save();
+    
+    // 应用变换
+    ctx.translate(text.position.x, text.position.y);
+    ctx.rotate(text.rotation);
+    ctx.scale(text.scale, text.scale);
+    
+    // 绘制文字
+    ctx.font = `${text.fontSize}px ${text.fontFamily}`;
+    ctx.fillStyle = text.color;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text.content, text.offset.x, text.offset.y);
+    
+    // 绘制控制点
+    if (editorState.selectedTextIndex === textLayers.indexOf(text)) {
+        const metrics = ctx.measureText(text.content);
+        const width = metrics.width;
+        const height = text.fontSize;
+        
+        // 绘制包围盒
+        ctx.strokeStyle = '#07c160';
+        ctx.setLineDash([5, 3]);
+        ctx.strokeRect(-width/2 -5, -height/2 -5, width + 10, height + 10);
+        
+        // 生成控制点
+        editorState.controlPoints = [
+            createControlPoint(width/2 + 10, 0, 'rotate'),
+            createControlPoint(width/2 + 20, 0, 'resize')
+        ];
+        
+        // 绘制控制点
+        editorState.controlPoints.forEach(point => {
+            ctx.fillStyle = '#07c160';
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 5, 0, Math.PI*2);
+            ctx.fill();
+        });
+    }
+    
+    ctx.restore();
+}
+
+function createControlPoint(x, y, type) {
+    return {
+        x: x,
+        y: y,
+        type: type,
+        region: new Path2D()
+    };
+}
+
+
+
+function handleCanvasMouseUp() {
+    editorState.dragging = false;
+}
+function updateSelectedText() {
+    if (editorState.selectedTextIndex === -1) return;
+    
+    const text = editorState.textLayers[editorState.selectedTextIndex];
+    text.color = document.getElementById('textColor').value;
+    text.fontSize = parseInt(document.getElementById('fontSize').value);
+    redrawCanvas();
+}
+
+// 核心功能函数
+function loadImageFile(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+            editorState.backgroundImage = img;
+            showAlert('图片上传成功');
+            redrawCanvas();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function addTextLayer() {
+    const textInput = document.getElementById('textContent');
+    const content = textInput.value.trim();
+    
+    if (!content) {
+        showAlert('请输入文字内容', 'warning');
+        return;
+    }
+
+    if (editorState.selectedTextIndex !== -1) {
+        // 更新现有文字
+        const text = editorState.textLayers[editorState.selectedTextIndex];
+        text.content = content;
+        text.color = document.getElementById('textColor').value;
+        text.fontSize = parseInt(document.getElementById('fontSize').value);
+        editorState.selectedTextIndex = -1;
+    } else {
+        // 添加新文字
+        editorState.textLayers.push({
+            content,
+            color: document.getElementById('textColor').value,
+            fontSize: parseInt(document.getElementById('fontSize').value),
+            position: { x: 450, y: 300 },
+            fontFamily: "'Microsoft YaHei', sans-serif"
+        });
+    }
+
+    textInput.value = '';
+    redrawCanvas();
+}
+
+
+
+function redrawCanvas() {
+    const { ctx, canvas } = editorState;
+    
+    // 清空画布
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 绘制背景
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // 绘制背景图片
+    if (editorState.backgroundImage) {
+        const img = editorState.backgroundImage;
+        const scale = Math.min(
+            canvas.width / img.width,
+            canvas.height / img.height
+        );
+        const width = img.width * scale;
+        const height = img.height * scale;
+        
+        ctx.drawImage(
+            img,
+            (canvas.width - width) / 2,
+            (canvas.height - height) / 2,
+            width,
+            height
+        );
+    }
+
+    // 绘制文字层
+    // 绘制文字层（新增选中高亮）
+    editorState.textLayers.forEach((text, index) => {
+        ctx.save();
+        ctx.font = `${text.fontSize}px ${text.fontFamily}`;
+        ctx.fillStyle = text.color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text.content, text.position.x, text.position.y);
+
+        // 绘制选中框
+        if (index === editorState.selectedTextIndex) {
+            const metrics = ctx.measureText(text.content);
+            const width = metrics.width;
+            const height = text.fontSize;
+            ctx.strokeStyle = '#ff0000';
+            ctx.setLineDash([5, 3]);
+            ctx.strokeRect(
+                text.position.x - width/2 - 5,
+                text.position.y - height/2 - 5,
+                width + 10,
+                height + 10
+            );
+        }
+        ctx.restore();
+    });
+
+    // 绘制参考线
+    if (editorState.showGrid) {
+        drawReferenceGuides();
+    }
+}
+
+// 辅助功能
+function drawReferenceGuides() {
+    const { ctx, canvas } = editorState;
+    ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+    ctx.setLineDash([5, 5]);
+    
+    // 中心线
+    ctx.beginPath();
+    ctx.moveTo(canvas.width/2, 0);
+    ctx.lineTo(canvas.width/2, canvas.height);
+    ctx.stroke();
+    
+    // 安全区域
+    ctx.strokeStyle = 'rgba(0, 150, 255, 0.3)';
+    ctx.strokeRect(50, 50, canvas.width-100, canvas.height-100);
+}
+
+function showAlert(message, type = 'info') {
+    const alertBox = document.getElementById('alertBox');
+    alertBox.style.display = 'block';
+    alertBox.textContent = message;
+    alertBox.className = `alert ${type}`;
+    setTimeout(() => alertBox.style.display = 'none', 3000);
+}
+
+// 控制功能
+function resetBackground() {
+    editorState.backgroundImage = null;
+    redrawCanvas();
+}
+
+function clearAllText() {
+    editorState.textLayers = [];
+    redrawCanvas();
+}
+
+function toggleGrid() {
+    editorState.showGrid = !editorState.showGrid;
+    redrawCanvas();
+}
+
+function undoLastAction() {
+    if (editorState.textLayers.length > 0) {
+        editorState.textLayers.pop();
+        redrawCanvas();
+    }
+}
+
+// 导出图片
+function exportImage() {
+    const link = document.createElement('a');
+    link.download = `wechat-cover-${Date.now()}.jpg`;
+    link.href = editorState.canvas.toDataURL('image/jpeg', 0.92);
+    link.click();
+}
+</script>
+</body>
+</html>
+
+getCanvasMousePos not defined.

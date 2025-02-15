@@ -80,6 +80,51 @@
                 display: flex;
             }
         }
+
+        .image-container {
+            margin: 20px 0;
+            padding: 15px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            background: #f8f9fa;
+        }
+
+        .image-preview {
+            position: relative;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .image-preview img {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .image-preview button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 5px 10px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .image-caption {
+            display: block;
+            width: 100%;
+            padding: 8px;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .image-caption::placeholder {
+            color: #999;
+        }
     </style>
 </head>
 <body>
@@ -183,56 +228,18 @@
                 {
                     text: '[..]',
                     href: '..'
-                },
+                }, 
                 {
-                    text: '[2025/02/13]->',
-                    href: '#'
-                },
+                    text: '[public]',
+                    href: 'public'
+                }, 
                 {
                     text: 'i1.html',
                     href: 'i1.html'
                 },
                 {
-                    text: 'i2.html',
-                    href: 'i2.html'
-                },
-                {
-                    text: 'i3.html',
-                    href: 'i3.html'
-                },
-                {  text: 'i4.html',
-                    href: 'i4.html'
-                },
-                {  text: 'i4a.html',
-                    href: 'i4a.html'
-                },
-                {  text: 'i4b.html',
-                    href: 'i4b.html'
-                },
-                {  text: 'i4c.html',
-                    href: 'i4c.html'
-                },
-                {  text: 'i5.html',
-                    href: 'i5.html'
-                },
-                {  text: 'i5a.html',
-                    href: 'i5a.html'
-                },
-                {  text: 'i5b.html',
-                    href: 'i5b.html'
-                },
-                {  text: 'i6.html',
-                    href: 'i6.html'
-                },
-                {  text: 'i6a.html',
-                    href: 'i6a.html'
-                },
-                {  text: 'i7.html',
-                    href: 'i7.html'
-                },
-                {
-                    text: '深度求索',
-                    href: 'https://www.deepseek.com'
+                    text: 'db1.html',
+                    href: 'db1.html'
                 },
                 {
                     text: '产品',
