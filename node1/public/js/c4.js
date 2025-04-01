@@ -1,19 +1,8 @@
-/**
- * ghChat.js 重构自 chat0.js
- * 去掉blo0相关代码
- * 测试发现 ClearMsg 实现不对,清空后数据库也应该清空
- * 测试发现 没有 logout 功能，请补上
- * 修正 ghChat.js ： 
- *  以下代码保持原样不要动
- *  TOKENS: [
-          "ghp_Od6GW3"+"J2NiP01Zsz"+"g9JQV0amzn"+"UxhF33iBES", //Jeremy
-       "ghp_LWbSRdeNb"+"tr0wykbm2Q"+"TFqxdP6x4u"+"A4MQH0M" //XiYu
-      ]
-   请返回完整的新代码 ghChat.js    
- */
-
-//chat0.js 
-var md = blo0.blDiv(document.body, "div_ID_4_I4C4", "room1_v0.12" ,blGrey[0]);  
+// c4.js
+ 
+var s= "v0.12 "; 
+  
+var md = document.getElementById("id_chat_room_ui");
 md.addTimerUser = function(o){
 		if(!md.timerUsers) md.timerUsers = [];
 		if(o) md.timerUsers.push(o);
@@ -30,18 +19,9 @@ md.timer2Users = function(_u){
 }
 
 if(!md.run){
-    md.run = true; 
-	var style ="position: absolute;";
-	style += "z-index: 9;";
-	style += "background-color: #f1f1f1;";
-	style += "text-align: center;";
-	style += "border: 1px solid #d3d3d3;";
-	style += "left: 400px";
-	style += "top: 40px";
-	style += "width: 540px";
-	md.style =style;
+    md.run = true;  
 	
-	var title = blo0.blDiv(md , "div_ID_4_I4C4" + "Header", "Header");
+	var title = blo0.blDiv(md , "id_title", "ghChatRoom");
 	style ="padding: 10px;";
 	style += "z-index: 10;";
 	style += "cursor: move;";
@@ -49,8 +29,7 @@ if(!md.run){
 	style += "border: 1px solid #fff;";
 	style += "background-color: #2196F3;";
 	title.style =style;
- 
-    blo0.blMakeDivMovable(md);
+  
 	md.style.left = "400px";
 	md.style.top = "40px";
 
@@ -146,7 +125,7 @@ if(!md.run){
 		updateOnlineUser(jsonAll);
 	 }
 	 
-	 function toLogin(){
+	 function login(){
 	   	var userObj = globalJsonObj.users;
 		var userName = md.vLogin.ta.value;
 		var newUsers = [];
@@ -238,60 +217,14 @@ if(!md.run){
 	   timerId = setInterval(readTimer, 1000);
 	   getOnlineUser(false);
 	   sleep(1000);
-	   setTimeout(function(){toLogin();}, 1000);
+	   setTimeout(function(){login();}, 1000);
 	}
-	//End Login
-	
-	function addBtn(number)
-	{
-	  md.v.d1 = blo0.blDiv(md,md.id+"vd1","",blColor[1]);
-	  function _Comments(o) {
-		var index = 0;
-		var parentDiv = md.v.d1;
-		for(i in o){
-		 index++;
-		 if(index == number)
-		 {
-			var a = o[i].body;
-			
-			var oTd = document.createElement('td');
-			parentDiv.appendChild(oTd);
-			
-			var btnJS = blo0.blBtn(oTd, parentDiv.id+"btnJS"+index,index,blGrey[2]);
-			btnJS.onclick = function(_txt){
-				return function(){
-					eval( _txt);
-				}
-			}(a);
-			var oA = blo0.blLink(oTd, parentDiv.id+"blLink"+index,"Delete",'javascript:;',blGrey[0]);
-			oA.onclick = function(){
-              parentDiv.removeChild(this.parentNode);
-            }
-		 }
-	
-		}
-	 }
 	 
-	 var _src = "https://api.github.com/repos/jeremyjia/Games/issues/4/comments";
-	 w3.getHttpObject(_src, _Comments);
-    }
 	
 	function dispatchMessage(message){
-		var beginWith = message.toLowerCase().substr(0,4); 
-		if( beginWith == "cmd:" ){
-			var id = message.substr(message.indexOf(":")+1);
-			if(id == "help"){
-			  var help = "Please use \"cmd:number\" format to load our plugins.";
-			  SendMsg(help);
-			}else{
-			  addBtn(id);
-			}
-		}else{
-			var user_Name=md.vLogin.ta.value;
-			var sMsg = formateDate()+"\n"+user_Name+":"+message;
-			SendMsg(sMsg);
-		}
-		
+		var user_Name=md.vLogin.ta.value;
+		var sMsg = formateDate()+"\n"+user_Name+":"+message;
+		SendMsg(sMsg); 
 	}
 	function SendMsg(ss)
 	{
@@ -373,7 +306,6 @@ if(!md.run){
 	
 	var tokenArray = new Array();
 	tokenArray[0] = "ghp_Od6GW3"+"J2NiP01Zsz"+"g9JQV0amzn"+"UxhF33iBES"; //Jeremy
-	//tokenArray[1] = "github_pat_11ARID6XI03"+"EPRn2jvrEaJ_9p1xckKElpo9D9Xt616u6w2hEUKA"+"TOFrBlFetLWKljrX562X3OMpeB8Dz1D"; //Wangxu's tk
 	tokenArray[1] = "ghp_LWbSRdeNb"+"tr0wykbm2Q"+"TFqxdP6x4u"+"A4MQH0M"; //XiYu	
 	function getToken(){	
 	  return tokenArray[nTokenNum];
@@ -420,7 +352,7 @@ if(!md.run){
 		continue;
 	  }
 	}
-	//This is a common method used for sending or receving information from Github
+	
 	function myAjaxCmd(method, url, data, callback){
 		var xmlHttpReg = null;
 		if (window.XMLHttpRequest){
@@ -443,6 +375,14 @@ if(!md.run){
 		}
 	}
 }
-_on_off_div(this,md);
+
 
    
+/**
+ * 重构代码：
+ * 去掉 blo0相关代码
+ * 以下内容保持不变：
+ * "ghp_Od6GW3"+"J2NiP01Zsz"+"g9JQV0amzn"+"UxhF33iBES"; //Jeremy
+ * "ghp_LWbSRdeNb"+"tr0wykbm2Q"+"TFqxdP6x4u"+"A4MQH0M"; //XiYu	
+ * 返回完整代码
+ */
