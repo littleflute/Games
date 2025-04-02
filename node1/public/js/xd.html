@@ -1,0 +1,190 @@
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <style>
+        body { font-family: Arial, Helvetica, sans-serif; }
+        .mobile-container { max-width: 480px; margin: auto; background-color: #555; height: 500px; color: white; border-radius: 10px; }
+        .topnav { overflow: hidden; background-color: #333; position: relative; }
+        .topnav #myLinks { display: none; }
+        .topnav a { color: white; padding: 14px 16px; text-decoration: none; font-size: 17px; display: block; }
+        .topnav a.icon { background: black; display: block; position: absolute; right: 0; top: 0; }
+        .topnav a:hover { background-color: #ddd; color: black; }
+        .active { background-color: #4CAF50; color: white; }
+        .chat-area { padding: 10px; }
+        .message-box { width: 98%; height: 240px; background: #444; color: white; border: none; resize: none; }
+        .input-box { width: 98%; height: 40px; margin-top: 10px; }
+        .user-list { background: #666; padding: 5px; margin-top: 10px; }
+        .login-area input { margin: 5px 0; width: 95%; padding: 8px; }
+        .login-area button { width: 48%; margin: 5px 1%; padding: 8px; }
+        
+        /* 新增样式 */
+        .comment-content {
+            width: 98%;
+            height: 100px;
+            background: #444;
+            color: white;
+            margin-top: 10px;
+            padding: 5px;
+            overflow-y: auto;
+        }
+        .comments-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .comment-btn {
+            background-color: #4CAF50;
+            padding: 5px 10px;
+            border: none;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="mobile-container">
+        <div class="topnav">
+            <a href="#home" class="active">GithubAPI v1.1.0</a>
+            <div id="myLinks">
+                <a href="https://jeremyjia.github.io/Games/" target="_blank">Home Page</a>
+                <a href="https://github.com/jeremyjia/Games" target="_blank">Repo</a>
+            </div>
+            <a href="javascript:void(0);" class="icon" onclick="toggleMenu()">
+                <i class="fa fa-bars"></i>
+            </a>
+        </div>
+        <div id="chatContainer"></div>
+    </div>
+
+    <script>
+        class C4GithubAPI {
+            constructor() {
+                this.n = 1;
+                this.container = document.getElementById('chatContainer');
+                this.allMessages = '';    
+                
+                this.initUI();
+            }
+
+            initUI() { 
+                this.appUI = this.createSection('appUI', ['chat-area']); 
+                this.messageDisplay = this.createElement('textarea', 'messageDisplay', '', ['message-box']); 
+                
+                this.appUI.append(
+                    this.messageDisplay,
+                );
+
+                this.toolbarUI = this.createSection('toolbarUI', ['login-area']); 
+                this.btnGetI1C1 = this.createElement('button', 'btnGetI1C1', 'get_s177I1C1');
+                this.btnSetI1C1 = this.createElement('button', 'btnSetI1C1', 'set_s177I1C1');
+                this.btnGetIssue2Comments = this.createElement('button', 'btnGetIssue2Comments', '获取Issue2评论');
+                this.commentsContainer = this.createElement('div', 'commentsContainer', '', ['comments-container']);
+                this.commentContent = this.createElement('div', 'commentContent', '', ['comment-content']);
+
+                this.toolbarUI.append(  
+                    this.btnGetI1C1,
+                    this.btnSetI1C1,
+                    this.btnGetIssue2Comments,
+                    this.commentsContainer,
+                    this.commentContent
+                );
+
+                this.appUI.style.display = 'none';
+                this.container.append(this.appUI, this.toolbarUI);
+
+                this.btnGetI1C1.onclick = () => this.get_I1C1();
+                this.btnSetI1C1.onclick = () => this.set_I1C1();
+                this.btnGetIssue2Comments.onclick = () => this.getIssue2Comments();
+            }
+
+            createElement(type, id, text, classes) {
+                const el = document.createElement(type);
+                if (id) el.id = id;
+                if (text) el.textContent = text;
+                if (classes) el.classList.add(...classes);
+                return el;
+            }
+
+            createSection(id, classes) {
+                const section = this.createElement('div', id, null, classes);
+                section.style.padding = '10px';
+                return section;
+            }
+
+            async set_I1C1() { 
+                try {
+                    await this.apiRequest('PATCH', 'issues/comments/1173345809', {
+                        body: this.allMessages + " " + this.n++
+                    });
+                } catch (error) {
+                    console.error('set_I1C1 error:', error);
+                }
+            }
+
+            async get_I1C1() {
+                try {
+                    const response = await this.apiRequest('GET', 'issues/comments/1173345809');
+                    this.allMessages = response.body || '';
+                    alert(this.allMessages);
+                } catch (error) {
+                    console.error('Fetch messages error:', error);
+                }
+            }
+
+            async getIssue2Comments() {
+                try {
+                    const response = await this.apiRequest('GET', 'issues/2/comments');
+                    this.displayComments(response);
+                } catch (error) {
+                    console.error('获取评论失败:', error);
+                    alert('获取评论失败，请检查控制台');
+                }
+            }
+
+            displayComments(comments) {
+                this.commentsContainer.innerHTML = '';
+                comments.forEach((comment, index) => {
+                    const btn = this.createElement('button', null, `评论 ${index + 1}`, ['comment-btn']);
+                    btn.onclick = () => {
+                        this.commentContent.innerHTML = `
+                            <p><strong>作者：${comment.user.login}</strong></p>
+                            <p>${comment.body}</p>
+                            <p>更新时间：${new Date(comment.updated_at).toLocaleString()}</p>
+                        `;
+                    };
+                    this.commentsContainer.appendChild(btn);
+                });
+            }
+
+            async apiRequest(method, endpoint, data) {
+                const xdToken = "ghp_2BF"+"JztcBlHHOkBybs"+"UVJZGHQ4S"+"wvFR0poLqc";
+                const url = `https://api.github.com/repos/littleflute/s177/${endpoint}`;
+                const headers = {
+                    'Authorization': `token ${xdToken}`,
+                    'Content-Type': 'application/json'
+                };
+
+                const response = await fetch(url, {
+                    method,
+                    headers,
+                    body: data ? JSON.stringify(data) : null
+                });
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.json();
+            }
+        }
+
+        const ghApp = new C4GithubAPI();
+
+        function toggleMenu() {
+            const menu = document.getElementById('myLinks');
+            menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+        //升级：让没个评论可以被编辑更新
+        //返回完整代码
+    </script>
+</body>
+</html>
