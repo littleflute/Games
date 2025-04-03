@@ -332,9 +332,10 @@
 <body>
     <div class="mobile-container">
         <div class="topnav">
-            <a href="#home" class="active">IssueManager v1.34</a>
+            <a href="#home" class="active">GithubAPI v1.34</a>
             <div id="myLinks">
-                <a href="index0.html" target="_blank">index0.html</a> 
+                <a href="https://littleflute.github.io/s177/" target="_blank">s177 Home Page</a>
+                <a href="https://github.com/littleflute/s177" target="_blank">s177 Repo</a>
             </div>
             <a href="javascript:void(0);" class="icon" onclick="toggleMenu()">
                 <i class="fa fa-bars"></i>
@@ -363,8 +364,8 @@
     <script>
         class C4GithubAPI {
             constructor() {
-                this.repos = ['Games',];
-                this.currentRepo = 'Games';
+                this.repos = ['s177', 's281', 'Songs', 'cchess', 'voa'];
+                this.currentRepo = 's177';
                 this.container = document.getElementById('id_4_ui');
                 this.initUI();
                 this.generateRepoButtons();
@@ -600,7 +601,7 @@
 
             async apiRequest(method, endpoint, data) {
                 const xdToken = "ghp_2BF" + "JztcBlHHOkBybs" + "UVJZGHQ4S" + "wvFR0poLqc";
-                const url = `https://api.github.com/repos/jeremyjia/${this.currentRepo}/${endpoint}`;
+                const url = `https://api.github.com/repos/littleflute/${this.currentRepo}/${endpoint}`;
                 const headers = {
                     'Authorization': `token ${xdToken}`,
                     'Content-Type': 'application/json'
