@@ -13,12 +13,16 @@
     <script>
         class SheetMusicEditor {
             constructor() {
+                this.version = "0.11";
                 this.currentRepo = 's177';
                 this.createElements();
                 this.applyStyles();
                 this.addEventListeners();
                 // 显示设置窗口
                 this.settingsModal.style.display = 'block';
+            }
+            processSpaces(text) {
+                return text.split('\n').map(line => line.replace(/\s{2,}/g, ' ')).join('\n');
             }
             async apiRequest(method, endpoint, data) {
                 const xdToken = "ghp_2BF" + "JztcBlHHOkBybs" + "UVJZGHQ4S" + "wvFR0poLqc";
@@ -47,7 +51,7 @@
                 this.settingsButton = document.createElement('button');
                 this.settingsButton.id = 'settings-button';
                 this.settingsButton.classList.add('bg-blue-500', 'hover:bg-blue-600', 'text-white', 'py-2', 'px-4', 'rounded');
-                this.settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i> 设置';
+                this.settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>'+ `设置${this.version}`;
                 this.toolbar.appendChild(this.settingsButton);
 
                 this.toggleI11 = document.createElement('button');
@@ -59,7 +63,7 @@
                 this.createCommentButton = document.createElement('button');
                 this.createCommentButton.id = 'create-comment-button';
                 this.createCommentButton.classList.add('bg-green-500', 'hover:bg-green-600', 'text-white', 'py-2', 'px-4', 'rounded', 'ml-2');
-                this.createCommentButton.textContent = '生成新评论';
+                this.createCommentButton.textContent = '+C';
                 this.toolbar.appendChild(this.createCommentButton);
 
                 this.updateContentButton = document.createElement('button');
@@ -80,7 +84,15 @@
 
                 this.settingsModalHeader = document.createElement('div');
                 this.settingsModalHeader.id = 'settings-modal-header';
+                this.settingsModalHeader.classList.add('flex', 'items-center', 'justify-between');
                 this.settingsModalHeader.innerHTML = '<h2 class="text-xl font-bold">简谱设置</h2>';
+
+                this.closeModalButton = document.createElement('button');
+                this.closeModalButton.id = 'close-modal-button';
+                this.closeModalButton.classList.add('bg-red-500', 'hover:bg-red-600', 'text-white', 'py-1', 'px-2', 'rounded');
+                this.closeModalButton.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                this.settingsModalHeader.appendChild(this.closeModalButton);
+
                 this.settingsModal.appendChild(this.settingsModalHeader);
 
                 this.modalToolbar = document.createElement('div');
@@ -106,12 +118,6 @@
                 this.sheetMusicInput.placeholder = '输入简谱';
                 this.settingsModal.appendChild(this.sheetMusicInput);
 
-                this.closeModalButton = document.createElement('button');
-                this.closeModalButton.id = 'close-modal-button';
-                this.closeModalButton.classList.add('bg-red-500', 'hover:bg-red-600', 'text-white', 'py-2', 'px-4', 'rounded');
-                this.closeModalButton.innerHTML = '<i class="fa-solid fa-xmark"></i> 关闭';
-                this.settingsModal.appendChild(this.closeModalButton);
-
                 document.body.appendChild(this.canvas);
                 document.body.appendChild(this.toolbar);
                 document.body.appendChild(this.i11Toolbar);
@@ -121,11 +127,22 @@
             applyStyles() {
                 const style = document.createElement('style');
                 style.textContent = `
+                    /* 新增样式 */
+                    .blue-note {
+                        color: #2563eb;
+                    }
+                    .green-text {
+                        color: #16a34a;
+                    }
+                    .brown-lyrics {
+                        color: #784d3c;
+                    }
                     #canvas {
                         width: 100%;
                         height: calc(100vh - 64px);
                         border: 1px solid #ccc;
                         font-family: monospace;
+                        overflow-y: auto; /* 垂直方向出现滚动条 */
                     }
                     #settings-modal {
                         position: fixed;
@@ -183,6 +200,16 @@
                    .error {
                         color: red;
                     }
+                   .note-with-chord {
+                        display: inline-block;
+                        text-align: center;
+                        vertical-align: middle;
+                        margin: 0 2px;
+                    }
+                   .chord {
+                        display: block;
+                        font-size: 0.8em;
+                    }
                 `;
                 document.head.appendChild(style);
             }
@@ -203,8 +230,9 @@
                     const exampleCode = `V:1.0
                     3/"C" 3// 3// 3. 2/ 3/ 5/
                     // `;
-                    this.sheetMusicInput.value = exampleCode;
-                    const parsedSheetMusic = this.parseSheetMusic(exampleCode);
+                    const processedCode = this.processSpaces(exampleCode);
+                    this.sheetMusicInput.value = processedCode;
+                    const parsedSheetMusic = this.parseSheetMusic(processedCode);
                     this.canvas.innerHTML = `<pre>${parsedSheetMusic}</pre>`;
                 });
 
@@ -214,18 +242,20 @@
                     3/"C" 3// 3// 3. 2/ 3/ 5/
                     // 
                     // `;
-                    this.sheetMusicInput.value = newSheetCode;
-                    const parsedSheetMusic = this.parseSheetMusic(newSheetCode);
+                    const processedCode = this.processSpaces(newSheetCode);
+                    this.sheetMusicInput.value = processedCode;
+                    const parsedSheetMusic = this.parseSheetMusic(processedCode);
                     this.canvas.innerHTML = `<pre>${parsedSheetMusic}</pre>`;
                 });
 
                 this.sheetMusicInput.addEventListener('input', () => {
                     const input = this.sheetMusicInput.value;
+                    const processedInput = this.processSpaces(input);
                     let parsedSheetMusic;
-                    if (input.includes('V:')) {
-                        parsedSheetMusic = this.parseSheetMusic(input);
+                    if (processedInput.includes('V:')) {
+                        parsedSheetMusic = this.parseSheetMusic(processedInput);
                     } else {
-                        parsedSheetMusic = `<span class="error">${input}</span>`;
+                        parsedSheetMusic = `<span class="error">${processedInput}</span>`;
                     }
                     this.canvas.innerHTML = `<pre>${parsedSheetMusic}</pre>`;
                 });
@@ -244,6 +274,23 @@
                 });
 
                 document.addEventListener('mouseup', () => {
+                    isDragging = false;
+                });
+
+                this.settingsModalHeader.addEventListener('touchstart', (e) => {
+                    isDragging = true;
+                    offsetX = e.touches[0].clientX - this.settingsModal.offsetLeft;
+                    offsetY = e.touches[0].clientY - this.settingsModal.offsetTop;
+                });
+
+                document.addEventListener('touchmove', (e) => {
+                    if (isDragging) {
+                        this.settingsModal.style.left = `${e.touches[0].clientX - offsetX}px`;
+                        this.settingsModal.style.top = `${e.touches[0].clientY - offsetY}px`;
+                    }
+                });
+
+                document.addEventListener('touchend', () => {
                     isDragging = false;
                 });
 
@@ -292,18 +339,19 @@
                     const issueData = await this.apiRequest('GET', 'issues/11');
                     const issueBody = issueData.body;
                     if (issueBody) {
+                        const processedIssueBody = this.processSpaces(issueBody);
                         const issueButton = document.createElement('button');
                         issueButton.classList.add('bg-orange-500', 'hover:bg-orange-600', 'text-white', 'py-2', 'px-4', 'rounded', 'mr-2');
                         issueButton.textContent = '议题 11 内容';
                         issueButton.addEventListener('click', () => {
                             this.resetHighlight();
                             issueButton.classList.add('highlighted');
-                            this.sheetMusicInput.value = issueBody;
+                            this.sheetMusicInput.value = processedIssueBody;
                             let parsedSheetMusic;
-                            if (issueBody.includes('V:')) {
-                                parsedSheetMusic = this.parseSheetMusic(issueBody);
+                            if (processedIssueBody.includes('V:')) {
+                                parsedSheetMusic = this.parseSheetMusic(processedIssueBody);
                             } else {
-                                parsedSheetMusic = `<span class="error">${issueBody}</span>`;
+                                parsedSheetMusic = `<span class="error">${processedIssueBody}</span>`;
                             }
                             this.canvas.innerHTML = `<pre>${parsedSheetMusic}</pre>`;
                         });
@@ -316,18 +364,19 @@
                         n++;
                         const commentBody = comment.body;
                         if (commentBody) {
+                            const processedCommentBody = this.processSpaces(commentBody);
                             const commentButton = document.createElement('button');
                             commentButton.classList.add('bg-pink-500', 'hover:bg-pink-600', 'text-white', 'py-2', 'px-4', 'rounded', 'mr-2');
                             commentButton.textContent = `C${n}`;
                             commentButton.addEventListener('click', () => {
                                 this.resetHighlight();
                                 commentButton.classList.add('highlighted');
-                                this.sheetMusicInput.value = commentBody;
+                                this.sheetMusicInput.value = processedCommentBody;
                                 let parsedSheetMusic;
-                                if (commentBody.includes('V:')) {
-                                    parsedSheetMusic = this.parseSheetMusic(commentBody);
+                                if (processedCommentBody.includes('V:')) {
+                                    parsedSheetMusic = this.parseSheetMusic(processedCommentBody);
                                 } else {
-                                    parsedSheetMusic = `<span class="error">${commentBody}</span>`;
+                                    parsedSheetMusic = `<span class="error">${processedCommentBody}</span>`;
                                 }
                                 this.canvas.innerHTML = `<pre>${parsedSheetMusic}</pre>`;
                             });
@@ -338,12 +387,29 @@
                     console.error('加载 issue 或评论时出错:', error);
                 }
             }
-
             parseSheetMusic(input) {
+                const lines = input.split('\n');
+                let output = '';
+                
+                lines.forEach(line => {
+                    if (line.startsWith('Q:')) {
+                        const content = line.substring(2).trim();
+                        output += `<span class="blue-note">${this.parseMusicLine(content)}</span>`;
+                    } else if (line.startsWith('C:')) {
+                        const lyrics = line.substring(2).trim();
+                        output += `<span class="brown-lyrics">${lyrics}</span>`;
+                    } else {
+                        output += `<span class="green-text">${line}</span>`;
+                    }
+                    output += '<br>';
+                });
+                return output;
+            }
+            parseMusicLine(line) {
                 let output = '';
                 let currentNote = '';
-                for (let i = 0; i < input.length; i++) {
-                    const char = input[i];
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
                     if (/[0-9]/.test(char)) {
                         if (currentNote) {
                             output += this.formatNote(currentNote);
@@ -352,6 +418,13 @@
                         currentNote += char;
                     } else if (char === '/') {
                         currentNote += char;
+                    } else if (char === '"') {
+                        if (currentNote) {
+                            const chord = this.extractChord(line, i);
+                            output += this.formatNoteWithChord(currentNote, chord);
+                            currentNote = '';
+                            i += chord.length + 1;
+                        }
                     } else {
                         if (currentNote) {
                             output += this.formatNote(currentNote);
@@ -378,6 +451,22 @@
                     }
                 }
                 return note;
+            }
+
+            formatNoteWithChord(note, chord) {
+                const formattedNote = this.formatNote(note);
+                return `<span class="note-with-chord"><span class="chord">${chord}</span>${formattedNote}</span>`;
+            }
+
+            extractChord(input, startIndex) {
+                let chord = '';
+                for (let i = startIndex + 1; i < input.length; i++) {
+                    if (input[i] === '"') {
+                        break;
+                    }
+                    chord += input[i];
+                }
+                return chord;
             }
 
             generateRandomSheet() {
@@ -415,9 +504,11 @@
 
 </html>
     
+    
 <!--
 升级 
- 3/"C" ，像这样的例子把字符串显示在音符的正上方。
+     以“C:” “Q:”自动配对，一个歌词自动对上一个音符 
  
+this.version++;
 return all new code
 -->
