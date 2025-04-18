@@ -90,7 +90,8 @@
                         <p><strong>安装时间:</strong> ${this.installTime}</p>
                         <p><strong>描述:</strong> ${this.description}</p>
                         <div class="flex gap-2 mt-4">
-                            <button id = "id_4_btn_show_code" onclick="this.parentElement.querySelector('pre').classList.toggle('hidden')"
+                            <button id="id_4_btn_show_code" 
+                                    onclick="app.showCodeInTextarea(${JSON.stringify(this.code)})"
                                     class="flex-1 p-2 bg-blue-500 text-white rounded hover:bg-blue-600">
                                 查看代码
                             </button>
@@ -99,13 +100,11 @@
                                 卸载
                             </button>
                         </div>
-                        <pre class="bg-gray-100 p-2 rounded text-xs hidden">${this.code}</pre>
                     </div>
                 `;
                 document.body.appendChild(detailWindow);
             }
 
-            // 新增静态方法用于反序列化
             static fromJSON(json) {
                 const plugin = new C4Plugin();
                 Object.assign(plugin, json);
@@ -115,10 +114,10 @@
 
         class C4MobileDevApp {
             constructor() {
-                this.version = "0.33";  // 更新版本号
+                this.version = "0.34";  // 更新版本号
                 this.currentRepo = 's177';
                 this.lastActiveButton = null;
-                this.plis = this.#loadPlugins(); // 修改加载方式
+                this.plis = this.#loadPlugins();
                 this.#applyStyles();
                 this.#createMainUI();
                 this.#loadComments();
@@ -129,12 +128,18 @@
                 this.#refreshPluginList();
                 return this;
             }
+            showCodeInTextarea(code) {
+                const ta = document.getElementById('id_4_ta_in_sandbox');
+                ta.value = code;
+                this.#updateStatusBarLineCount();
+                ta.focus();
+            }
+
             _uninstallPlugin(pluginName) {
                 if (confirm(`确定要卸载 ${pluginName} 吗？`)) {
                     this.plis = this.plis.filter(p => p.name !== pluginName);
                     this.#savePlugins();
                     this.#refreshPluginList();
-                    // 关闭所有相关详情窗口
                     document.querySelectorAll('.plugin-detail-window').forEach(wnd => wnd.remove());
                 }
             }
@@ -952,7 +957,7 @@ app.oWnd1.toggleUI();
     
 <!--
 升级 
- let id_4_btn_show_code show code in id_4_ta_in_sandbox
+ 优化代码
 this.version++;
 return all new code
 -->

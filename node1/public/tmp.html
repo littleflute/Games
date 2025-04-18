@@ -2,10 +2,12 @@
 <html lang="en">
 
 <head>
-    <!-- 其他头部内容保持不变 -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
     <title>手机编程系统 v0.34</title>
     <style>
-        /* 原有样式保持不变 */
         .uninstall-btn {
             transition: all 0.2s;
             padding: 2px 6px;
@@ -15,14 +17,64 @@
             background-color: #dc2626;
             color: white;
         }
+        .plugin-item {
+            transition: all 0.3s;
+            border-left: 4px solid transparent;
+        }
+        .plugin-item:hover {
+            border-left-color: #3B82F6;
+            background-color: #f8fafc;
+        }
+        #id_4_togglePluginsWnd.active {
+            background-color: #3B82F6;
+            color: white;
+        }
+        #id_4_togglePluginsWnd {
+            background-color: #0e3715;
+            color: rgb(144, 128, 128);
+        }
+        .draggable {
+            touch-action: none;
+            user-select: none;
+            cursor: move;
+        }
+        .active {
+            background-color: #3B82F6;
+            color: white;
+            border: 2px solid #1D4ED8;
+        }
+        .close-btn {
+            transition: all 0.2s;
+            padding: 2px 6px;
+            border-radius: 50%;
+        }
+        .close-btn:hover {
+            background-color: #dc2626;
+            color: white;
+        }
+        .plugin-detail-window {
+            transition: all 0.3s;
+            box-shadow: 0 0 15px rgba(0,0,0,0.2);
+        }
+        .plugin-detail-content {
+            max-height: 300px;
+            overflow-y: auto;
+        }
     </style>
 </head>
 
 <body class="bg-gray-100">
     <script>
         class C4Plugin {
-            // 原有构造函数保持不变
-            
+            constructor(name = "新插件", code = "", version = "1.0.0") {
+                this.name = name;
+                this.code = code;
+                this.version = version;
+                this.enabled = true;
+                this.description = "这是一个新安装的插件";
+                this.installTime = new Date().toLocaleString();
+            }
+
             showDetail() {
                 const detailWindow = document.createElement('div');
                 detailWindow.className = 'fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-80 bg-white rounded-lg shadow-xl p-4 plugin-detail-window';
@@ -38,7 +90,8 @@
                         <p><strong>安装时间:</strong> ${this.installTime}</p>
                         <p><strong>描述:</strong> ${this.description}</p>
                         <div class="flex gap-2 mt-4">
-                            <button onclick="this.parentElement.querySelector('pre').classList.toggle('hidden')"
+                            <button id="id_4_btn_show_code" 
+                                    onclick="app.showCodeInTextarea(${JSON.stringify(this.code)})"
                                     class="flex-1 p-2 bg-blue-500 text-white rounded hover:bg-blue-600">
                                 查看代码
                             </button>
@@ -47,68 +100,56 @@
                                 卸载
                             </button>
                         </div>
-                        <pre class="bg-gray-100 p-2 rounded text-xs hidden">${this.code}</pre>
                     </div>
                 `;
                 document.body.appendChild(detailWindow);
             }
 
-            // 其他方法保持不变
+            static fromJSON(json) {
+                const plugin = new C4Plugin();
+                Object.assign(plugin, json);
+                return plugin;
+            }
         }
 
         class C4MobileDevApp {
             constructor() {
-                this.version = "0.35";  // 更新版本号
-                // 其他初始化代码保持不变
+                this.version = "0.34";  // 更新版本号
+                this.currentRepo = 's177';
+                this.lastActiveButton = null;
+                this.plis = this.#loadPlugins();
+                this.#applyStyles();
+                this.#createMainUI();
+                this.#loadComments();
+                this.#updateStatusBarLineCount();
+                
+                this.pluginsWindow = this.#createPluginsWindow();
+                this.isPluginsWindowVisible = false;
+                this.#refreshPluginList();
+                return this;
             }
 
-            // 新增卸载方法
+            showCodeInTextarea(code) {
+                const ta = document.getElementById('id_4_ta_in_sandbox');
+                ta.value = code;
+                this.#updateStatusBarLineCount();
+                ta.focus();
+            }
+
             _uninstallPlugin(pluginName) {
                 if (confirm(`确定要卸载 ${pluginName} 吗？`)) {
                     this.plis = this.plis.filter(p => p.name !== pluginName);
                     this.#savePlugins();
                     this.#refreshPluginList();
-                    // 关闭所有相关详情窗口
                     document.querySelectorAll('.plugin-detail-window').forEach(wnd => wnd.remove());
                 }
             }
 
-            #refreshPluginList() {
-                const pluginList = document.getElementById('id_4_installed_plugins_list');
-                pluginList.innerHTML = '';
-
-                if (this.plis.length === 0) {
-                    pluginList.innerHTML = '<div class="p-2 bg-gray-100 mb-2 rounded">还没安装插件。</div>';
-                    return;
-                }
-
-                this.plis.forEach(plugin => {
-                    const pluginItem = document.createElement('div');
-                    pluginItem.className = 'plugin-item p-2 bg-gray-100 mb-2 rounded cursor-pointer flex justify-between items-center';
-                    pluginItem.innerHTML = `
-                        <div>
-                            <span class="font-medium">${plugin.name}</span>
-                            <span class="text-xs text-gray-500 ml-2">v${plugin.version}</span>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-xs ${plugin.enabled ? 'text-green-500' : 'text-red-500'}">
-                                ${plugin.enabled ? '已启用' : '已禁用'}
-                            </span>
-                            <button class="uninstall-btn px-2 py-1 hover:bg-red-100 rounded"
-                                    onclick="app._uninstallPlugin('${plugin.name}')">
-                                ×
-                            </button>
-                        </div>
-                    `;
-                    pluginItem.addEventListener('click', () => plugin.showDetail());
-                    pluginList.appendChild(pluginItem);
-                });
-            }
-
-            // 其他方法保持不变
+            // ... 保持其他方法不变 ...
+            
         }
 
-        // 其余代码保持不变
+        const app = new C4MobileDevApp();
     </script>
 </body>
 </html>
