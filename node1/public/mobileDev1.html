@@ -15,11 +15,16 @@
             constructor() {
                 this.element = document.createElement('div');
                 this.element.id = 'id_4_debug_wnd_wnd';
-                this.element.classList.add('max-w-2xl', 'mx-auto', 'bg-white', 'rounded-lg', 'shadow', 'p-4', 'absolute');
+                this.element.classList.add('max-w-2xl', 'bg-white', 'rounded-lg', 'shadow', 'p-4', 'fixed');
+                this.element.style.zIndex = '100';
+                this.element.style.left = '50%';
+                this.element.style.top = '50%';
+                this.element.style.transform = 'translate(-50%, -50%)';
                 this.#createHeader();
                 this.#createBody();
                 this.makeDraggable();
                 document.body.appendChild(this.element);
+                this.element.style.display = 'none';
             }
             #createBody() {
                 const body = document.createElement('div');
@@ -29,10 +34,10 @@
             }
             #createHeader() {
                 const header = document.createElement('div');
-                header.classList.add('bg-gray-200', 'p-2', 'cursor-move');
+                header.classList.add('bg-gray-200', 'p-2', 'cursor-move', 'select-none');
                 header.textContent = '可拖动头部';
                 this.element.prepend(header);
-            } 
+            }
 
             makeDraggable() {
                 const header = this.element.firstChild;
@@ -41,31 +46,239 @@
 
                 header.addEventListener('mousedown', (e) => {
                     isDragging = true;
-                    offsetX = e.clientX - this.element.offsetLeft;
-                    offsetY = e.clientY - this.element.offsetTop;
+                    const rect = this.element.getBoundingClientRect();
+                    offsetX = e.clientX - rect.left;
+                    offsetY = e.clientY - rect.top;
+                    this.element.style.cursor = 'grabbing';
                 });
 
                 document.addEventListener('mousemove', (e) => {
                     if (isDragging) {
-                        this.element.style.left = (e.clientX - offsetX) + 'px';
-                        this.element.style.top = (e.clientY - offsetY) + 'px';
+                        const x = e.clientX - offsetX;
+                        const y = e.clientY - offsetY;
+                        this.element.style.left = x + 'px';
+                        this.element.style.top = y + 'px';
+                        this.element.style.transform = 'none';
                     }
                 });
 
                 document.addEventListener('mouseup', () => {
                     isDragging = false;
+                    this.element.style.cursor = 'default';
                 });
+            }
+        }
+
+        class C4NavigationMenu {
+            constructor() {
+                this.element = document.createElement('nav');
+                this.element.classList.add('fixed', 'top-0', 'left-0', 'right-0', 'bg-white', 'shadow', 'flex', 'justify-center', 'p-2', 'z-50');
+                this.#createMenuItems();
+                document.body.prepend(this.element);
+            }
+
+            #createMenuItems() {
+                const items = [
+                    { text: '主页', href: '#' },
+                    { text: '关于', href: '#' },
+                    { text: '联系我们', href: '#' }
+                ];
+
+                items.forEach(item => {
+                    const menuItem = document.createElement('a');
+                    menuItem.classList.add('mr-4', 'text-blue-500', 'hover:text-blue-700', 'font-bold');
+                    menuItem.textContent = item.text;
+                    menuItem.href = item.href;
+                    this.element.appendChild(menuItem);
+                });
+            }
+        }
+
+        class C4Blackboard {
+            constructor() {
+                this.canvas = document.createElement('canvas');
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+                this.canvas.style.position = 'fixed';
+                this.canvas.style.top = '0';
+                this.canvas.style.left = '0';
+                this.ctx = this.canvas.getContext('2d');
+                this.tools = [];
+                this.selectedTool = null;
+                this.toolbar = document.createElement('div');
+                this.toolbar.classList.add('fixed', 'top-12', 'left-0', 'right-0', 'bg-white', 'shadow', 'flex', 'p-2');
+                this.drawnObjects = [];
+                this.draggingObject = null;
+                this.dragOffsetX = 0;
+                this.dragOffsetY = 0;
+                document.body.appendChild(this.canvas);
+                document.body.appendChild(this.toolbar);
+
+                this.canvas.addEventListener('mousedown', this.onMouseDown.bind(this));
+                this.canvas.addEventListener('mousemove', this.onMouseMove.bind(this));
+                this.canvas.addEventListener('mouseup', this.onMouseUp.bind(this));
+            }
+
+            registerTool(tool) {
+                this.tools.push(tool);
+                const button = document.createElement('button');
+                button.textContent = tool.name;
+                button.classList.add('bg-blue-500', 'hover:bg-blue-700', 'text-white', 'font-bold', 'py-2', 'px-4', 'rounded', 'mr-2');
+                button.addEventListener('click', () => this.selectedTool = tool);
+                this.toolbar.appendChild(button);
+            }
+
+            onMouseDown(e) {
+                const x = e.offsetX;
+                const y = e.offsetY;
+                this.draggingObject = this.getObjectAtPoint(x, y);
+                if (this.draggingObject) {
+                    this.dragOffsetX = x - this.draggingObject.startX;
+                    this.dragOffsetY = y - this.draggingObject.startY;
+                } else {
+                    this.selectedTool?.startDrawing(this.ctx, x, y);
+                }
+            }
+
+            onMouseMove(e) {
+                const x = e.offsetX;
+                const y = e.offsetY;
+                if (this.draggingObject) {
+                    this.draggingObject.startX = x - this.dragOffsetX;
+                    this.draggingObject.startY = y - this.dragOffsetY;
+                    this.redrawObjects();
+                } else {
+                    this.redrawObjects();
+                    this.selectedTool?.continueDrawing(this.ctx, x, y);
+                }
+            }
+
+            onMouseUp(e) {
+                const x = e.offsetX;
+                const y = e.offsetY;
+                if (this.draggingObject) {
+                    this.draggingObject = null;
+                } else {
+                    this.selectedTool?.endDrawing(this.ctx, x, y);
+                    if (this.selectedTool) {
+                        const newObject = {
+                            type: this.selectedTool.name,
+                            startX: this.selectedTool.startX,
+                            startY: this.selectedTool.startY,
+                            endX: x,
+                            endY: y
+                        };
+                        this.drawnObjects.push(newObject);
+                    }
+                }
+            }
+
+            getObjectAtPoint(x, y) {
+                for (let i = this.drawnObjects.length - 1; i >= 0; i--) {
+                    const obj = this.drawnObjects[i];
+                    if (obj.type === '直线') {
+                        // 简单判断是否在直线附近
+                        const dx = x - obj.startX;
+                        const dy = y - obj.startY;
+                        const distance = Math.abs(dx * (obj.endY - obj.startY) - dy * (obj.endX - obj.startX)) /
+                            Math.sqrt((obj.endY - obj.startY) ** 2 + (obj.endX - obj.startX) ** 2);
+                        if (distance < 5) {
+                            return obj;
+                        }
+                    } else if (obj.type === '圆形') {
+                        const radius = Math.sqrt((obj.endX - obj.startX) ** 2 + (obj.endY - obj.startY) ** 2);
+                        const dist = Math.sqrt((x - obj.startX) ** 2 + (y - obj.startY) ** 2);
+                        if (dist <= radius) {
+                            return obj;
+                        }
+                    }
+                }
+                return null;
+            }
+
+            redrawObjects() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.drawnObjects.forEach(obj => {
+                    if (obj === this.draggingObject) {
+                        this.ctx.strokeStyle = 'red';
+                        this.ctx.lineWidth = 3;
+                    } else {
+                        this.ctx.strokeStyle = 'black';
+                        this.ctx.lineWidth = 1;
+                    }
+                    if (obj.type === '直线') {
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(obj.startX, obj.startY);
+                        this.ctx.lineTo(obj.endX, obj.endY);
+                        this.ctx.stroke();
+                    } else if (obj.type === '圆形') {
+                        const radius = Math.sqrt((obj.endX - obj.startX) ** 2 + (obj.endY - obj.startY) ** 2);
+                        this.ctx.beginPath();
+                        this.ctx.arc(obj.startX, obj.startY, radius, 0, Math.PI * 2);
+                        this.ctx.stroke();
+                    }
+                });
+            }
+        }
+
+        class DrawingTool {
+            constructor(name) {
+                this.name = name;
+                this.isDrawing = false;
+            }
+
+            startDrawing(ctx, x, y) {
+                this.isDrawing = true;
+                this.startX = x;
+                this.startY = y;
+            }
+
+            continueDrawing() {}
+            endDrawing() { this.isDrawing = false; }
+        }
+
+        class LineTool extends DrawingTool {
+            constructor() {
+                super('直线');
+            }
+
+            continueDrawing(ctx, x, y) {
+                if (this.isDrawing) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.startX, this.startY);
+                    ctx.lineTo(x, y);
+                    ctx.stroke();
+                }
+            }
+        }
+
+        class CircleTool extends DrawingTool {
+            constructor() {
+                super('圆形');
+            }
+
+            continueDrawing(ctx, x, y) {
+                if (this.isDrawing) {
+                    const radius = Math.sqrt((x - this.startX) ** 2 + (y - this.startY) ** 2);
+                    ctx.beginPath();
+                    ctx.arc(this.startX, this.startY, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
             }
         }
 
         class C4MobileDevApp {
             constructor() {
-                this.version = "0.11";
+                this.version = "0.13";
                 this.currentRepo = 's177';
-                this.uiIssue = 9; 
+                this.uiIssue = 9;
                 this.issueScript = "";
                 this.issueBodyVisible = false;
-                this.debugWindow = new C4IssueManager();
+                this.oIssueMngWnd = new C4IssueManager();
+                this.oNavigationMenu = new C4NavigationMenu();
+                this.blackboard = new C4Blackboard();
+                this.blackboard.registerTool(new LineTool());
+                this.blackboard.registerTool(new CircleTool());
                 this.#createUI();
                 this.#loadIssue();
                 return this;
@@ -75,22 +288,17 @@
                 const toolbar = document.createElement('div');
                 toolbar.classList.add('fixed', 'bottom-0', 'left-0', 'right-0', 'bg-white', 'shadow', 'flex', 'justify-center', 'p-2');
 
-                const btnToggleDebugWnd = document.createElement('button');
-                btnToggleDebugWnd.classList.add('bg-blue-500', 'hover:bg-blue-700', 'text-white', 'font-bold', 'py-2', 'px-4', 'rounded');
-                btnToggleDebugWnd.textContent = 'toggleDebugWnd';
-
-                btnToggleDebugWnd.addEventListener('click', () => {
-                    if (this.debugWindow.element.style.display === 'none') {
-                        this.debugWindow.element.style.display = 'block';
-                    } else {
-                        this.debugWindow.element.style.display = 'none';
-                    }
+                const btn4MngUI = document.createElement('button');
+                btn4MngUI.classList.add('bg-blue-500', 'hover:bg-blue-700', 'text-white', 'font-bold', 'py-2', 'px-4', 'rounded');
+                btn4MngUI.textContent = 'IssueMng';
+                btn4MngUI.addEventListener('click', () => {
+                    this.oIssueMngWnd.element.style.display = 
+                        this.oIssueMngWnd.element.style.display === 'none' ? 'block' : 'none';
                 });
 
-                toolbar.appendChild(btnToggleDebugWnd);
+                toolbar.appendChild(btn4MngUI);
                 document.body.appendChild(toolbar);
             }
-
             async #write2Issue(issueNumber, text) {
                 try {
                     const data = { body: text.toString() };
@@ -264,7 +472,7 @@
             }
 
             #showError(message) {
-                const container = this.debugWindow.element;
+                const container = this.oIssueMngWnd.element;
                 container.innerHTML = `
                     <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
                         ${message}
@@ -300,8 +508,10 @@
 </body>
 
 </html>
+    
+    
 <!--
 升级  
-add a button to delete comment
+直线移动逻辑不对，只有一个端点动，修复
 return all new code
 --> 
