@@ -1,127 +1,231 @@
- 
-        if (typeof app === 'undefined') {
-            app = {};
+if (typeof app === 'undefined') {
+    app = {};
+}
+
+class CBeat {
+    constructor() {
+        this.tempo = 120;       // 节拍速度
+        this.timeSignature = 4; // 拍号分子
+        this.beatUnit = 4;      // 拍号分母（音符类型）
+        this.isPlaying = false;
+        this.currentBeat = 0;
+        this.audioContext = null;
+        this.timer = null;
+    }
+
+    draw(ctx, width, height) {
+        ctx.clearRect(0, 0, width, height);
+        ctx.font = '20px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#000';
+
+        // 绘制节拍器参数
+        ctx.fillText(`速度：${this.tempo} BPM`, width/2, 30);
+        ctx.fillText(`拍号：${this.timeSignature}/${this.beatUnit}`, width/2, 60);
+
+        // 绘制节拍指示器
+        const radius = Math.min(width, height) * 0.3;
+        const centerX = width/2;
+        const centerY = height/2 + 30;
+        
+        // 绘制外圆
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = '#666';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // 绘制节拍标记
+        for (let i = 0; i < this.timeSignature; i++) {
+            const angle = (i * (Math.PI * 2) / this.timeSignature) - Math.PI/2;
+            const x = centerX + Math.cos(angle) * (radius - 10);
+            const y = centerY + Math.sin(angle) * (radius - 10);
+            
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI * 2);
+            ctx.fillStyle = i === this.currentBeat ? '#f00' : '#666';
+            ctx.fill();
+        }
+    }
+
+    play() {
+        if (!this.audioContext) {
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
         }
 
-        app.C4Note = function (id) {
-            let d = document.getElementById(id);
-            if (!d) {
-                class Note {
-                    constructor() {
-                        this.currentNote = '3';
-                        this.noteLength = '4';
-                        this.fontSize = '24px';
-                        this.fontFamily = 'Arial';
-                        this.octave = 0;
-                    }
-                }
+        const oscillator = this.audioContext.createOscillator();
+        const gainNode = this.audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(this.audioContext.destination);
 
-                d = document.createElement('div');
-                d.id = id;
-                d.note = new Note();
+        // 主拍音
+        oscillator.frequency.setValueAtTime(this.currentBeat === 0 ? 880 : 440, 
+                                         this.audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.5, this.audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, this.audioContext.currentTime + 0.1);
+        
+        oscillator.start();
+        oscillator.stop(this.audioContext.currentTime + 0.1);
+    }
 
-                // 修改容器为flex布局
-                d.style.cssText = `
-                    position: absolute;
-                    width: 300px;
-                    height: 400px;  /* 增加总高度以更好容纳内容 */
-                    background: white;
-                    border: 1px solid #ccc;
-                    border-radius: 8px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    z-index: 1000;
-                    display: none;
-                    flex-direction: column;
-                `;
+    start() {
+        if (!this.isPlaying) {
+            this.isPlaying = true;
+            this.schedule();
+        }
+    }
 
-                const titleBar = document.createElement('div');
-                titleBar.style.cssText = `
-                    padding: 8px;
-                    background: #f0f0f0;
-                    cursor: move;
-                    border-bottom: 1px solid #ccc;
-                    flex-shrink: 0;  /* 固定标题栏高度 */
-                `;
+    stop() {
+        this.isPlaying = false;
+        clearTimeout(this.timer);
+    }
 
-                // 关闭按钮保持不变...
+    schedule() {
+        if (!this.isPlaying) return;
 
-                const editorContainer = document.createElement('div');
-                editorContainer.style.cssText = `
-                    padding: 10px;
-                    flex: 1;  /* 弹性填充剩余空间 */
-                    overflow-y: auto;
-                    border-bottom: 1px solid #ccc;
-                `;
+        const interval = 60000 / this.tempo;
+        this.play();
+        this.currentBeat = (this.currentBeat + 1) % this.timeSignature;
+        
+        this.timer = setTimeout(() => {
+            this.schedule();
+        }, interval);
+    }
+}
 
-                const canvasContainer = document.createElement('div');
-                canvasContainer.style.cssText = `
-                    padding: 10px;
-                    flex: 1;  /* 弹性填充剩余空间 */
-                    display: flex;
-                    justify-content: center;
-                    align-items: center;
-                    border-bottom: 1px solid #ccc;
-                    min-height: 100px;  /* 最小高度保障 */
-                `;
+app.C4Beat = function (id) {
+    let d = document.getElementById(id);
+    if (!d) {
+        d = document.createElement('div');
+        d.id = id;
+        d.beat = new CBeat();
 
-                const canvas = document.createElement('canvas');
-                canvas.style.cssText = `
-                    width: 100%;
-                    height: 100%;
-                    border: 1px solid #eee;
-                    cursor: crosshair;
-                    background-color: #fafafa;
-                `;
+        // UI结构
+        d.classList.add('absolute', 'w-[300px]', 'h-[400px]', 'bg-white', 'border', 
+                       'border-gray-300', 'rounded-lg', 'shadow-md', 'z-1000', 
+                       'hidden', 'flex', 'flex-col');
 
-                // 修改绘制逻辑
-                function updateCanvas() {
-                    const ctx = canvas.getContext('2d');
-                    const container = canvas.parentElement;
-                    const width = container.clientWidth - 20;  // 计算有效宽度
-                    const height = container.clientHeight - 20;  // 计算有效高度
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    
-                    // 后续绘制逻辑保持不变...
-                }
+        // 标题栏（同原代码结构）
+        const titleBar = document.createElement('div');
+        titleBar.classList.add('p-2', 'bg-gray-100', 'cursor-move', 
+                             'border-b', 'border-gray-300', 'flex-shrink-0');
+        titleBar.textContent = "节拍器v0.1";
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '×';
+        closeBtn.classList.add('float-right', '-mt-4', '-mr-2', 'bg-transparent', 
+                             'border-none', 'text-lg', 'cursor-pointer', 'text-gray-600');
+        closeBtn.onclick = () => d.classList.add('hidden');
+        titleBar.appendChild(closeBtn);
+        d.appendChild(titleBar);
 
-                // 其他逻辑保持不变...
+        // 控制面板
+        const controls = document.createElement('div');
+        controls.classList.add('p-2', 'flex', 'flex-col', 'gap-2');
 
-                // 窗口拖动时添加边界检查
-                function checkBoundary() {
-                    const rect = d.getBoundingClientRect();
-                    if (rect.left < 0) d.style.left = '0px';
-                    if (rect.top < 0) d.style.top = '0px';
-                    if (rect.right > window.innerWidth) 
-                        d.style.left = (window.innerWidth - rect.width) + 'px';
-                    if (rect.bottom > window.innerHeight) 
-                        d.style.top = (window.innerHeight - rect.height) + 'px';
-                }
+        // 速度控制
+        const tempoControl = document.createElement('div');
+        tempoControl.classList.add('flex', 'items-center', 'gap-2');
+        tempoControl.innerHTML = `
+            <span class="text-sm">速度：</span>
+            <input type="number" value="120" min="40" max="240" 
+                   class="w-20 px-2 py-1 border rounded">
+            <button class="px-2 py-1 bg-blue-100 rounded">-</button>
+            <button class="px-2 py-1 bg-blue-100 rounded">+</button>
+        `;
+        const tempoInput = tempoControl.querySelector('input');
+        const tempoDecBtn = tempoControl.querySelector('button:nth-child(2)');
+        const tempoIncBtn = tempoControl.querySelector('button:nth-child(3)');
+        
+        tempoInput.addEventListener('change', () => {
+            d.beat.tempo = Math.min(240, Math.max(40, tempoInput.valueAsNumber));
+            tempoInput.value = d.beat.tempo;
+        });
+        tempoDecBtn.onclick = () => tempoInput.stepDown() && tempoInput.dispatchEvent(new Event('change'));
+        tempoIncBtn.onclick = () => tempoInput.stepUp() && tempoInput.dispatchEvent(new Event('change'));
 
-                // 在拖动事件中添加边界检查
-                document.onmousemove = function (e) {
-                    if (isDragging) {
-                        d.style.left = Math.max(0, Math.min(e.clientX - offsetX, window.innerWidth - d.offsetWidth)) + 'px';
-                        d.style.top = Math.max(0, Math.min(e.clientY - offsetY, window.innerHeight - d.offsetHeight)) + 'px';
-                    }
-                };
+        // 拍号控制
+        const timeSigControl = document.createElement('div');
+        timeSigControl.classList.add('flex', 'items-center', 'gap-2');
+        timeSigControl.innerHTML = `
+            <span class="text-sm">拍号：</span>
+            <select class="px-2 py-1 border rounded">
+                <option>2/4</option>
+                <option selected>3/4</option>
+                <option>4/4</option>
+                <option>6/8</option>
+            </select>
+        `;
+        const timeSigSelect = timeSigControl.querySelector('select');
+        timeSigSelect.addEventListener('change', () => {
+            const [ts, bu] = timeSigSelect.value.split('/');
+            d.beat.timeSignature = parseInt(ts);
+            d.beat.beatUnit = parseInt(bu);
+            updateCanvas();
+        });
 
-                document.ontouchmove = function (e) {
-                    if (isDragging) {
-                        const touch = e.touches[0];
-                        d.style.left = Math.max(0, Math.min(touch.clientX - offsetX, window.innerWidth - d.offsetWidth)) + 'px';
-                        d.style.top = Math.max(0, Math.min(touch.clientY - offsetY, window.innerHeight - d.offsetHeight)) + 'px';
-                        e.preventDefault();
-                    }
-                };
-            }
+        // 播放控制
+        const playControl = document.createElement('div');
+        playControl.classList.add('flex', 'gap-2', 'justify-center');
+        const startBtn = document.createElement('button');
+        startBtn.textContent = '▶';
+        startBtn.classList.add('px-4', 'py-2', 'bg-green-500', 'text-white', 'rounded');
+        const stopBtn = document.createElement('button');
+        stopBtn.textContent = '⏹';
+        stopBtn.classList.add('px-4', 'py-2', 'bg-red-500', 'text-white', 'rounded');
+        
+        startBtn.onclick = () => d.beat.start();
+        stopBtn.onclick = () => d.beat.stop();
 
-            // 其他原有逻辑保持不变...
+        playControl.append(startBtn, stopBtn);
+        controls.append(tempoControl, timeSigControl, playControl);
+        d.appendChild(controls);
+
+        // 画布区域
+        const canvasContainer = document.createElement('div');
+        canvasContainer.classList.add('flex-grow', 'p-2');
+        
+        const canvas = document.createElement('canvas');
+        canvasContainer.appendChild(canvas);
+        d.appendChild(canvasContainer);
+
+        document.body.appendChild(d);
+
+        // 更新画布
+        function updateCanvas() {
+            const ctx = canvas.getContext('2d');
+            const rect = canvasContainer.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = rect.height;
+            d.beat.draw(ctx, canvas.width, canvas.height);
         }
 
-        app.C4Note('n1c11');
-    </script>
-</body>
+        window.addEventListener('resize', updateCanvas);
+        setInterval(updateCanvas, 100);
+    }
 
-</html>
+    // 拖拽逻辑（与原代码相同）
+    d.toggleUI = () => d.classList.toggle('hidden');
+    
+    let isDragging = false;
+    let offsetX, offsetY;
+    titleBar.onmousedown = e => {
+        isDragging = true;
+        offsetX = e.clientX - d.offsetLeft;
+        offsetY = e.clientY - d.offsetTop;
+    };
+    document.onmouseup = () => isDragging = false;
+    document.onmousemove = e => {
+        if (isDragging) {
+            d.style.left = `${e.clientX - offsetX}px`;
+            d.style.top = `${e.clientY - offsetY}px`;
+        }
+    };
+
+    d.style.left = '150px';
+    d.style.top = '150px';
+    d.toggleUI();
+}
+
+app.C4Beat('beatc9');
