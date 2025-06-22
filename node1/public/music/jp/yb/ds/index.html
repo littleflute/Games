@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>简谱编辑器 v1.16</title>
+  <title>简谱编辑器 v1.17</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     :root {
@@ -318,6 +318,16 @@
       background: rgba(108, 117, 125, 0.2);
     }
     
+    .barline-btn {
+      background: rgba(67, 97, 238, 0.15);
+      color: var(--primary);
+      border: 1px solid rgba(67, 97, 238, 0.25);
+    }
+    
+    .barline-btn:hover {
+      background: rgba(67, 97, 238, 0.25);
+    }
+    
     .examples {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -424,6 +434,15 @@
       border-color: var(--accent);
       box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
     }
+    
+    .feature-badge {
+      background: var(--primary);
+      color: white;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      margin-left: 10px;
+    }
   </style>
 </head>
 <body>
@@ -434,8 +453,8 @@
           <i class="fas fa-music"></i>
         </div>
         <div class="logo-text">
-          <h1>简谱编辑器</h1>
-          <div class="version">v1.16 (2024-03-15)</div>
+          <h1>简谱编辑器 <span class="feature-badge">v1.17</span></h1>
+          <div class="version">新增小节线功能 (2024-05-20)</div>
         </div>
       </div>
       <div class="header-controls">
@@ -486,6 +505,7 @@
           <button class="tool-btn octave-btn active" onclick="toggleOctave('normal')"><i class="fas fa-circle-dot"></i> 正常</button>
           <button class="tool-btn octave-btn" onclick="toggleOctave('high')"><i class="fas fa-arrow-up"></i> 高八度</button>
           <button class="tool-btn octave-btn" onclick="toggleOctave('low')"><i class="fas fa-arrow-down"></i> 低八度</button>
+          <button class="tool-btn barline-btn" onclick="insertBarline()"><i class="fas fa-grip-lines-vertical"></i> 小节线</button>
           <button class="tool-btn control-btn" onclick="deleteNote()"><i class="fas fa-backspace"></i> 删除</button>
         </div>
       </div>
@@ -519,6 +539,10 @@
             <div class="shortcut-desc">快速输入音符 (0-7)</div>
           </div>
           <div class="shortcut">
+            <div class="shortcut-key">B</div>
+            <div class="shortcut-desc">插入小节线</div>
+          </div>
+          <div class="shortcut">
             <div class="shortcut-key">Del</div>
             <div class="shortcut-desc">删除音符</div>
           </div>
@@ -546,27 +570,27 @@
       <div class="examples">
         <div class="example-card" onclick="loadExample('happy_birthday')">
           <div class="example-title"><i class="fas fa-birthday-cake"></i> 生日快乐歌</div>
-          <div class="example-content">5.5 6 5 1^ 7 - 5.5 6 5 2^ 1^ -</div>
-          <div class="example-desc">经典生日歌曲简谱</div>
+          <div class="example-content">5.5 6 5 1^ 7 - | 5.5 6 5 2^ 1^ - | 5.5 5^ 3^ 1^ 7 6 | 4^.4^ 3^ 1^ 2^ 1^ -</div>
+          <div class="example-desc">经典生日歌曲简谱（带小节线）</div>
         </div>
         
         <div class="example-card" onclick="loadExample('little_star')">
           <div class="example-title"><i class="fas fa-star"></i> 小星星</div>
-          <div class="example-content">1 1 5 5 6 6 5 - 4 4 3 3 2 2 1 -</div>
-          <div class="example-desc">儿童歌曲经典简谱</div>
+          <div class="example-content">1 1 5 5 6 6 5 - | 4 4 3 3 2 2 1 - | 5 5 4 4 3 3 2 - | 5 5 4 4 3 3 2 -</div>
+          <div class="example-desc">儿童歌曲经典简谱（带小节线）</div>
         </div>
         
         <div class="example-card" onclick="loadExample('ode_to_joy')">
           <div class="example-title"><i class="fas fa-music"></i> 欢乐颂</div>
-          <div class="example-content">3 3 4 5 5 4 3 2 1 1 2 3 3 2 2 -</div>
-          <div class="example-desc">贝多芬第九交响曲主题</div>
+          <div class="example-content">3 3 4 5 | 5 4 3 2 | 1 1 2 3 | 3. 2 2 - | 3 3 4 5 | 5 4 3 2 | 1 1 2 3 | 2. 1 1 -</div>
+          <div class="example-desc">贝多芬第九交响曲主题（带小节线）</div>
         </div>
       </div>
     </div>
     
     <div class="footer">
-      <p>简谱编辑器 v1.16 &copy; 2024 | 修复了低八度点在十六分音符下的位置问题</p>
-      <p>使用说明：输入数字音符，使用符号 "^" 表示高八度，"_" 表示低八度，"~"后加时值符号设置音符时值</p>
+      <p>简谱编辑器 v1.17 &copy; 2024 | 新增小节线功能，优化乐谱组织结构</p>
+      <p>使用说明：输入数字音符，使用符号 "^" 表示高八度，"_" 表示低八度，"~"后加时值符号设置音符时值，使用 "|" 添加小节线</p>
     </div>
   </div>
 
@@ -590,7 +614,9 @@
           wholeNoteWidth: 80,
           wholeNoteDashCount: 3,
           wholeNoteSpacing: 90,
-          dashOffsetY: 0
+          dashOffsetY: 0,
+          barlineWidth: 3,
+          barlineSpacing: 20
         };
         
         this.currentDuration = 'quarter';
@@ -626,6 +652,12 @@
             e.preventDefault();
           }
           
+          // B键插入小节线
+          if (e.key === 'b' || e.key === 'B') {
+            this.insertBarline();
+            e.preventDefault();
+          }
+          
           // 删除键删除音符
           if (e.key === 'Delete' || e.key === 'Backspace') {
             this.deleteNote();
@@ -658,6 +690,14 @@
         
         while (i < content.length) {
           const char = content[i];
+          
+          // 处理小节线
+          if (char === '|') {
+            notes.push({ type: 'barline' });
+            i++;
+            continue;
+          }
+          
           if (/[0-7]/.test(char)) {
             let note = { 
               value: char, 
@@ -771,6 +811,15 @@
         }
       }
       
+      drawBarline(x, y) {
+        this.ctx.lineWidth = this.config.barlineWidth;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x, y - 35);
+        this.ctx.lineTo(x, y + 35);
+        this.ctx.stroke();
+        this.ctx.lineWidth = 1.8; // 恢复默认线宽
+      }
+      
       drawWholeNoteDashes(x, y) {
         const dashCount = this.config.wholeNoteDashCount;
         const startX = x + 15;
@@ -815,16 +864,21 @@
         const notes = this.parseNotes();
         let x = 60;
         
-        // 绘制音符
+        // 绘制音符和小节线
         for (let i = 0; i < notes.length; i++) {
-          const note = notes[i];
+          const element = notes[i];
           
-          this.drawNote(x, note);
-          
-          if (note.duration === 'whole') {
-            x += this.config.wholeNoteSpacing;
+          if (element.type === 'barline') {
+            this.drawBarline(x, this.config.baselineY);
+            x += this.config.barlineSpacing;
           } else {
-            x += this.config.noteSpacing;
+            this.drawNote(x, element);
+            
+            if (element.duration === 'whole') {
+              x += this.config.wholeNoteSpacing;
+            } else {
+              x += this.config.noteSpacing;
+            }
           }
         }
       }
@@ -867,6 +921,21 @@
           range.collapse(false);
         } else {
           this.editor.textContent += textToInsert;
+        }
+        this.render();
+      }
+      
+      insertBarline() {
+        const barlineSymbol = '|';
+        const selection = window.getSelection();
+        
+        if (selection.rangeCount > 0) {
+          const range = selection.getRangeAt(0);
+          range.deleteContents();
+          range.insertNode(document.createTextNode(barlineSymbol));
+          range.collapse(false);
+        } else {
+          this.editor.textContent += barlineSymbol;
         }
         this.render();
       }
@@ -953,6 +1022,10 @@
       musicApp.insertNote(note);
     }
     
+    function insertBarline() {
+      musicApp.insertBarline();
+    }
+    
     function deleteNote() {
       musicApp.deleteNote();
     }
@@ -979,9 +1052,9 @@
     
     function loadExample(type) {
       const examples = {
-        happy_birthday: '5.5 6 5 1^ 7 - 5.5 6 5 2^ 1^ - 5.5 5^ 3^ 1^ 7 6 4^.4^ 3^ 1^ 2^ 1^ -',
-        little_star: '1 1 5 5 6 6 5 - 4 4 3 3 2 2 1 - 5 5 4 4 3 3 2 - 5 5 4 4 3 3 2 -',
-        ode_to_joy: '3 3 4 5 5 4 3 2 1 1 2 3 3 2 2 - 3 3 4 5 5 4 3 2 1 1 2 3 2 1 1 -'
+        happy_birthday: '5.5 6 5 1^ 7 - | 5.5 6 5 2^ 1^ - | 5.5 5^ 3^ 1^ 7 6 | 4^.4^ 3^ 1^ 2^ 1^ -',
+        little_star: '1 1 5 5 6 6 5 - | 4 4 3 3 2 2 1 - | 5 5 4 4 3 3 2 - | 5 5 4 4 3 3 2 -',
+        ode_to_joy: '3 3 4 5 | 5 4 3 2 | 1 1 2 3 | 3. 2 2 - | 3 3 4 5 | 5 4 3 2 | 1 1 2 3 | 2. 1 1 -'
       };
       
       musicApp.loadExample(examples[type] || examples.happy_birthday);
