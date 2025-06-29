@@ -86,13 +86,6 @@
             box-shadow: 0 0 0 2px rgba(255, 71, 87, 0.3);
         }
         
-        .measure.dragging {
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            transform: scale(1.02);
-            opacity: 0.9;
-        }
-        
         .status-bar {
             height: 48px;
             background: white;
@@ -293,41 +286,6 @@
                     updateButtonStates();
                 });
                 
-                // 拖拽功能
-                measure.addEventListener('mousedown', startDrag);
-                measure.addEventListener('touchstart', startDrag, { passive: false });
-                
-                function startDrag(e) {
-                    if (e.button !== 0 && e.type === 'mousedown') return;
-                    
-                    e.stopPropagation();
-                    this.classList.add('dragging');
-                    const startX = e.clientX || e.touches[0].clientX;
-                    const startY = e.clientY || e.touches[0].clientY;
-                    const startLeft = this.getBoundingClientRect().left;
-                    const startTop = this.getBoundingClientRect().top;
-                    
-                    function moveDrag(e) {
-                        const dx = (e.clientX || e.touches[0].clientX) - startX;
-                        const dy = (e.clientY || e.touches[0].clientY) - startY;
-                        this.style.transform = `translate(${dx}px, ${dy}px)`;
-                    }
-                    
-                    function endDrag() {
-                        this.classList.remove('dragging');
-                        this.style.transform = '';
-                        document.removeEventListener('mousemove', moveDrag);
-                        document.removeEventListener('touchmove', moveDrag);
-                        document.removeEventListener('mouseup', endDrag);
-                        document.removeEventListener('touchend', endDrag);
-                    }
-                    
-                    document.addEventListener('mousemove', moveDrag.bind(this));
-                    document.addEventListener('touchmove', moveDrag.bind(this), { passive: false });
-                    document.addEventListener('mouseup', endDrag.bind(this));
-                    document.addEventListener('touchend', endDrag.bind(this));
-                }
-                
                 canvas.appendChild(measure);
                 measures.push(measure);
                 counter.textContent = measures.length;
@@ -438,3 +396,8 @@
     </script>
 </body>
 </html>
+<!--
+升级
+小节选择以后不要让它移动。
+return all new code
+-->
