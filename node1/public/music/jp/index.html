@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简谱编辑器 v0.5</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, sans-serif;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f8f9fa;
+            touch-action: manipulation;
+        }
+        
+        .toolbar {
+            height: 56px;
+            background: linear-gradient(135deg, #4a6bff, #6a11cb);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            gap: 12px;
+        }
+        
+        .tool-btn {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .tool-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .tool-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            padding: 12px;
+            overflow: auto;
+            background-color: white;
+            display: flex;
+            flex-wrap: wrap;
+            align-content: flex-start;
+            gap: 8px;
+        }
+        
+        .measure {
+            width: 120px;
+            height: 80px;
+            border: 2px solid #4a6bff;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            color: #333;
+            background-color: rgba(74, 107, 255, 0.05);
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        
+        .measure.selected {
+            border-color: #ff4757;
+            background-color: rgba(255, 71, 87, 0.1);
+            box-shadow: 0 0 0 2px rgba(255, 71, 87, 0.3);
+        }
+        
+        .status-bar {
+            height: 48px;
+            background: white;
+            border-top: 1px solid #ddd;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            font-size: 14px;
+            color: #666;
+            justify-content: space-between;
+        }
+        
+        .settings-panel {
+            position: fixed;
+            right: 20px;
+            bottom: 80px;
+            width: 280px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+            padding: 16px;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .settings-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .settings-title {
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 14px;
+            color: #555;
+        }
+        
+        .form-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .apply-btn {
+            width: 100%;
+            padding: 10px;
+            background: #4a6bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .settings-toggle {
+            background: none;
+            border: none;
+            color: #4a6bff;
+            font-size: 14px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+        }
+        
+        .settings-toggle:hover {
+            background: rgba(74, 107, 255, 0.1);
+        }
+        
+        @media (max-width: 768px) {
+            .measure {
+                width: 100px;
+                height: 70px;
+                font-size: 20px;
+            }
+            .canvas-container {
+                gap: 6px;
+            }
+            .settings-panel {
+                width: 260px;
+                right: 10px;
+                bottom: 70px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <button class="tool-btn" id="addMeasureBtn">添加小节</button>
+        <button class="tool-btn" id="deleteMeasureBtn" disabled>删除小节</button>
+    </div>
+    
+    <div class="canvas-container" id="canvas"></div>
+    
+    <div class="status-bar">
+        <span>简谱编辑器 v0.5 | 小节数: <span id="measureCount">0</span></span>
+        <div>
+            <span>已选中: <span id="selectedCount">0</span>个小节</span>
+            <button class="settings-toggle" id="settingsToggle">设置面板</button>
+        </div>
+    </div>
+
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header">
+            <span class="settings-title">小节尺寸设置</span>
+            <button class="close-btn" id="closeSettings">×</button>
+        </div>
+        <div class="form-group">
+            <label class="form-label">宽度 (px)</label>
+            <input type="number" class="form-input" id="measureWidth" value="120" min="60" max="300">
+        </div>
+        <div class="form-group">
+            <label class="form-label">高度 (px)</label>
+            <input type="number" class="form-input" id="measureHeight" value="80" min="40" max="200">
+        </div>
+        <button class="apply-btn" id="applySettings">应用设置</button>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('canvas');
+            const addBtn = document.getElementById('addMeasureBtn');
+            const deleteBtn = document.getElementById('deleteMeasureBtn');
+            const counter = document.getElementById('measureCount');
+            const selectedCounter = document.getElementById('selectedCount');
+            const settingsToggle = document.getElementById('settingsToggle');
+            const settingsPanel = document.getElementById('settingsPanel');
+            const closeSettings = document.getElementById('closeSettings');
+            const applyBtn = document.getElementById('applySettings');
+            const widthInput = document.getElementById('measureWidth');
+            const heightInput = document.getElementById('measureHeight');
+            
+            let measures = [];
+            let selectedMeasures = new Set();
+            let isDraggingPanel = false;
+            let panelStartX, panelStartY;
+            
+            // 默认尺寸
+            let measureWidth = 120;
+            let measureHeight = 80;
+            
+            // 更新按钮状态
+            function updateButtonStates() {
+                deleteBtn.disabled = selectedMeasures.size === 0;
+                selectedCounter.textContent = selectedMeasures.size;
+            }
+            
+            // 添加小节
+            addBtn.addEventListener('click', function() {
+                const measure = document.createElement('div');
+                measure.className = 'measure';
+                measure.textContent = measures.length + 1;
+                measure.dataset.id = Date.now().toString();
+                measure.style.width = `${measureWidth}px`;
+                measure.style.height = `${measureHeight}px`;
+                
+                // 点击选择/取消选择
+                measure.addEventListener('click', function(e) {
+                    if (e.ctrlKey || e.metaKey) {
+                        // 多选模式
+                        this.classList.toggle('selected');
+                        if (this.classList.contains('selected')) {
+                            selectedMeasures.add(this.dataset.id);
+                        } else {
+                            selectedMeasures.delete(this.dataset.id);
+                        }
+                    } else {
+                        // 单选模式（清除之前选择）
+                        document.querySelectorAll('.measure.selected').forEach(el => {
+                            el.classList.remove('selected');
+                        });
+                        selectedMeasures.clear();
+                        
+                        this.classList.add('selected');
+                        selectedMeasures.add(this.dataset.id);
+                    }
+                    updateButtonStates();
+                });
+                
+                canvas.appendChild(measure);
+                measures.push(measure);
+                counter.textContent = measures.length;
+                updateButtonStates();
+            });
+            
+            // 删除小节
+            deleteBtn.addEventListener('click', function() {
+                if (selectedMeasures.size === 0) return;
+                
+                // 从DOM和数组中移除
+                document.querySelectorAll('.measure').forEach(measure => {
+                    if (selectedMeasures.has(measure.dataset.id)) {
+                        measure.remove();
+                        const index = measures.indexOf(measure);
+                        if (index > -1) {
+                            measures.splice(index, 1);
+                        }
+                    }
+                });
+                
+                // 更新编号
+                measures.forEach((measure, index) => {
+                    measure.textContent = index + 1;
+                });
+                
+                selectedMeasures.clear();
+                counter.textContent = measures.length;
+                updateButtonStates();
+            });
+            
+            // 空白处点击取消选择
+            canvas.addEventListener('click', function(e) {
+                if (e.target === canvas) {
+                    document.querySelectorAll('.measure.selected').forEach(el => {
+                        el.classList.remove('selected');
+                    });
+                    selectedMeasures.clear();
+                    updateButtonStates();
+                }
+            });
+            
+            // 键盘快捷键 (Ctrl+A全选)
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+                    e.preventDefault();
+                    document.querySelectorAll('.measure').forEach(measure => {
+                        measure.classList.add('selected');
+                        selectedMeasures.add(measure.dataset.id);
+                    });
+                    updateButtonStates();
+                }
+            });
+            
+            // 设置面板功能
+            settingsToggle.addEventListener('click', function() {
+                settingsPanel.style.display = settingsPanel.style.display === 'block' ? 'none' : 'block';
+            });
+            
+            closeSettings.addEventListener('click', function() {
+                settingsPanel.style.display = 'none';
+            });
+            
+            // 面板拖拽功能
+            settingsPanel.addEventListener('mousedown', function(e) {
+                if (e.target === this || e.target.classList.contains('settings-header')) {
+                    isDraggingPanel = true;
+                    panelStartX = e.clientX - this.getBoundingClientRect().left;
+                    panelStartY = e.clientY - this.getBoundingClientRect().top;
+                    this.style.cursor = 'grabbing';
+                }
+            });
+            
+            document.addEventListener('mousemove', function(e) {
+                if (!isDraggingPanel) return;
+                
+                settingsPanel.style.left = `${e.clientX - panelStartX}px`;
+                settingsPanel.style.top = `${e.clientY - panelStartY}px`;
+                settingsPanel.style.right = 'auto';
+                settingsPanel.style.bottom = 'auto';
+            });
+            
+            document.addEventListener('mouseup', function() {
+                isDraggingPanel = false;
+                settingsPanel.style.cursor = '';
+            });
+            
+            // 应用设置
+            applyBtn.addEventListener('click', function() {
+                const newWidth = parseInt(widthInput.value);
+                const newHeight = parseInt(heightInput.value);
+                
+                if (newWidth >= 60 && newWidth <= 300 && newHeight >= 40 && newHeight <= 200) {
+                    measureWidth = newWidth;
+                    measureHeight = newHeight;
+                    
+                    document.querySelectorAll('.measure').forEach(measure => {
+                        measure.style.width = `${measureWidth}px`;
+                        measure.style.height = `${measureHeight}px`;
+                    });
+                    
+                    settingsPanel.style.display = 'none';
+                } else {
+                    alert('请输入有效的尺寸值（宽度60-300px，高度40-200px）');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+<!--
+升级
+小节选择以后不要让它移动。
+return all new code
+-->
