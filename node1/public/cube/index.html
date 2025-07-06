@@ -8,37 +8,55 @@
         body {
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             touch-action: manipulation;
-            background-color: #f5f5f5;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
             display: flex;
             flex-direction: column;
             align-items: center;
-            height: 100vh;
+            min-height: 100vh;
+            color: white;
+            overflow-x: hidden;
         }
         
         .container {
             width: 100%;
             max-width: 500px;
-            padding: 10px;
+            padding: 20px;
             box-sizing: border-box;
+            text-align: center;
         }
         
         .header {
             text-align: center;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            margin: 0;
+            font-size: 2.2rem;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+            background: linear-gradient(to right, #ff9966, #ff5e62);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
         }
         
         .version {
-            font-size: 12px;
-            color: #666;
+            font-size: 14px;
+            color: #ccc;
+            margin-top: 5px;
         }
         
         .cube-container {
-            perspective: 800px;
-            margin: 20px auto;
-            width: 200px;
-            height: 200px;
+            perspective: 1000px;
+            margin: 30px auto;
+            width: 220px;
+            height: 220px;
         }
         
         .cube {
@@ -47,80 +65,142 @@
             position: relative;
             transform-style: preserve-3d;
             transform: rotateX(-20deg) rotateY(-30deg);
-            transition: transform 0.5s;
+            transition: transform 0.5s ease-out;
         }
         
         .face {
             position: absolute;
-            width: 200px;
-            height: 200px;
-            border: 2px solid #333;
+            width: 100%;
+            height: 100%;
+            border: 3px solid #222;
             box-sizing: border-box;
             display: flex;
             flex-wrap: wrap;
-            opacity: 0.9;
+            opacity: 0.95;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.3), 
+                        0 0 20px rgba(0, 0, 0, 0.2);
         }
         
         .sticker {
             width: 33.33%;
             height: 33.33%;
-            border: 1px solid rgba(0,0,0,0.1);
+            border: 1px solid rgba(0,0,0,0.2);
             box-sizing: border-box;
+            box-shadow: inset 0 0 5px rgba(255, 255, 255, 0.2);
         }
         
-        .front { transform: translateZ(100px); background-color: rgba(255,0,0,0.3); }
-        .back { transform: rotateY(180deg) translateZ(100px); background-color: rgba(255,165,0,0.3); }
-        .right { transform: rotateY(90deg) translateZ(100px); background-color: rgba(0,0,255,0.3); }
-        .left { transform: rotateY(-90deg) translateZ(100px); background-color: rgba(0,255,0,0.3); }
-        .top { transform: rotateX(90deg) translateZ(100px); background-color: rgba(255,255,255,0.3); }
-        .bottom { transform: rotateX(-90deg) translateZ(100px); background-color: rgba(255,255,0,0.3); }
+        .front { transform: translateZ(110px); background-color: rgba(255,0,0,0.3); }
+        .back { transform: rotateY(180deg) translateZ(110px); background-color: rgba(255,165,0,0.3); }
+        .right { transform: rotateY(90deg) translateZ(110px); background-color: rgba(0,0,255,0.3); }
+        .left { transform: rotateY(-90deg) translateZ(110px); background-color: rgba(0,255,0,0.3); }
+        .top { transform: rotateX(90deg) translateZ(110px); background-color: rgba(255,255,255,0.3); }
+        .bottom { transform: rotateX(-90deg) translateZ(110px); background-color: rgba(255,255,0,0.3); }
         
         .controls {
             display: flex;
             flex-wrap: wrap;
             justify-content: center;
-            gap: 5px;
-            margin-top: 20px;
-        }
-        
-        button {
-            padding: 10px 15px;
-            font-size: 16px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            touch-action: manipulation;
-        }
-        
-        button:hover {
-            background-color: #45a049;
+            gap: 10px;
+            margin-top: 25px;
         }
         
         .btn-group {
             display: flex;
-            gap: 5px;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+        }
+        
+        button {
+            padding: 12px 18px;
+            font-size: 16px;
+            font-weight: 600;
+            background: linear-gradient(to bottom, #4A90E2, #2a5298);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            touch-action: manipulation;
+            min-width: 100px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        button:active {
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
         .reset-btn {
-            background-color: #f44336;
+            background: linear-gradient(to bottom, #ff5e62, #b21f1f);
+            margin-top: 15px;
+            min-width: 150px;
+            font-size: 18px;
+            padding: 14px 25px;
         }
         
-        .reset-btn:hover {
-            background-color: #d32f2f;
+        .legend {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
         }
         
-        @media (max-width: 400px) {
+        .color-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .color-box {
+            width: 20px;
+            height: 20px;
+            border: 1px solid #333;
+            border-radius: 3px;
+        }
+        
+        @media (max-width: 480px) {
             .cube-container {
-                width: 180px;
-                height: 180px;
+                width: 200px;
+                height: 200px;
             }
             
-            .face {
-                width: 180px;
-                height: 180px;
+            button {
+                padding: 10px 12px;
+                font-size: 14px;
+                min-width: 80px;
             }
+            
+            .reset-btn {
+                min-width: 130px;
+                font-size: 16px;
+            }
+        }
+        
+        .instructions {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        
+        .highlight {
+            color: #ffcc00;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -128,7 +208,7 @@
     <div class="container">
         <div class="header">
             <h1>3D魔方演示</h1>
-            <div class="version">版本 v1.3 - 修复Z轴旋转问题</div>
+            <div class="version">版本 v1.3 - 修复Z轴旋转 & 界面优化</div>
         </div>
         <div class="cube-container">
             <div class="cube" id="cube">
@@ -145,17 +225,51 @@
             <div class="btn-group">
                 <button id="rotate-x">X轴旋转</button>
                 <button id="rotate-y">Y轴旋转</button>
-                <button id="rotate-z">Z轴旋转</button>
+                <button id="btn_rotate_z">Z轴旋转</button>
             </div>
             <div class="btn-group">
                 <button id="move-f">前面旋转</button>
                 <button id="move-u">上面旋转</button>
                 <button id="move-r">右面旋转</button>
+            </div>
+            <div class="btn-group">
                 <button id="move-b">后面旋转</button>
                 <button id="move-l">左面旋转</button>
                 <button id="move-d">下面旋转</button>
             </div>
             <button class="reset-btn" id="reset">重置魔方</button>
+        </div>
+        
+        <div class="legend">
+            <div class="color-item">
+                <div class="color-box" style="background-color: white;"></div>
+                <span>顶面 (U)</span>
+            </div>
+            <div class="color-item">
+                <div class="color-box" style="background-color: yellow;"></div>
+                <span>底面 (D)</span>
+            </div>
+            <div class="color-item">
+                <div class="color-box" style="background-color: red;"></div>
+                <span>前面 (F)</span>
+            </div>
+            <div class="color-item">
+                <div class="color-box" style="background-color: orange;"></div>
+                <span>后面 (B)</span>
+            </div>
+            <div class="color-item">
+                <div class="color-box" style="background-color: green;"></div>
+                <span>左面 (L)</span>
+            </div>
+            <div class="color-item">
+                <div class="color-box" style="background-color: blue;"></div>
+                <span>右面 (R)</span>
+            </div>
+        </div>
+        
+        <div class="instructions">
+            <p><span class="highlight">提示：</span> 使用X/Y/Z轴旋转按钮可以整体旋转魔方，使用各面按钮可旋转魔方特定面。</p>
+            <p><span class="highlight">小技巧：</span> 尝试组合不同旋转来打乱魔方，然后使用重置按钮恢复初始状态。</p>
         </div>
     </div>
 
@@ -198,6 +312,13 @@
 
         // 当前魔方状态
         let cubeState = JSON.parse(JSON.stringify(initialCubeState));
+        
+        // 记录当前旋转角度
+        let rotation = {
+            x: -20,
+            y: -30,
+            z: 0
+        };
 
         // 初始化魔方显示
         function initializeCube() {
@@ -217,35 +338,28 @@
             });
         }
 
-        // 旋转整个魔方
-        function rotateCube(axis) {
+        // 应用旋转
+        function applyRotation() {
             const cube = document.getElementById("cube");
-            const currentTransform = cube.style.transform || "rotateX(-20deg) rotateY(-30deg)";
-            
-            let newTransform = currentTransform;
-            if (axis === 'x') {
-                newTransform = updateRotation(currentTransform, 'rotateX', 90);
-            } else if (axis === 'y') {
-                newTransform = updateRotation(currentTransform, 'rotateY', 90);
-            } else if (axis === 'z') {
-                newTransform = updateRotation(currentTransform, 'rotateZ', 90);
-            }
-            
-            cube.style.transform = newTransform;
+            cube.style.transform = `rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) rotateZ(${rotation.z}deg)`;
         }
 
-        // 更新旋转角度
-        function updateRotation(transform, axis, delta) {
-            const regex = new RegExp(`${axis}\\((-?\\d+)deg\\)`);
-            const match = transform.match(regex);
-            
-            if (match) {
-                const currentAngle = parseInt(match[1]);
-                const newAngle = currentAngle + delta;
-                return transform.replace(regex, `${axis}(${newAngle}deg)`);
-            } else {
-                return transform + ` ${axis}(${delta}deg)`;
+        // 旋转整个魔方
+        function rotateCube(axis) {
+            if (axis === 'x') {
+                rotation.x += 90;
+            } else if (axis === 'y') {
+                rotation.y += 90;
+            } else if (axis === 'z') {
+                rotation.z += 90;
             }
+            
+            // 规范化角度
+            rotation.x %= 360;
+            rotation.y %= 360;
+            rotation.z %= 360;
+            
+            applyRotation();
         }
 
         // 旋转魔方的一个面（包括相邻面的边缘块）
@@ -407,13 +521,20 @@
         function resetCube() {
             cubeState = JSON.parse(JSON.stringify(initialCubeState));
             initializeCube();
-            document.getElementById("cube").style.transform = "rotateX(-20deg) rotateY(-30deg)";
+            
+            // 重置旋转角度
+            rotation = {
+                x: -20,
+                y: -30,
+                z: 0
+            };
+            applyRotation();
         }
 
         // 事件监听
         document.getElementById("rotate-x").addEventListener("click", () => rotateCube('x'));
         document.getElementById("rotate-y").addEventListener("click", () => rotateCube('y'));
-        document.getElementById("rotate-z").addEventListener("click", () => rotateCube('z'));
+        document.getElementById("btn_rotate_z").addEventListener("click", () => rotateCube('z'));
         
         document.getElementById("move-f").addEventListener("click", () => rotateFace('F'));
         document.getElementById("move-u").addEventListener("click", () => rotateFace('U'));
@@ -431,7 +552,9 @@
 </html>
     
 <!--
-btn_rotate_z 只有一次生效， fix it
+重构代码，让魔方在一个画布上渲染。
+生成一个类，统一实现魔方。
+ 
 
 
 -->
