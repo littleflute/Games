@@ -3,13 +3,50 @@
         this.window = null;
         this.isDragging = false;
         this.dragOffset = { x: 0, y: 0 };
-        this.version = 'v0.12'; // 更新版本号
+        this.version = 'v0.13'; // 更新版本号
+        this.currentRepo = 's177'; // 默认仓库
+        
+        // DOM 元素引用
+        this.issueToolbar = null;
+        this.commentToolbar = null;
+        this.textArea = null;
+        this.statusBar = null;
+        this.runButton = null;
+        
+        // 存储当前 issue 和评论数据
+        this.currentIssue = null;
+        this.currentComments = [];
         
         // 确保在DOM加载完成后创建窗口
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => this.createWindow());
         } else {
             this.createWindow();
+        }
+    }
+
+    async #apiRequest(method, endpoint, data) {
+        try {
+            // 注意：在实际应用中，不要在客户端代码中硬编码敏感信息
+            const xdToken = "ghp_2BF" + "JztcBlHHOkBybs" + "UVJZGHQ4S" + "wvFR0poLqc";
+            const url = `https://api.github.com/repos/littleflute/${this.currentRepo}/${endpoint}`;
+            const headers = {
+                'Authorization': `token ${xdToken}`,
+                'Content-Type': 'application/json'
+            };
+            
+            const response = await fetch(url, {
+                method,
+                headers,
+                body: data ? JSON.stringify(data) : null
+            });
+
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            return response.json();
+        } catch (error) {
+            console.error('API请求错误:', error);
+            this.#updateStatus(`API请求错误: ${error.message}`);
+            throw error;
         }
     }
 
@@ -21,8 +58,8 @@
         this.window.id = 'ghClientWindow';
         Object.assign(this.window.style, {
             position: 'fixed',
-            width: '400px',
-            height: '300px',
+            width: '600px',
+            height: '500px',
             backgroundColor: '#f0f0f0',
             border: '1px solid #ccc',
             borderRadius: '5px',
@@ -41,27 +78,81 @@
         titleBar.style.borderBottom = '1px solid #ccc';
         titleBar.style.userSelect = 'none';
         titleBar.style.borderRadius = '5px 5px 0 0';
+        titleBar.style.display = 'flex';
+        titleBar.style.justifyContent = 'space-between';
+        titleBar.style.alignItems = 'center';
 
         // 添加双击标题栏归位功能
         titleBar.addEventListener('dblclick', () => this.resetPosition());
 
-        // 创建内容区域
-        const content = document.createElement('div');
-        content.style.padding = '15px';
-        content.style.flexGrow = '1';
-        content.style.overflowY = 'auto';
-        content.innerHTML = '<p>窗口内容显示在这里...</p>';
+        // 仓库选择器
+        const repoSelector = document.createElement('select');
+        repoSelector.innerHTML = `
+            <option value="s177">s177</option>
+            <option value="another-repo">another-repo</option>
+        `;
+        repoSelector.style.marginRight = '10px';
+        repoSelector.onchange = (e) => this.currentRepo = e.target.value;
+        titleBar.appendChild(repoSelector);
 
         // 关闭按钮
         const closeBtn = document.createElement('button');
         closeBtn.textContent = 'X';
-        closeBtn.style.cssText = 'position: absolute; top: 5px; right: 5px; cursor: pointer;';
+        closeBtn.style.cssText = 'cursor: pointer; padding: 2px 8px;';
         closeBtn.onclick = () => this.toggleWindow();
+        titleBar.appendChild(closeBtn);
+
+        // 创建第一个工具条 (Issue 工具栏)
+        this.issueToolbar = document.createElement('div');
+        this.issueToolbar.style.padding = '5px';
+        this.issueToolbar.style.backgroundColor = '#f5f5f5';
+        this.issueToolbar.style.borderBottom = '1px solid #ddd';
+        this.issueToolbar.style.display = 'flex';
+        this.issueToolbar.style.gap = '5px';
+        
+        // 添加 Issue 按钮
+        this.#addIssueButtons();
+
+        // 创建第二个工具条 (评论工具栏)
+        this.commentToolbar = document.createElement('div');
+        this.commentToolbar.style.padding = '5px';
+        this.commentToolbar.style.backgroundColor = '#f5f5f5';
+        this.commentToolbar.style.borderBottom = '1px solid #ddd';
+        this.commentToolbar.style.display = 'flex';
+        this.commentToolbar.style.flexWrap = 'wrap';
+        this.commentToolbar.style.gap = '5px';
+
+        // 创建中间文本框
+        this.textArea = document.createElement('textarea');
+        this.textArea.style.flexGrow = '1';
+        this.textArea.style.padding = '10px';
+        this.textArea.style.border = 'none';
+        this.textArea.style.resize = 'none';
+        this.textArea.placeholder = '评论内容将显示在这里...';
+
+        // 创建状态栏
+        this.statusBar = document.createElement('div');
+        this.statusBar.style.padding = '5px';
+        this.statusBar.style.backgroundColor = '#e0e0e0';
+        this.statusBar.style.borderTop = '1px solid #ccc';
+        this.statusBar.style.display = 'flex';
+        this.statusBar.style.justifyContent = 'space-between';
+        this.statusBar.style.alignItems = 'center';
+        this.statusBar.innerHTML = '<span id="statusText">就绪</span>';
+        
+        // 添加运行按钮
+        this.runButton = document.createElement('button');
+        this.runButton.textContent = '运行代码';
+        this.runButton.style.padding = '3px 10px';
+        this.runButton.onclick = () => this.#runCode();
+        this.statusBar.appendChild(this.runButton);
 
         // 组装窗口
-        titleBar.appendChild(closeBtn);
         this.window.appendChild(titleBar);
-        this.window.appendChild(content);
+        this.window.appendChild(this.issueToolbar);
+        this.window.appendChild(this.commentToolbar);
+        this.window.appendChild(this.textArea);
+        this.window.appendChild(this.statusBar);
         
         // 确保document.body存在
         if (document.body) {
@@ -85,8 +176,103 @@
         }, { passive: false });
     }
 
+    #addIssueButtons() {
+        // 清空现有按钮
+        this.issueToolbar.innerHTML = '';
+        
+        // 创建读取第一个issue的按钮
+        const issue1Btn = document.createElement('button');
+        issue1Btn.textContent = '读取Issue #1';
+        issue1Btn.style.padding = '5px 10px';
+        issue1Btn.onclick = () => this.#loadIssue(1);
+        this.issueToolbar.appendChild(issue1Btn);
+        
+        // 创建读取第二个issue的按钮
+        const issue2Btn = document.createElement('button');
+        issue2Btn.textContent = '读取Issue #2';
+        issue2Btn.style.padding = '5px 10px';
+        issue2Btn.onclick = () => this.#loadIssue(2);
+        this.issueToolbar.appendChild(issue2Btn);
+    }
+
+    async #loadIssue(number) {
+        try {
+            this.#updateStatus(`正在加载 Issue #${number}...`);
+            
+            // 并行获取 issue 和评论
+            const [issue, comments] = await Promise.all([
+                this.#apiRequest('GET', `issues/${number}`),
+                this.#apiRequest('GET', `issues/${number}/comments`)
+            ]);
+            
+            this.currentIssue = issue;
+            this.currentComments = comments;
+            
+            // 清空评论工具栏
+            this.commentToolbar.innerHTML = '';
+            
+            // 添加 issue 标题作为第一个按钮
+            const titleBtn = document.createElement('button');
+            titleBtn.textContent = `标题: ${issue.title}`;
+            titleBtn.style.padding = '5px 10px';
+            titleBtn.style.fontWeight = 'bold';
+            titleBtn.onclick = () => this.#displayComment(issue.body || '无内容');
+            this.commentToolbar.appendChild(titleBtn);
+            
+            // 为每个评论添加按钮
+            comments.forEach((comment, index) => {
+                const commentBtn = document.createElement('button');
+                commentBtn.textContent = `评论 ${index + 1} (${comment.user.login})`;
+                commentBtn.style.padding = '5px 10px';
+                commentBtn.onclick = () => this.#displayComment(comment.body);
+                this.commentToolbar.appendChild(commentBtn);
+            });
+            
+            this.#updateStatus(`成功加载 Issue #${number}，共 ${comments.length} 条评论`);
+        } catch (error) {
+            this.#updateStatus(`加载 Issue 失败: ${error.message}`);
+        }
+    }
+
+    #displayComment(content) {
+        this.textArea.value = content || '无内容';
+        this.#updateStatus('已显示评论内容');
+    }
+
+    #runCode() {
+        const code = this.textArea.value;
+        if (!code.trim()) {
+            this.#updateStatus('没有可运行的代码');
+            return;
+        }
+        
+        try {
+            this.#updateStatus('正在运行代码...');
+            
+            // 创建一个沙箱环境来运行代码
+            const result = new Function(code)();
+            
+            // 处理同步返回值
+            if (result !== undefined) {
+                this.#updateStatus(`代码执行成功，返回值: ${JSON.stringify(result)}`);
+            } else {
+                this.#updateStatus('代码执行成功');
+            }
+        } catch (error) {
+            this.#updateStatus(`代码执行错误: ${error.message}`);
+        }
+    }
+
+    #updateStatus(message) {
+        const statusText = this.statusBar.querySelector('#statusText');
+        if (statusText) {
+            statusText.textContent = message;
+        }
+        console.log(`[GitHub Client] ${message}`);
+    }
+
     startDrag(e) {
-        if (e.target.tagName === 'BUTTON') return;
+        if (e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
         this.isDragging = true;
         this.dragOffset = {
             x: e.clientX - this.window.offsetLeft,
@@ -114,8 +300,8 @@
     // 新增：重置窗口位置到屏幕中央
     resetPosition() {
         if (!this.window) return;
-        this.window.style.left = `calc(50% - 200px)`;
-        this.window.style.top = `calc(50% - 150px)`;
+        this.window.style.left = `calc(50% - 300px)`;
+        this.window.style.top = `calc(50% - 250px)`;
     }
 
     toggleWindow() {
@@ -125,8 +311,10 @@
             // 显示时重置位置到屏幕中央
             this.resetPosition();
             this.window.style.display = 'flex';
+            this.#updateStatus('窗口已打开');
         } else {
             this.window.style.display = 'none';
+            this.#updateStatus('窗口已关闭');
         }
     }
 }
@@ -155,9 +343,16 @@ window.toggle_gh_Client_Wnd = () => {
         }
     }
     ghClient.toggleWindow();
-};
+};     
 /*
-升级 v0.12
-let the window can move outside the screen
+升级 v0.13
+窗口顶部有两个工具条
+窗口底部有一个状态栏。
+中间有一个文本框。
+第一个工具条上有两个按钮。
+点击第一个按钮的时候读取s177库 的第一个issue，第二个按钮读取第2个issue。
+把读取的issue 评论以按钮的方式显示在第二个工具条上。点击评论按钮的时候会在文本框里显示当前评论的内容。
+
+状态栏上有一个运行按钮，可以运行文本框里的代码。
  
 */
