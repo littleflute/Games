@@ -439,7 +439,7 @@
             const mobileSlowerBtn = document.getElementById('mobileSlowerBtn');
             
             // 跳舞小人动画帧数据
-            const frames = [
+            const mans = [
                 "   o\n  /|\\\n */ \\*        ",
                 "   o_\n  \\<| *\n  *>\\         ",
                 "  _o/*\n * |\n  / \\         ",
@@ -575,7 +575,7 @@
                 drawStage();
                 
                 // 绘制小人
-                drawCharacter(frames[frameIndex]);
+                drawCharacter(mans[frameIndex]);
                 
                 // 绘制聚光灯
                 drawSpotlight();
@@ -665,7 +665,7 @@
             // 动画循环
             function animate() {
                 renderFrame(currentFrame);
-                currentFrame = (currentFrame + 1) % frames.length;
+                currentFrame = (currentFrame + 1) % mans.length;
                 frameCounter++;
                 frameCountEl.textContent = frameCounter;
                 
@@ -983,6 +983,6 @@
     
 <!--
 升级  v0.14
-startBtn failed on cell phone.
+
  
 -->
