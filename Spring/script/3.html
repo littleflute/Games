@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>跳舞小人动画游戏v0.14</title>
+    <title>跳舞小人动画游戏v0.15</title>
+    
+    <script src="plx/ghClient.js"></script>
     <style>
         * {
             margin: 0;
@@ -132,6 +134,10 @@
         
         .btn-secondary {
             background: linear-gradient(to right, #4a00e0, #8e2de2);
+            color: white;
+        }
+        .btn_gh_client {
+            background: linear-gradient(to right, #13b077, #8e2de2);
             color: white;
         }
         
@@ -358,7 +364,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>跳舞小人动画游戏v0.14</h1>
+            <h1>跳舞小人动画游戏v0.15</h1>
             <div class="subtitle">移动设备完美演示版</div>
         </header>
         
@@ -388,6 +394,7 @@
                 <button id="stopBtn" class="btn">停止</button>
                 <button id="fasterBtn" class="btn btn-secondary">加速</button>
                 <button id="slowerBtn" class="btn btn-secondary">减速</button>
+                <button id="id_4_toggle_ghClientWnd" class="btn btn_gh_client">ghClientWnd</button>
             </div>
             
             <div class="difficulty">
@@ -419,7 +426,6 @@
             <p>基于经典跳舞小人动画 | 移动设备优化版 | © 2023 跳舞小人游戏</p>
         </footer>
     </div>
-    
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             const canvas = document.getElementById('danceCanvas');
@@ -860,6 +866,7 @@
             startBtn.addEventListener('click', startAnimation);
             stopBtn.addEventListener('click', stopAnimation);
             
+            document.getElementById('id_4_toggle_ghClientWnd').addEventListener('click', toggle_gh_Client_Wnd);
             fasterBtn.addEventListener('click', () => {
                 if (speed > 30) {
                     changeSpeed(speed - 30);
@@ -982,7 +989,7 @@
 </html>
     
 <!--
-升级  v0.14
+升级  v0.15
 
  
 -->
