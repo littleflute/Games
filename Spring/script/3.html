@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>跳舞小人动画游戏v0.13</title>
+    <title>跳舞小人动画游戏v0.14</title>
     <style>
         * {
             margin: 0;
@@ -347,12 +347,18 @@
             animation: spin 1s linear infinite;
             display: none;
         }
+        
+        /* 按钮活跃状态 */
+        .btn.active {
+            background: linear-gradient(to right, #ffd700, #ff8c00);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>跳舞小人动画游戏v0.13</h1>
+            <h1>跳舞小人动画游戏v0.14</h1>
             <div class="subtitle">移动设备完美演示版</div>
         </header>
         
@@ -497,6 +503,33 @@
                 
                 // 预加载资源
                 preloadResources();
+                
+                // 解决移动端音频问题
+                setupAudioContext();
+            }
+            
+            // 初始化音频上下文
+            function setupAudioContext() {
+                try {
+                    // 为移动端创建音频上下文
+                    if (isMobile && !audioContext) {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                        
+                        // 创建空音频源以解锁音频
+                        const buffer = audioContext.createBuffer(1, 1, 22050);
+                        const source = audioContext.createBufferSource();
+                        source.buffer = buffer;
+                        source.connect(audioContext.destination);
+                        
+                        // 第一次交互时播放空音频
+                        document.addEventListener('touchstart', function unlockAudio() {
+                            source.start(0);
+                            document.removeEventListener('touchstart', unlockAudio);
+                        }, { once: true });
+                    }
+                } catch (e) {
+                    console.log("音频上下文初始化失败", e);
+                }
             }
             
             // 调整画布尺寸
@@ -659,6 +692,10 @@
             // 开始动画
             function startAnimation() {
                 if (isPlaying) return;
+                
+                // 确保音频上下文已初始化
+                setupAudioContext();
+                
                 isPlaying = true;
                 animate();
                 startBtn.textContent = "跳舞中...";
@@ -776,6 +813,7 @@
                         backgroundMusic.src = URL.createObjectURL(source.stream);
                     }
                     
+                    // 确保在用户交互后播放
                     backgroundMusic.play().catch(e => console.log("背景音乐播放失败:", e));
                 } catch (e) {
                     console.log("背景音乐生成失败", e);
@@ -890,6 +928,50 @@
                 button.addEventListener('touchend', function() {
                     this.classList.remove('active');
                 });
+                
+                // 移动端点击事件优化
+                button.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    this.classList.add('active');
+                    
+                    // 创建一个临时变量来跟踪触摸是否移动太远
+                    this.touchStartX = e.touches[0].clientX;
+                    this.touchStartY = e.touches[0].clientY;
+                    
+                    // 添加触摸移动和结束事件
+                    const handleTouchMove = (e) => {
+                        const touchX = e.touches[0].clientX;
+                        const touchY = e.touches[0].clientY;
+                        
+                        // 如果触摸移动超过20px，则认为是滑动而不是点击
+                        if (Math.abs(touchX - this.touchStartX) > 20 || Math.abs(touchY - this.touchStartY) > 20) {
+                            this.classList.remove('active');
+                            document.removeEventListener('touchmove', handleTouchMove);
+                            document.removeEventListener('touchend', handleTouchEnd);
+                        }
+                    };
+                    
+                    const handleTouchEnd = (e) => {
+                        this.classList.remove('active');
+                        document.removeEventListener('touchmove', handleTouchMove);
+                        document.removeEventListener('touchend', handleTouchEnd);
+                        
+                        // 如果触摸没有移动太远，则触发点击事件
+                        if (Math.abs(e.changedTouches[0].clientX - this.touchStartX) <= 20 && 
+                            Math.abs(e.changedTouches[0].clientY - this.touchStartY) <= 20) {
+                            // 模拟点击事件
+                            const clickEvent = new MouseEvent('click', {
+                                bubbles: true,
+                                cancelable: true,
+                                view: window
+                            });
+                            this.dispatchEvent(clickEvent);
+                        }
+                    };
+                    
+                    document.addEventListener('touchmove', handleTouchMove);
+                    document.addEventListener('touchend', handleTouchEnd);
+                });
             });
             
             // 初始化游戏
@@ -898,6 +980,7 @@
     </script>
 </body>
 </html>
+    
 <!--
 升级  v0.14
 startBtn failed on cell phone.
