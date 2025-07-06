@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>3D魔方演示 v1.2</title>
+    <title>3D魔方演示 v1.3</title>
     <style>
         body {
             margin: 0;
@@ -128,7 +128,7 @@
     <div class="container">
         <div class="header">
             <h1>3D魔方演示</h1>
-            <div class="version">版本 v1.2 - 修正为正立方体</div>
+            <div class="version">版本 v1.3 - 修复Z轴旋转问题</div>
         </div>
         <div class="cube-container">
             <div class="cube" id="cube">
@@ -161,7 +161,7 @@
 
     <script>
         // 版本信息
-        const VERSION = "1.2";
+        const VERSION = "1.3";
         
         // 魔方初始状态
         const initialCubeState = {
@@ -224,29 +224,28 @@
             
             let newTransform = currentTransform;
             if (axis === 'x') {
-                newTransform = currentTransform.replace(/rotateX$([^)]+)$/, (match, deg) => {
-                    return `rotateX(${parseInt(deg) + 90}deg)`;
-                });
-                if (!/rotateX$/.test(newTransform)) {
-                    newTransform += " rotateX(90deg)";
-                }
+                newTransform = updateRotation(currentTransform, 'rotateX', 90);
             } else if (axis === 'y') {
-                newTransform = currentTransform.replace(/rotateY\(([^)]+)$/, (match, deg) => {
-                    return `rotateY(${parseInt(deg) + 90}deg)`;
-                });
-                if (!/rotateY$/.test(newTransform)) {
-                    newTransform += " rotateY(90deg)";
-                }
+                newTransform = updateRotation(currentTransform, 'rotateY', 90);
             } else if (axis === 'z') {
-                newTransform = currentTransform.replace(/rotateZ\(([^)]+)$/, (match, deg) => {
-                    return `rotateZ(${parseInt(deg) + 90}deg)`;
-                });
-                if (!/rotateZ\(/.test(newTransform)) {
-                    newTransform += " rotateZ(90deg)";
-                }
+                newTransform = updateRotation(currentTransform, 'rotateZ', 90);
             }
             
             cube.style.transform = newTransform;
+        }
+
+        // 更新旋转角度
+        function updateRotation(transform, axis, delta) {
+            const regex = new RegExp(`${axis}\\((-?\\d+)deg\\)`);
+            const match = transform.match(regex);
+            
+            if (match) {
+                const currentAngle = parseInt(match[1]);
+                const newAngle = currentAngle + delta;
+                return transform.replace(regex, `${axis}(${newAngle}deg)`);
+            } else {
+                return transform + ` ${axis}(${delta}deg)`;
+            }
         }
 
         // 旋转魔方的一个面（包括相邻面的边缘块）
@@ -430,3 +429,9 @@
     </script>
 </body>
 </html>
+    
+<!--
+btn_rotate_z 只有一次生效， fix it
+
+
+-->
