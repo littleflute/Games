@@ -3,7 +3,7 @@
         this.window = null;
         this.isDragging = false;
         this.dragOffset = { x: 0, y: 0 };
-        this.version = 'v0.21'; // 更新版本号
+        this.version = 'v0.22'; // 更新版本号
         this.currentRepo = 's177'; // 默认仓库
         
         // DOM 元素引用
@@ -23,6 +23,9 @@
             'Javascript': [1, 2, 3],
             'Songs': [1, 2, 3, 4]
         };
+        
+        // 存储最后点击的按钮
+        this.lastClickedButton = null;
         
         // 确保在DOM加载完成后创建窗口
         if (document.readyState === 'loading') {
@@ -200,7 +203,11 @@
             const issueBtn = document.createElement('button');
             issueBtn.textContent = `读取Issue #${issueNumber}`;
             issueBtn.style.padding = '5px 10px';
-            issueBtn.onclick = () => this.#loadIssue(issueNumber);
+            issueBtn.onclick = () => {
+                // 高亮当前按钮
+                this.#highlightButton(issueBtn);
+                this.#loadIssue(issueNumber);
+            };
             this.issueToolbar.appendChild(issueBtn);
         });
     }
@@ -226,7 +233,11 @@
             titleBtn.textContent = `标题: ${issue.title}`;
             titleBtn.style.padding = '5px 10px';
             titleBtn.style.fontWeight = 'bold';
-            titleBtn.onclick = () => this.#displayComment(issue.body || '无内容');
+            titleBtn.onclick = () => {
+                // 高亮当前按钮
+                this.#highlightButton(titleBtn);
+                this.#displayComment(issue.body || '无内容');
+            };
             this.commentToolbar.appendChild(titleBtn);
             
             // 为每个评论添加按钮
@@ -234,7 +245,11 @@
                 const commentBtn = document.createElement('button');
                 commentBtn.textContent = `评论 ${index + 1} (${comment.user.login})`;
                 commentBtn.style.padding = '5px 10px';
-                commentBtn.onclick = () => this.#displayComment(comment.body);
+                commentBtn.onclick = () => {
+                    // 高亮当前按钮
+                    this.#highlightButton(commentBtn);
+                    this.#displayComment(comment.body);
+                };
                 this.commentToolbar.appendChild(commentBtn);
             });
             
@@ -242,6 +257,24 @@
         } catch (error) {
             this.#updateStatus(`加载 Issue 失败: ${error.message}`);
         }
+    }
+
+    // 新增：高亮按钮功能
+    #highlightButton(button) {
+        // 移除之前按钮的高亮
+        if (this.lastClickedButton) {
+            this.lastClickedButton.style.backgroundColor = '';
+            this.lastClickedButton.style.border = '';
+            this.lastClickedButton.style.fontWeight = '';
+        }
+        
+        // 高亮当前按钮
+        button.style.backgroundColor = '#4CAF50';
+        button.style.border = '2px solid #45a049';
+        button.style.fontWeight = 'bold';
+        
+        // 存储当前按钮
+        this.lastClickedButton = button;
     }
 
     #displayComment(content) {
@@ -353,7 +386,7 @@ window.toggle_gh_Client_Wnd = () => {
         }
     }
     ghClient.toggleWindow();
-};      
+};  
 /*
 升级 v0.22
 hightlight lasted clicked button
