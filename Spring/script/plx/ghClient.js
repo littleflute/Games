@@ -1,9 +1,10 @@
-﻿class GhClientWindow {
+﻿//ghClient.js
+class GhClientWindow {
     constructor() {
         this.window = null;
         this.isDragging = false;
         this.dragOffset = { x: 0, y: 0 };
-        this.version = 'v0.22'; // 更新版本号
+        this.version = 'v0.25'; // 更新版本号
         this.currentRepo = 's177'; // 默认仓库
         
         // DOM 元素引用
@@ -12,6 +13,7 @@
         this.textArea = null;
         this.statusBar = null;
         this.runButton = null;
+        this.updateButton = null;
         
         // 存储当前 issue 和评论数据
         this.currentIssue = null;
@@ -24,8 +26,9 @@
             'Songs': [1, 2, 3, 4]
         };
         
-        // 存储最后点击的按钮
-        this.lastClickedButton = null;
+        // 存储最后点击的按钮（独立存储）
+        this.lastClickedIssueButton = null;
+        this.lastClickedCommentButton = null;
         
         // 确保在DOM加载完成后创建窗口
         if (document.readyState === 'loading') {
@@ -51,7 +54,10 @@
                 body: data ? JSON.stringify(data) : null
             });
 
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || `HTTP ${response.status}`);
+            }
             return response.json();
         } catch (error) {
             console.error('API请求错误:', error);
@@ -105,7 +111,9 @@
         repoSelector.style.marginRight = '10px';
         repoSelector.onchange = (e) => {
             this.currentRepo = e.target.value;
-            this.#addIssueButtons(); // 切换仓库时更新 issue 按钮
+            // 切换仓库时重置评论工具条和文本框
+            this.#resetCommentToolbar();
+            this.#addIssueButtons();
             this.#updateStatus(`已切换到仓库: ${this.currentRepo}`);
         };
         titleBar.appendChild(repoSelector);
@@ -162,6 +170,14 @@
         this.runButton.onclick = () => this.#runCode();
         this.statusBar.appendChild(this.runButton);
 
+         
+        this.updateButton = document.createElement('button');
+        this.updateButton.textContent = '更新代码';
+        this.updateButton.style.backgroundColor = '#188';
+        this.updateButton.style.padding = '3px 10px';
+        this.updateButton.onclick = () => this.#updateCode();
+        this.statusBar.appendChild(this.updateButton);
+
         // 组装窗口
         this.window.appendChild(titleBar);
         this.window.appendChild(this.issueToolbar);
@@ -191,6 +207,22 @@
         }, { passive: false });
     }
 
+    // 新增：重置评论工具栏
+    #resetCommentToolbar() {
+        this.commentToolbar.innerHTML = '';
+        this.textArea.value = '';
+        this.currentIssue = null;
+        this.currentComments = [];
+        
+        // 移除评论按钮高亮
+        if (this.lastClickedCommentButton) {
+            this.lastClickedCommentButton.style.backgroundColor = '';
+            this.lastClickedCommentButton.style.border = '';
+            this.lastClickedCommentButton.style.fontWeight = '';
+            this.lastClickedCommentButton = null;
+        }
+    }
+
     #addIssueButtons() {
         // 清空现有按钮
         this.issueToolbar.innerHTML = '';
@@ -205,7 +237,7 @@
             issueBtn.style.padding = '5px 10px';
             issueBtn.onclick = () => {
                 // 高亮当前按钮
-                this.#highlightButton(issueBtn);
+                this.#highlightIssueButton(issueBtn);
                 this.#loadIssue(issueNumber);
             };
             this.issueToolbar.appendChild(issueBtn);
@@ -235,7 +267,7 @@
             titleBtn.style.fontWeight = 'bold';
             titleBtn.onclick = () => {
                 // 高亮当前按钮
-                this.#highlightButton(titleBtn);
+                this.#highlightCommentButton(titleBtn);
                 this.#displayComment(issue.body || '无内容');
             };
             this.commentToolbar.appendChild(titleBtn);
@@ -247,7 +279,7 @@
                 commentBtn.style.padding = '5px 10px';
                 commentBtn.onclick = () => {
                     // 高亮当前按钮
-                    this.#highlightButton(commentBtn);
+                    this.#highlightCommentButton(commentBtn);
                     this.#displayComment(comment.body);
                 };
                 this.commentToolbar.appendChild(commentBtn);
@@ -259,27 +291,103 @@
         }
     }
 
-    // 新增：高亮按钮功能
-    #highlightButton(button) {
-        // 移除之前按钮的高亮
-        if (this.lastClickedButton) {
-            this.lastClickedButton.style.backgroundColor = '';
-            this.lastClickedButton.style.border = '';
-            this.lastClickedButton.style.fontWeight = '';
+    // 新增：高亮issue按钮功能（蓝色）
+    #highlightIssueButton(button) {
+        // 移除之前issue按钮的高亮
+        if (this.lastClickedIssueButton) {
+            this.lastClickedIssueButton.style.backgroundColor = '#888';
+            this.lastClickedIssueButton.style.border = '';
+            this.lastClickedIssueButton.style.fontWeight = '';
         }
         
-        // 高亮当前按钮
+        // 高亮当前issue按钮（蓝色系）
+        button.style.backgroundColor = '#2196F3';
+        button.style.border = '2px solid #0b7dda';
+        button.style.fontWeight = 'bold';
+        button.style.color = 'white';
+        
+        // 存储当前按钮
+        this.lastClickedIssueButton = button;
+    }
+
+    // 新增：高亮评论按钮功能（绿色）
+    #highlightCommentButton(button) {
+        // 移除之前评论按钮的高亮
+        if (this.lastClickedCommentButton) {
+            this.lastClickedCommentButton.style.backgroundColor = '';
+            this.lastClickedCommentButton.style.border = '';
+            this.lastClickedCommentButton.style.fontWeight = '';
+            this.lastClickedCommentButton.style.color = '';
+        }
+        
+        // 高亮当前评论按钮（绿色系）
         button.style.backgroundColor = '#4CAF50';
         button.style.border = '2px solid #45a049';
         button.style.fontWeight = 'bold';
+        button.style.color = 'white';
         
         // 存储当前按钮
-        this.lastClickedButton = button;
+        this.lastClickedCommentButton = button;
     }
 
     #displayComment(content) {
         this.textArea.value = content || '无内容';
         this.#updateStatus('已显示评论内容');
+    }
+
+    // 新增：更新代码到GitHub
+    async #updateCode() {
+        if (!this.lastClickedCommentButton) {
+            this.#updateStatus('错误: 请先选择一个issue标题或评论');
+            return;
+        }
+
+        // 获取当前选中的评论按钮索引
+        const buttons = Array.from(this.commentToolbar.children);
+        const selectedIndex = buttons.indexOf(this.lastClickedCommentButton);
+        
+        if (selectedIndex === -1) {
+            this.#updateStatus('错误: 无法确定选中的项目');
+            return;
+        }
+
+        const newContent = this.textArea.value;
+        if (!newContent.trim()) {
+            this.#updateStatus('错误: 内容不能为空');
+            return;
+        }
+
+        try {
+            this.#updateStatus('正在更新GitHub内容...');
+            
+            // 0 = issue标题, >0 = 评论
+            if (selectedIndex === 0) {
+                // 更新issue主体
+                await this.#apiRequest('PATCH', `issues/${this.currentIssue.number}`, {
+                    body: newContent
+                });
+                this.#updateStatus('成功更新issue主体内容');
+            } else {
+                // 更新评论
+                const commentIndex = selectedIndex - 1;
+                const commentId = this.currentComments[commentIndex].id;
+                await this.#apiRequest('PATCH', `issues/comments/${commentId}`, {
+                    body: newContent
+                });
+                this.#updateStatus(`成功更新评论 #${commentIndex + 1}`);
+            }
+
+            // 重新加载当前issue以获取最新内容
+            await this.#loadIssue(this.currentIssue.number);
+            
+            // 重新高亮选中的按钮
+            if (buttons[selectedIndex]) {
+                this.#highlightCommentButton(buttons[selectedIndex]);
+                this.#displayComment(newContent);
+            }
+        } catch (error) {
+            this.#updateStatus(`更新失败: ${error.message}`);
+        }
     }
 
     #runCode() {
@@ -386,9 +494,11 @@ window.toggle_gh_Client_Wnd = () => {
         }
     }
     ghClient.toggleWindow();
-};  
+};
 /*
-升级 v0.22
-hightlight lasted clicked button
+升级 ghClient.js v0.25 
+code #updateCode, 用文本框里的内容更新 github 上的内容。
+
+return all new code
  
 */
