@@ -3,7 +3,7 @@
         this.window = null;
         this.isDragging = false;
         this.dragOffset = { x: 0, y: 0 };
-        this.version = 'v0.13'; // 更新版本号
+        this.version = 'v0.14'; // 更新版本号
         this.currentRepo = 's177'; // 默认仓库
         
         // DOM 元素引用
@@ -89,7 +89,7 @@
         const repoSelector = document.createElement('select');
         repoSelector.innerHTML = `
             <option value="s177">s177</option>
-            <option value="another-repo">another-repo</option>
+            <option value="s117">s117</option>
         `;
         repoSelector.style.marginRight = '10px';
         repoSelector.onchange = (e) => this.currentRepo = e.target.value;
