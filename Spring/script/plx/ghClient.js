@@ -3,7 +3,7 @@
         this.window = null;
         this.isDragging = false;
         this.dragOffset = { x: 0, y: 0 };
-        this.version = 'v0.13'; // 更新版本号
+        this.version = 'v0.21'; // 更新版本号
         this.currentRepo = 's177'; // 默认仓库
         
         // DOM 元素引用
@@ -16,6 +16,13 @@
         // 存储当前 issue 和评论数据
         this.currentIssue = null;
         this.currentComments = [];
+        
+        // 各仓库可用的 issue 列表
+        this.repoIssues = {
+            's177': [1, 2],
+            'Javascript': [1, 2, 3],
+            'Songs': [1, 2, 3, 4]
+        };
         
         // 确保在DOM加载完成后创建窗口
         if (document.readyState === 'loading') {
@@ -89,10 +96,15 @@
         const repoSelector = document.createElement('select');
         repoSelector.innerHTML = `
             <option value="s177">s177</option>
-            <option value="another-repo">another-repo</option>
+            <option value="Javascript">Javascript</option>
+            <option value="Songs">Songs</option>
         `;
         repoSelector.style.marginRight = '10px';
-        repoSelector.onchange = (e) => this.currentRepo = e.target.value;
+        repoSelector.onchange = (e) => {
+            this.currentRepo = e.target.value;
+            this.#addIssueButtons(); // 切换仓库时更新 issue 按钮
+            this.#updateStatus(`已切换到仓库: ${this.currentRepo}`);
+        };
         titleBar.appendChild(repoSelector);
 
         // 关闭按钮
@@ -180,24 +192,22 @@
         // 清空现有按钮
         this.issueToolbar.innerHTML = '';
         
-        // 创建读取第一个issue的按钮
-        const issue1Btn = document.createElement('button');
-        issue1Btn.textContent = '读取Issue #1';
-        issue1Btn.style.padding = '5px 10px';
-        issue1Btn.onclick = () => this.#loadIssue(1);
-        this.issueToolbar.appendChild(issue1Btn);
+        // 获取当前仓库的可用 issue 列表
+        const issues = this.repoIssues[this.currentRepo] || [1, 2];
         
-        // 创建读取第二个issue的按钮
-        const issue2Btn = document.createElement('button');
-        issue2Btn.textContent = '读取Issue #2';
-        issue2Btn.style.padding = '5px 10px';
-        issue2Btn.onclick = () => this.#loadIssue(2);
-        this.issueToolbar.appendChild(issue2Btn);
+        // 为每个 issue 添加按钮
+        issues.forEach(issueNumber => {
+            const issueBtn = document.createElement('button');
+            issueBtn.textContent = `读取Issue #${issueNumber}`;
+            issueBtn.style.padding = '5px 10px';
+            issueBtn.onclick = () => this.#loadIssue(issueNumber);
+            this.issueToolbar.appendChild(issueBtn);
+        });
     }
 
     async #loadIssue(number) {
         try {
-            this.#updateStatus(`正在加载 Issue #${number}...`);
+            this.#updateStatus(`正在加载 ${this.currentRepo} 仓库的 Issue #${number}...`);
             
             // 并行获取 issue 和评论
             const [issue, comments] = await Promise.all([
@@ -228,7 +238,7 @@
                 this.commentToolbar.appendChild(commentBtn);
             });
             
-            this.#updateStatus(`成功加载 Issue #${number}，共 ${comments.length} 条评论`);
+            this.#updateStatus(`成功加载 ${this.currentRepo} 仓库的 Issue #${number}，共 ${comments.length} 条评论`);
         } catch (error) {
             this.#updateStatus(`加载 Issue 失败: ${error.message}`);
         }
@@ -343,16 +353,9 @@ window.toggle_gh_Client_Wnd = () => {
         }
     }
     ghClient.toggleWindow();
-};     
+};      
 /*
-升级 v0.13
-窗口顶部有两个工具条
-窗口底部有一个状态栏。
-中间有一个文本框。
-第一个工具条上有两个按钮。
-点击第一个按钮的时候读取s177库 的第一个issue，第二个按钮读取第2个issue。
-把读取的issue 评论以按钮的方式显示在第二个工具条上。点击评论按钮的时候会在文本框里显示当前评论的内容。
-
-状态栏上有一个运行按钮，可以运行文本框里的代码。
+升级 v0.22
+hightlight lasted clicked button
  
 */
