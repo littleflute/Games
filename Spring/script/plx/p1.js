@@ -113,7 +113,7 @@ function CPlayground(parentDiv){
 
     this.show = function(b){
         if(!ui){
-            ui=blo0.blMDiv(p,"id_mdiv_4_playground","playground",555,5,w,111,blGrey[0]);
+            ui=blo0.blMDiv(p,"id_mdiv_4_playground","playground",11,111,w,111,blGrey[0]);
             ui.inf = {};
             ui.inf.x = 0;
             ui.inf.y = 0;
