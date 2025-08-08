@@ -1,10 +1,10 @@
 ﻿
-const p1Tag = "[plx/p1.js_v0.343]";
+const p1Tag = "[plx/p1.js_v0.41]";
 
 const btn4p1 = bl$("plx_p1_btn");
 
 if(btn4p1){ 
-    btn4p1.v = blo0.blMD(btn4p1.id+p1Tag,p1Tag,210,11,555,150,blGrey[0]);
+    btn4p1.v = blo0.blMD(btn4p1.id+p1Tag,p1Tag,210,11,333,150,blGrey[0]);
     var tb = blo0.blDiv(btn4p1.v,btn4p1.v.id+"tb","tb0",blGrey[1]);
     tb.btnStoryBoard = blo0.blBtn(tb,"btnStoryBoard","storyBoard",blGrey[2]);
     tb.btnStoryBoard.style.float = "left";
@@ -113,7 +113,7 @@ function CPlayground(parentDiv){
 
     this.show = function(b){
         if(!ui){
-            ui=blo0.blMDiv(p,"id_mdiv_4_playground","playground",555,5,w,111,blGrey[0]);
+            ui=blo0.blMDiv(p,"id_mdiv_4_playground","playground",11,111,w,111,blGrey[0]);
             ui.inf = {};
             ui.inf.x = 0;
             ui.inf.y = 0;
