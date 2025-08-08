@@ -291,6 +291,9 @@ public class CommonController {
 		String java_version = System.getProperty("java.version");
 		ret.put("Java Runtime Version", java_version);
 
+		String ipServer = "127.0.0.1";
+		ret.put("ip ", ipServer);
+
 		return ret;
 	}
 }
