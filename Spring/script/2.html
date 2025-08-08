@@ -1,53 +1,1268 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-<style>
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-.topnav {
-  overflow: hidden;
-  background-color: #333;
-}
-
-.topnav a {
-  float: left;
-  color: #f2f2f2;
-  text-align: center;
-  padding: 14px 16px;
-  text-decoration: none;
-  font-size: 17px;
-}
-
-.topnav a:hover {
-  background-color: #ddd;
-  color: black;
-}
-
-.topnav a.active {
-  background-color: #4CAF50;
-  color: white;
-}
-</style> 
-<title>2.html</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>高级移动端画布应用</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            touch-action: manipulation;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            color: #fff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            max-width: 100%;
+            height: 100vh;
+            margin: 0 auto;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
+            background: rgba(25, 25, 35, 0.95);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* 顶部导航菜单 */
+        nav {
+            background: linear-gradient(to right, #1a2980, #26d0ce);
+            padding: 12px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+        }
+        
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo i {
+            margin-right: 10px;
+            font-size: 1.8rem;
+            color: #ffd700;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+        
+        .nav-links li {
+            margin-left: 15px;
+        }
+        
+        .nav-links a {
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            font-size: 0.9rem;
+            padding: 5px 8px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .nav-links a:hover, .nav-links a.active {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+        
+        /* 工具条样式 */
+        .toolbar {
+            background: #2c3e50;
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 90;
+            flex-wrap: wrap;
+        }
+        
+        .toolbar-btn {
+            background: linear-gradient(to right, #3498db, #2980b9);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 30px;
+            font-size: 0.95rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin: 5px;
+            min-width: 120px;
+        }
+        
+        .toolbar-btn i {
+            margin-right: 8px;
+            font-size: 1.1rem;
+        }
+        
+        .toolbar-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .toolbar-btn.active {
+            background: linear-gradient(to right, #e74c3c, #c0392b);
+        }
+        
+        /* 画布区域 */
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            background: #ecf0f1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: background-color 0.5s ease;
+            touch-action: none;
+        }
+        
+        .canvas-content {
+            text-align: center;
+            padding: 20px;
+            color: #2c3e50;
+            max-width: 90%;
+        }
+        
+        .canvas-content h2 {
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+            color: #1a2980;
+        }
+        
+        .canvas-content p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .grid-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(200, 200, 200, 0.2) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(200, 200, 200, 0.2) 1px, transparent 1px);
+            background-size: 20px 20px;
+            pointer-events: none;
+            opacity: 1;
+            transition: opacity 0.3s ease;
+        }
+        
+        .grid-overlay.hidden {
+            opacity: 0;
+        }
+        
+        /* 状态栏样式 */
+        footer {
+            background: linear-gradient(to right, #1a2980, #26d0ce);
+            padding: 10px 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+        }
+        
+        .status-info {
+            display: flex;
+            align-items: center;
+        }
+        
+        .status-info i {
+            margin-right: 8px;
+            color: #ffd700;
+        }
+        
+        .battery {
+            display: flex;
+            align-items: center;
+        }
+        
+        .battery-level {
+            height: 15px;
+            width: 40px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 3px;
+            margin-right: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .battery-level::after {
+            content: '';
+            position: absolute;
+            height: 100%;
+            width: 82%;
+            background: #2ecc71;
+            border-radius: 2px;
+        }
+        
+        /* 可移动设置窗口 */
+        .settings-window {
+            position: absolute;
+            width: 280px;
+            background: rgba(40, 44, 52, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+            display: none;
+            z-index: 200;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .window-header {
+            background: linear-gradient(to right, #1a2980, #26d0ce);
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: move;
+        }
+        
+        .window-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .close-btn {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 0, 0, 0.6);
+        }
+        
+        .window-content {
+            padding: 20px;
+        }
+        
+        .color-picker {
+            margin-bottom: 25px;
+        }
+        
+        .color-picker label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .color-options {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+        }
+        
+        .color-option {
+            width: 100%;
+            height: 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+        
+        .color-option:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+        
+        .color-option.active {
+            border: 2px solid white;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+        }
+        
+        .preset-label {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .custom-color {
+            display: flex;
+            align-items: center;
+            margin-top: 15px;
+        }
+        
+        .custom-color input {
+            flex: 1;
+            height: 40px;
+            width: 180px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            padding: 0 15px;
+            color: white;
+            font-size: 1rem;
+        }
+        
+        .custom-color-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-left: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .custom-color-btn:hover {
+            background: #2980b9;
+        }
+        
+        .setting-group {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .setting-group:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        
+        .setting-group label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            outline: none;
+        }
+        
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #3498db;
+            cursor: pointer;
+        }
+        
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .slider-toggle {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.1);
+            transition: .4s;
+            border-radius: 24px;
+        }
+        
+        .slider-toggle:before {
+            position: absolute;
+            content: "";
+            height: 16px;
+            width: 16px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .slider-toggle {
+            background-color: #3498db;
+        }
+        
+        input:checked + .slider-toggle:before {
+            transform: translateX(26px);
+        }
+        
+        /* 画布工具提示 */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            z-index: 300;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        /* 临时形状预览 */
+        .preview-shape {
+            position: absolute;
+            pointer-events: none;
+            border: 2px dashed rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
+        /* 响应式调整 */
+        @media (max-width: 480px) {
+            .nav-links li {
+                margin-left: 10px;
+            }
+            
+            .nav-links a {
+                font-size: 0.8rem;
+                padding: 4px 6px;
+            }
+            
+            .canvas-content h2 {
+                font-size: 1.5rem;
+            }
+            
+            .canvas-content p {
+                font-size: 1rem;
+            }
+            
+            .toolbar-btn {
+                padding: 8px 12px;
+                font-size: 0.85rem;
+                min-width: 100px;
+            }
+            
+            .settings-window {
+                width: 90%;
+                max-width: 300px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <!-- 顶部导航菜单 -->
+        <nav>
+            <div class="logo">
+                <i class="fas fa-palette"></i>
+                <span>高级画布工作室 v1.14</span>
+            </div>
+            <ul class="nav-links">
+                <li><a href="index.html">index.html</a></li>
+                <li><a href="1.html">1.html</a></li> 
+                <li><a href="#" class="active">2.html</a></li>
+            </ul>
+        </nav>
+        
+        <!-- 工具条 -->
+        <div class="toolbar">
+            <button class="toolbar-btn" id="settings_btn">
+                <i class="fas fa-cog"></i>
+                <span>画布设置</span>
+            </button>
+            <button class="toolbar-btn active" id="free_draw_btn">
+                <i class="fas fa-pencil-alt"></i>
+                <span>自由绘制</span>
+            </button>
+            <button class="toolbar-btn" id="line_btn">
+                <i class="fas fa-minus"></i>
+                <span>直线</span>
+            </button>
+            <button class="toolbar-btn" id="rect_btn">
+                <i class="fas fa-square"></i>
+                <span>矩形</span>
+            </button>
+            <button class="toolbar-btn" id="circle_btn">
+                <i class="fas fa-circle"></i>
+                <span>圆形</span>
+            </button>
+            <button class="toolbar-btn" id="clear_btn">
+                <i class="fas fa-trash-alt"></i>
+                <span>清空画布</span>
+            </button>
+            <button class="toolbar-btn" id="grid_toggle">
+                <i class="fas fa-th"></i>
+                <span>网格: 开</span>
+            </button>
+        </div>
+        
+        <!-- 画布区域 -->
+        <div class="canvas-container" id="canvas">
+            <div class="canvas-content">
+                <h2>创意画布空间</h2>
+                <p>选择左侧工具开始创作，使用"画布设置"自定义背景和画笔设置。</p>
+                <p>支持自由绘制、直线、矩形和圆形，设置窗口可以拖动到任意位置。</p>
+                <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.05); border-radius: 10px;">
+                    <i class="fas fa-info-circle" style="color: #3498db;"></i>
+                    <span style="font-size: 0.9rem;">修复版本：支持多种形状绘制和实时预览</span>
+                </div>
+            </div>
+            <div class="grid-overlay" id="grid-overlay"></div>
+            <canvas id="drawing-canvas" style="display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+            <div class="tooltip" id="tooltip"></div>
+            <div class="preview-shape" id="preview-shape" style="display: none;"></div>
+        </div>
+        
+        <!-- 状态栏 -->
+        <footer>
+            <div class="status-info">
+                <i class="fas fa-sync-alt"></i>
+                <span>当前工具: <span id="current-tool">自由绘制</span></span>
+            </div>
+            <div class="battery">
+                <div class="battery-level"></div>
+                <span>82%</span>
+            </div>
+        </footer>
+        
+        <!-- 可移动设置窗口 -->
+        <div class="settings-window" id="settings-window">
+            <div class="window-header" id="window-header">
+                <div class="window-title">
+                    <i class="fas fa-fill-drip"></i> 画布设置
+                </div>
+                <button class="close-btn" id="close-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="window-content">
+                <div class="setting-group">
+                    <label>画布背景颜色:</label>
+                    <div class="color-options">
+                        <div class="color-option active" style="background-color: #ecf0f1;" data-color="#ecf0f1"></div>
+                        <div class="color-option" style="background-color: #d5f5e3;" data-color="#d5f5e3"></div>
+                        <div class="color-option" style="background-color: #f9ebea;" data-color="#f9ebea"></div>
+                        <div class="color-option" style="background-color: #eaf2f8;" data-color="#eaf2f8"></div>
+                        <div class="color-option" style="background-color: #fdebd0;" data-color="#fdebd0"></div>
+                        <div class="color-option" style="background-color: #e8daef;" data-color="#e8daef"></div>
+                        <div class="color-option" style="background-color: #d1f2eb;" data-color="#d1f2eb"></div>
+                        <div class="color-option" style="background-color: #f5eef8;" data-color="#f5eef8"></div>
+                    </div>
+                    
+                    <div class="preset-label">自定义颜色:</div>
+                    <div class="custom-color">
+                        <input type="text" id="custom-color-input" placeholder="#FFFFFF 或 rgb(255,255,255)">
+                        <button class="custom-color-btn" id="apply_custom_btn">应用</button>
+                    </div>
+                </div>
+                
+                <div class="setting-group">
+                    <label>画笔颜色:</label>
+                    <div class="color-options">
+                        <div class="color-option active" style="background-color: #000000;" data-color="#000000" data-type="brush"></div>
+                        <div class="color-option" style="background-color: #e74c3c;" data-color="#e74c3c" data-type="brush"></div>
+                        <div class="color-option" style="background-color: #3498db;" data-color="#3498db" data-type="brush"></div>
+                        <div class="color-option" style="background-color: #2ecc71;" data-color="#2ecc71" data-type="brush"></div>
+                    </div>
+                </div>
+                
+                <div class="setting-group">
+                    <label>画笔大小: <span id="brush-size-value">5</span>px</label>
+                    <div class="slider-container">
+                        <input type="range" min="1" max="20" value="5" class="slider" id="brush-size">
+                    </div>
+                </div>
+                
+                <div class="setting-group">
+                    <label>网格显示:</label>
+                    <div class="slider-container">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="grid-toggle" checked>
+                            <span class="slider-toggle"></span>
+                        </label>
+                        <span id="grid-status">开</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-
-<div class="topnav">
-  <a class="active" href="http://localhost:8080/">Home</a>
-  <a href="#">[2.html_v0.0.14]</a> 
-</div>
-<div>
-	<button id="plx_p1_btn">p1</button>
-</div>
-
-<script src="https://littleflute.github.io/JavaScript/w3.js" ></script>
-<script src="https://littleflute.github.io/JavaScript/blclass.js" ></script>
-<script src="plx/p1.js"></script>
+    <script>
+        // 图形基类
+        class C4Shape {
+            constructor(x1, y1, color, lineWidth) {
+                this.x1 = x1;
+                this.y1 = y1;
+                this.color = color;
+                this.lineWidth = lineWidth;
+            }
+            
+            // 每个子类都需要实现draw方法
+            draw(context) {
+                throw new Error("子类必须实现draw方法");
+            }
+            
+            // 预览绘制方法
+            preview(context) {
+                // 默认使用正常绘制方法，子类可以重写
+                this.draw(context);
+            }
+        }
+        
+        // 直线类
+        class C4Line extends C4Shape {
+            constructor(x1, y1, x2, y2, color, lineWidth) {
+                super(x1, y1, color, lineWidth);
+                this.x2 = x2;
+                this.y2 = y2;
+            }
+            
+            draw(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.lineCap = 'round';
+                context.beginPath();
+                context.moveTo(this.x1, this.y1);
+                context.lineTo(this.x2, this.y2);
+                context.stroke();
+                context.restore();
+            }
+            
+            preview(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.setLineDash([5, 5]);
+                context.lineCap = 'round';
+                context.beginPath();
+                context.moveTo(this.x1, this.y1);
+                context.lineTo(this.x2, this.y2);
+                context.stroke();
+                context.setLineDash([]);
+                context.restore();
+            }
+        }
+        
+        // 圆形类
+        class C4Circle extends C4Shape {
+            constructor(x1, y1, x2, y2, color, lineWidth) {
+                super(x1, y1, color, lineWidth);
+                this.x2 = x2;
+                this.y2 = y2;
+                this.radius = this.calculateRadius();
+            }
+            
+            calculateRadius() {
+                return Math.sqrt(Math.pow(this.x2 - this.x1, 2) + Math.pow(this.y2 - this.y1, 2));
+            }
+            
+            // 更新终点并重新计算半径
+            updateEndPoint(x2, y2) {
+                this.x2 = x2;
+                this.y2 = y2;
+                this.radius = this.calculateRadius();
+            }
+            
+            draw(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.beginPath();
+                context.arc(this.x1, this.y1, this.radius, 0, Math.PI * 2);
+                context.stroke();
+                context.restore();
+            }
+            
+            preview(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.setLineDash([5, 5]);
+                context.beginPath();
+                context.arc(this.x1, this.y1, this.radius, 0, Math.PI * 2);
+                context.stroke();
+                context.setLineDash([]);
+                context.restore();
+            }
+        }
+        
+        // 矩形类
+        class C4Rect extends C4Shape {
+            constructor(x1, y1, x2, y2, color, lineWidth) {
+                super(x1, y1, color, lineWidth);
+                this.x2 = x2;
+                this.y2 = y2;
+            }
+            
+            // 更新终点
+            updateEndPoint(x2, y2) {
+                this.x2 = x2;
+                this.y2 = y2;
+            }
+            
+            draw(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.beginPath();
+                
+                const x = Math.min(this.x1, this.x2);
+                const y = Math.min(this.y1, this.y2);
+                const width = Math.abs(this.x2 - this.x1);
+                const height = Math.abs(this.y2 - this.y1);
+                
+                context.rect(x, y, width, height);
+                context.stroke();
+                context.restore();
+            }
+            
+            preview(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.setLineDash([5, 5]);
+                context.beginPath();
+                
+                const x = Math.min(this.x1, this.x2);
+                const y = Math.min(this.y1, this.y2);
+                const width = Math.abs(this.x2 - this.x1);
+                const height = Math.abs(this.y2 - this.y1);
+                
+                context.rect(x, y, width, height);
+                context.stroke();
+                context.setLineDash([]);
+                context.restore();
+            }
+        }
+        
+        // 自由绘制类
+        class C4Freehand extends C4Shape {
+            constructor(x1, y1, color, lineWidth) {
+                super(x1, y1, color, lineWidth);
+                this.points = [{x: x1, y: y1}];
+            }
+            
+            // 添加新点
+            addPoint(x, y) {
+                this.points.push({x, y});
+            }
+            
+            draw(context) {
+                if (this.points.length < 2) return;
+                
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.lineCap = 'round';
+                context.lineJoin = 'round';
+                context.beginPath();
+                context.moveTo(this.points[0].x, this.points[0].y);
+                
+                for (let i = 1; i < this.points.length; i++) {
+                    context.lineTo(this.points[i].x, this.points[i].y);
+                }
+                
+                context.stroke();
+                context.restore();
+            }
+        }
+        
+        // 画布管理器类
+        class C4CanvasManager {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.context = this.canvas.getContext('2d');
+                this.shapes = [];
+                this.currentShape = null;
+                this.isDrawing = false;
+                this.drawMode = 'free'; // 默认自由绘制
+                this.currentColor = '#000000';
+                this.currentLineWidth = 5;
+                
+                // 绑定事件处理方法
+                this.bindEvents();
+                
+                // 初始化画布大小
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+            
+            // 绑定事件
+            bindEvents() {
+                // 鼠标事件
+                this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
+                this.canvas.addEventListener('mousemove', (e) => this.draw(e));
+                this.canvas.addEventListener('mouseup', () => this.stopDrawing());
+                this.canvas.addEventListener('mouseout', () => this.stopDrawing());
+                
+                // 触摸事件
+                this.canvas.addEventListener('touchstart', (e) => this.startDrawing(e));
+                this.canvas.addEventListener('touchmove', (e) => this.draw(e));
+                this.canvas.addEventListener('touchend', () => this.stopDrawing());
+            }
+            
+            // 调整画布大小
+            resizeCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+                this.redrawAll(); // 重绘所有图形
+            }
+            
+            // 设置绘制模式
+            setDrawMode(mode) {
+                this.drawMode = mode;
+            }
+            
+            // 设置画笔颜色
+            setColor(color) {
+                this.currentColor = color;
+            }
+            
+            // 设置画笔大小
+            setLineWidth(width) {
+                this.currentLineWidth = width;
+            }
+            
+            // 开始绘制
+            startDrawing(e) {
+                e.preventDefault();
+                this.isDrawing = true;
+                const [x, y] = this.getCoordinates(e);
+                
+                // 根据当前模式创建相应的图形对象
+                switch(this.drawMode) {
+                    case 'free':
+                        this.currentShape = new C4Freehand(x, y, this.currentColor, this.currentLineWidth);
+                        break;
+                    case 'line':
+                        this.currentShape = new C4Line(x, y, x, y, this.currentColor, this.currentLineWidth);
+                        break;
+                    case 'rect':
+                        this.currentShape = new C4Rect(x, y, x, y, this.currentColor, this.currentLineWidth);
+                        break;
+                    case 'circle':
+                        this.currentShape = new C4Circle(x, y, x, y, this.currentColor, this.currentLineWidth);
+                        break;
+                }
+            }
+            
+            // 绘制中
+            draw(e) {
+                if (!this.isDrawing || !this.currentShape) return;
+                e.preventDefault();
+                
+                const [x, y] = this.getCoordinates(e);
+                
+                // 根据当前形状类型更新
+                switch(this.drawMode) {
+                    case 'free':
+                        this.currentShape.addPoint(x, y);
+                        this.redrawAll();
+                        break;
+                    case 'line':
+                        this.currentShape.x2 = x;
+                        this.currentShape.y2 = y;
+                        this.redrawAll();
+                        this.currentShape.preview(this.context);
+                        break;
+                    case 'rect':
+                        this.currentShape.updateEndPoint(x, y);
+                        this.redrawAll();
+                        this.currentShape.preview(this.context);
+                        break;
+                    case 'circle':
+                        this.currentShape.updateEndPoint(x, y);
+                        this.redrawAll();
+                        this.currentShape.preview(this.context);
+                        break;
+                }
+            }
+            
+            // 停止绘制
+            stopDrawing() {
+                if (this.isDrawing && this.currentShape) {
+                    this.shapes.push(this.currentShape);
+                    this.currentShape = null;
+                    this.isDrawing = false;
+                    this.redrawAll();
+                }
+            }
+            
+            // 清空画布
+            clearCanvas() {
+                this.shapes = [];
+                this.redrawAll();
+            }
+            
+            // 重绘所有图形
+            redrawAll() {
+                // 清空画布
+                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 绘制所有保存的图形
+                this.shapes.forEach(shape => {
+                    shape.draw(this.context);
+                });
+            }
+            
+            // 获取坐标
+            getCoordinates(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                let x, y;
+                
+                if (e.type.includes('touch')) {
+                    x = e.touches[0].clientX - rect.left;
+                    y = e.touches[0].clientY - rect.top;
+                } else {
+                    x = e.clientX - rect.left;
+                    y = e.clientY - rect.top;
+                }
+                
+                return [x, y];
+            }
+        }
+        
+        // 应用主控制器
+        class CanvasApp {
+            constructor() {
+                // 初始化画布管理器
+                this.canvasManager = new C4CanvasManager('drawing-canvas');
+                
+                // 获取DOM元素
+                this.settingsBtn = document.getElementById('settings_btn');
+                this.settingsWindow = document.getElementById('settings-window');
+                this.closeBtn = document.getElementById('close-btn');
+                this.colorOptions = document.querySelectorAll('.color-option');
+                this.canvasContainer = document.getElementById('canvas');
+                this.customColorInput = document.getElementById('custom-color-input');
+                this.applyCustomBtn = document.getElementById('apply_custom_btn');
+                this.windowHeader = document.getElementById('window-header');
+                this.freeDrawBtn = document.getElementById('free_draw_btn');
+                this.lineBtn = document.getElementById('line_btn');
+                this.rectBtn = document.getElementById('rect_btn');
+                this.circleBtn = document.getElementById('circle_btn');
+                this.clearBtn = document.getElementById('clear_btn');
+                this.gridToggleBtn = document.getElementById('grid_toggle');
+                this.gridOverlay = document.getElementById('grid-overlay');
+                this.tooltip = document.getElementById('tooltip');
+                this.brushSizeSlider = document.getElementById('brush-size');
+                this.brushSizeValue = document.getElementById('brush-size-value');
+                this.gridToggle = document.getElementById('grid-toggle');
+                this.gridStatus = document.getElementById('grid-status');
+                this.currentToolDisplay = document.getElementById('current-tool');
+                this.previewShape = document.getElementById('preview-shape');
+                
+                // 初始化变量
+                this.isDragging = false;
+                this.currentX = 0;
+                this.currentY = 0;
+                this.initialX = 0;
+                this.initialY = 0;
+                this.xOffset = 0;
+                this.yOffset = 0;
+                
+                // 初始化设置窗口位置
+                this.settingsWindow.style.top = '150px';
+                this.settingsWindow.style.left = '50%';
+                this.settingsWindow.style.transform = 'translateX(-50%)';
+                
+                // 绑定事件
+                this.bindEvents();
+                
+                // 初始化网格显示
+                this.gridToggle.dispatchEvent(new Event('change'));
+                
+                // 隐藏初始画布内容
+                document.querySelector('.canvas-content').style.display = 'none';
+            }
+            
+            // 绑定所有事件
+            bindEvents() {
+                // 设置按钮切换
+                this.settingsBtn.addEventListener('click', () => this.toggleSettingsWindow());
+                
+                // 关闭设置窗口
+                this.closeBtn.addEventListener('click', () => this.hideSettingsWindow());
+                
+                // 颜色选择
+                this.colorOptions.forEach(option => {
+                    option.addEventListener('click', (e) => this.selectColor(e.target));
+                });
+                
+                // 应用自定义颜色
+                this.applyCustomBtn.addEventListener('click', () => this.applyCustomColor());
+                
+                // 窗口拖动
+                this.windowHeader.addEventListener('mousedown', (e) => this.dragStart(e));
+                this.windowHeader.addEventListener('touchstart', (e) => this.dragStart(e));
+                document.addEventListener('mousemove', (e) => this.drag(e));
+                document.addEventListener('touchmove', (e) => this.drag(e));
+                document.addEventListener('mouseup', () => this.dragEnd());
+                document.addEventListener('touchend', () => this.dragEnd());
+                
+                // 工具选择
+                this.freeDrawBtn.addEventListener('click', () => this.selectTool('free'));
+                this.lineBtn.addEventListener('click', () => this.selectTool('line'));
+                this.rectBtn.addEventListener('click', () => this.selectTool('rect'));
+                this.circleBtn.addEventListener('click', () => this.selectTool('circle'));
+                
+                // 清空画布
+                this.clearBtn.addEventListener('click', () => this.clearCanvas());
+                
+                // 网格开关
+                this.gridToggle.addEventListener('change', () => this.toggleGrid());
+                this.gridToggleBtn.addEventListener('click', () => this.toggleGridBtn());
+                
+                // 画笔大小调整
+                this.brushSizeSlider.addEventListener('input', () => this.updateBrushSize());
+                
+                // 键盘快捷键
+                document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+            }
+            
+            // 切换设置窗口显示
+            toggleSettingsWindow() {
+                if (this.settingsWindow.style.display === 'block') {
+                    this.hideSettingsWindow();
+                } else {
+                    this.showSettingsWindow();
+                }
+            }
+            
+            // 显示设置窗口
+            showSettingsWindow() {
+                this.settingsWindow.style.display = 'block';
+            }
+            
+            // 隐藏设置窗口
+            hideSettingsWindow() {
+                this.settingsWindow.style.display = 'none';
+            }
+            
+            // 选择颜色
+            selectColor(element) {
+                const type = element.getAttribute('data-type');
+                const color = element.getAttribute('data-color');
+                
+                // 画笔颜色选择
+                if (type === 'brush') {
+                    // 移除所有画笔颜色的active类
+                    document.querySelectorAll('.color-option[data-type="brush"]').forEach(opt => {
+                        opt.classList.remove('active');
+                    });
+                    
+                    // 为当前选项添加active类
+                    element.classList.add('active');
+                    
+                    // 更新画笔颜色
+                    this.canvasManager.setColor(color);
+                    return;
+                }
+                
+                // 画布背景颜色选择
+                // 移除所有背景颜色的active类
+                document.querySelectorAll('.color-option:not([data-type])').forEach(opt => {
+                    opt.classList.remove('active');
+                });
+                
+                // 为当前选项添加active类
+                element.classList.add('active');
+                
+                // 更改画布背景
+                this.canvasContainer.style.backgroundColor = color;
+            }
+            
+            // 应用自定义颜色
+            applyCustomColor() {
+                const color = this.customColorInput.value;
+                if (this.isValidColor(color)) {
+                    this.canvasContainer.style.backgroundColor = color;
+                    // 移除所有预设背景颜色的active类
+                    document.querySelectorAll('.color-option:not([data-type])').forEach(opt => {
+                        opt.classList.remove('active');
+                    });
+                } else {
+                    alert('请输入有效的颜色值（如 #FFFFFF 或 rgb(255,255,255)');
+                }
+            }
+            
+            // 验证颜色值是否有效
+            isValidColor(color) {
+                const style = new Option().style;
+                style.color = color;
+                return style.color !== '';
+            }
+            
+            // 拖动窗口开始
+            dragStart(e) {
+                if (e.type === "touchstart") {
+                    this.initialX = e.touches[0].clientX - this.xOffset;
+                    this.initialY = e.touches[0].clientY - this.yOffset;
+                } else {
+                    this.initialX = e.clientX - this.xOffset;
+                    this.initialY = e.clientY - this.yOffset;
+                }
+                
+                if (e.target === this.windowHeader) {
+                    this.isDragging = true;
+                }
+            }
+            
+            // 拖动窗口
+            drag(e) {
+                if (this.isDragging) {
+                    e.preventDefault();
+                    
+                    if (e.type === "touchmove") {
+                        this.currentX = e.touches[0].clientX - this.initialX;
+                        this.currentY = e.touches[0].clientY - this.initialY;
+                    } else {
+                        this.currentX = e.clientX - this.initialX;
+                        this.currentY = e.clientY - this.initialY;
+                    }
+                    
+                    this.xOffset = this.currentX;
+                    this.yOffset = this.currentY;
+                    
+                    this.setTranslate(this.currentX, this.currentY, this.settingsWindow);
+                }
+            }
+            
+            // 拖动窗口结束
+            dragEnd() {
+                this.initialX = this.currentX;
+                this.initialY = this.currentY;
+                this.isDragging = false;
+            }
+            
+            // 设置元素位置
+            setTranslate(xPos, yPos, el) {
+                el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
+            }
+            
+            // 选择工具
+            selectTool(tool) {
+                // 重置所有按钮状态
+                this.freeDrawBtn.classList.remove('active');
+                this.lineBtn.classList.remove('active');
+                this.rectBtn.classList.remove('active');
+                this.circleBtn.classList.remove('active');
+                
+                // 设置当前工具按钮状态
+                switch(tool) {
+                    case 'free':
+                        this.freeDrawBtn.classList.add('active');
+                        this.currentToolDisplay.textContent = '自由绘制';
+                        break;
+                    case 'line':
+                        this.lineBtn.classList.add('active');
+                        this.currentToolDisplay.textContent = '直线';
+                        break;
+                    case 'rect':
+                        this.rectBtn.classList.add('active');
+                        this.currentToolDisplay.textContent = '矩形';
+                        break;
+                    case 'circle':
+                        this.circleBtn.classList.add('active');
+                        this.currentToolDisplay.textContent = '圆形';
+                        break;
+                }
+                
+                // 更新绘图模式
+                this.canvasManager.setDrawMode(tool);
+            }
+            
+            // 清空画布
+            clearCanvas() {
+                if (confirm('确定要清空画布吗？')) {
+                    this.canvasManager.clearCanvas();
+                }
+            }
+            
+            // 切换网格显示
+            toggleGrid() {
+                if (this.gridToggle.checked) {
+                    this.gridOverlay.classList.remove('hidden');
+                    this.gridStatus.textContent = '开';
+                    this.gridToggleBtn.innerHTML = '<i class="fas fa-th"></i> <span>网格: 开</span>';
+                } else {
+                    this.gridOverlay.classList.add('hidden');
+                    this.gridStatus.textContent = '关';
+                    this.gridToggleBtn.innerHTML = '<i class="fas fa-th"></i> <span>网格: 关</span>';
+                }
+            }
+            
+            // 网格按钮切换
+            toggleGridBtn() {
+                this.gridToggle.checked = !this.gridToggle.checked;
+                this.toggleGrid();
+            }
+            
+            // 更新画笔大小
+            updateBrushSize() {
+                const size = this.brushSizeSlider.value;
+                this.brushSizeValue.textContent = size;
+                this.canvasManager.setLineWidth(size);
+            }
+            
+            // 处理键盘事件
+            handleKeyboard(e) {
+                // ESC键关闭设置窗口
+                if (e.key === 'Escape' && this.settingsWindow.style.display === 'block') {
+                    this.hideSettingsWindow();
+                }
+                
+                // 数字键1-4切换工具
+                if (e.key === '1') this.selectTool('free');
+                if (e.key === '2') this.selectTool('line');
+                if (e.key === '3') this.selectTool('rect');
+                if (e.key === '4') this.selectTool('circle');
+            }
+        }
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new CanvasApp();
+        });
+    </script>
 </body>
 </html>
