@@ -1,5 +1,5 @@
 // file: blclass.js   
-var g_ver_blClass = "CBlClass_bv1.7.51"
+var g_ver_blClass = "CBlClass_bv1.7.52"
 
 function myAjaxCmd(method, url, data, callback){
 	const getToken = function () {
@@ -2392,59 +2392,119 @@ function CBlClass ()
 		return md;
 	};
 
-    this.blMDiv = function (oBoss,id,html,x,y,w,h,bkClr){
+	 
+    this.blMDiv = function (oBoss, id, html, x, y, w, h, bkClr) {
 		var x1 = 0;
-		var y1 = 0; 
-        var r = document.getElementById(id);
-        if(!r){
-            r = document.createElement("div");
-            r.id = id;
-    	    r.innerHTML = html; 
-            r.style.backgroundColor=bkClr?bkClr:"gold";
+		var y1 = 0;
+		var isTouch = false; // 标记当前是否是触摸事件
+		var r = document.getElementById(id);
+		
+		if (!r) {
+			r = document.createElement("div");
+			r.id = id;
+			r.innerHTML = html;
+			r.style.backgroundColor = bkClr ? bkClr : "gold";
 			r.style.position = "absolute";
-			r.style.left		= x+"px";
-			r.style.top			= y+"px";
-			r.style.width		= w+"px";
-			r.style.height		= h+"px";
-			r.style.cursor		= "default";
-    	    if(oBoss!=null)oBoss.appendChild(r);
-		}	
-		var divMoveHandle	= this.blDiv(r,id+"divMoveHandle","divMoveHandle","skyblue");r.handle = divMoveHandle;
-		divMoveHandle.style.cursor		= "move";
-		var main	= this.blDiv(r,id+"main","main","lightblue");r.main = main;
+			r.style.left = x + "px";
+			r.style.top = y + "px";
+			r.style.width = w + "px";
+			r.style.height = h + "px";
+			r.style.cursor = "default";
+			if (oBoss != null) oBoss.appendChild(r);
+		}
+		
+		var divMoveHandle = this.blDiv(r, id + "divMoveHandle", "divMoveHandle", "brown");
+		r.handle = divMoveHandle;
+		divMoveHandle.style.cursor = "move";
+		var main = this.blDiv(r, id + "main", "main", "lightblue");
+		r.main = main;
 		var dm = r;
-		divMoveHandle.onmousedown = function(){
-			var c = _getXY();
-			main.innerHTML = "down:" + c.x + "," + c.y;
-			x1 = c.x;
-			y1 = c.y;
-			return false;
-		};
-		divMoveHandle.onmousemove = function(){
-			var c = _getXY();
-			main.innerHTML = "move:" + c.x + "," + c.y; 
-			if(x1==0 &&y1==0) return false;
-			_move_div(dm,c.x-x1,c.y-y1); 
-			if(dm.followDiv){_move_div(dm.followDiv,c.x-x1,c.y-y1);}
+
+		// 通用移动处理函数
+		function handleMove(e) {
+			var pos = getPosition(e);
+			main.innerHTML = (isTouch ? "touchmove" : "move") + ":" + pos.x + "," + pos.y;
 			
-			x1 = c.x;
-			y1 = c.y;
+			if (x1 == 0 && y1 == 0) return false;
+			
+			var dx = pos.x - x1;
+			var dy = pos.y - y1;
+			_move_div(dm, dx, dy);
+			if (dm.followDiv) _move_div(dm.followDiv, dx, dy);
+			
+			x1 = pos.x;
+			y1 = pos.y;
+			return false;
+		}
+
+		// 获取坐标（支持鼠标/触摸事件）
+		function getPosition(e) {
+			if (isTouch && e.touches && e.touches[0]) {
+				return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+			} else if (e.changedTouches && e.changedTouches[0]) {
+				return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+			}
+			return { x: e.clientX, y: e.clientY };
+		}
+
+		// 鼠标事件处理
+		divMoveHandle.onmousedown = function(e) {
+			var pos = getPosition(e);
+			main.innerHTML = "down:" + pos.x + "," + pos.y;
+			x1 = pos.x;
+			y1 = pos.y;
 			return false;
 		};
-		divMoveHandle.onmouseup = function(){
-			var c = _getXY();
-			main.innerHTML = "up:" + c.x + "," + c.y; 
+		
+		divMoveHandle.onmousemove = handleMove;
+		
+		divMoveHandle.onmouseup = function(e) {
+			var pos = getPosition(e);
+			main.innerHTML = "up:" + pos.x + "," + pos.y;
 			x1 = 0;
-			y1 = 0; 
-		}; 
-		divMoveHandle.onmouseout = function(){
-			var c = _getXY();
-			main.innerHTML = "out:" + c.x + "," + c.y; 
+			y1 = 0;
+		};
+		
+		divMoveHandle.onmouseout = function(e) {
+			var pos = getPosition(e);
+			main.innerHTML = "out:" + pos.x + "," + pos.y;
 			x1 = 0;
-			y1 = 0; 
-		};  
-        return r;
-    }
+			y1 = 0;
+		};
+
+		// 触摸事件处理
+		divMoveHandle.addEventListener('touchstart', function(e) {
+			isTouch = true;
+			var pos = getPosition(e);
+			main.innerHTML = "touchstart:" + pos.x + "," + pos.y;
+			x1 = pos.x;
+			y1 = pos.y;
+			e.preventDefault(); // 阻止页面滚动
+		}, { passive: false });
+		
+		divMoveHandle.addEventListener('touchmove', function(e) {
+			handleMove(e);
+			e.preventDefault(); // 阻止页面滚动
+		}, { passive: false });
+		
+		divMoveHandle.addEventListener('touchend', function(e) {
+			var pos = getPosition(e);
+			main.innerHTML = "touchend:" + pos.x + "," + pos.y;
+			x1 = 0;
+			y1 = 0;
+			isTouch = false;
+		});
+		
+		divMoveHandle.addEventListener('touchcancel', function(e) {
+			var pos = getPosition(e);
+			main.innerHTML = "touchcancel:" + pos.x + "," + pos.y;
+			x1 = 0;
+			y1 = 0;
+			isTouch = false;
+		});
+
+		return r;
+	};
 	
     this.blToolbar = function (oBoss,id,html,x,y,w,h,bkClr){ 
         var r = document.getElementById(id);
