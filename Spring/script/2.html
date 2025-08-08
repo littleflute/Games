@@ -492,7 +492,7 @@
         <nav>
             <div class="logo">
                 <i class="fas fa-palette"></i>
-                <span>高级画布工作室 v1.13</span>
+                <span>高级画布工作室 v1.14</span>
             </div>
             <ul class="nav-links">
                 <li><a href="index.html">index.html</a></li>
@@ -625,68 +625,463 @@
     </div>
 
     <script>
-        // 获取DOM元素
-        const settingsBtn = document.getElementById('settings_btn');
-        const settingsWindow = document.getElementById('settings-window');
-        const closeBtn = document.getElementById('close-btn');
-        const colorOptions = document.querySelectorAll('.color-option');
-        const canvas = document.getElementById('canvas');
-        const customColorInput = document.getElementById('custom-color-input');
-        const applyCustomBtn = document.getElementById('apply_custom_btn');
-        const windowHeader = document.getElementById('window-header');
-        const freeDrawBtn = document.getElementById('free_draw_btn');
-        const lineBtn = document.getElementById('line_btn');
-        const rectBtn = document.getElementById('rect_btn');
-        const circleBtn = document.getElementById('circle_btn');
-        const clearBtn = document.getElementById('clear_btn');
-        const gridToggleBtn = document.getElementById('grid_toggle');
-        const gridOverlay = document.getElementById('grid-overlay');
-        const drawingCanvas = document.getElementById('drawing-canvas');
-        const tooltip = document.getElementById('tooltip');
-        const brushSizeSlider = document.getElementById('brush-size');
-        const brushSizeValue = document.getElementById('brush-size-value');
-        const gridToggle = document.getElementById('grid-toggle');
-        const gridStatus = document.getElementById('grid-status');
-        const currentToolDisplay = document.getElementById('current-tool');
-        const previewShape = document.getElementById('preview-shape');
-        
-        // 初始化变量
-        let drawingMode = true; // 是否处于绘画模式
-        let isDrawing = false;  // 当前是否正在绘制
-        let lastX = 0;
-        let lastY = 0;
-        let startX = 0;
-        let startY = 0;
-        let currentColor = '#000000';
-        let currentBrushSize = 5;
-        let drawingContext = drawingCanvas.getContext('2d');
-        
-        // 绘图模式：'free' 自由绘制, 'line' 直线, 'rect' 矩形, 'circle' 圆形
-        let drawMode = 'free';
-        
-        // 初始位置
-        settingsWindow.style.top = '150px';
-        settingsWindow.style.left = '50%';
-        settingsWindow.style.transform = 'translateX(-50%)';
-        
-        // 设置按钮切换功能
-        settingsBtn.addEventListener('click', () => {
-            if (settingsWindow.style.display === 'block') {
-                settingsWindow.style.display = 'none';
-            } else {
-                settingsWindow.style.display = 'block';
+        // 图形基类
+        class C4Shape {
+            constructor(x1, y1, color, lineWidth) {
+                this.x1 = x1;
+                this.y1 = y1;
+                this.color = color;
+                this.lineWidth = lineWidth;
             }
-        });
+            
+            // 每个子类都需要实现draw方法
+            draw(context) {
+                throw new Error("子类必须实现draw方法");
+            }
+            
+            // 预览绘制方法
+            preview(context) {
+                // 默认使用正常绘制方法，子类可以重写
+                this.draw(context);
+            }
+        }
         
-        // 关闭设置窗口
-        closeBtn.addEventListener('click', () => {
-            settingsWindow.style.display = 'none';
-        });
+        // 直线类
+        class C4Line extends C4Shape {
+            constructor(x1, y1, x2, y2, color, lineWidth) {
+                super(x1, y1, color, lineWidth);
+                this.x2 = x2;
+                this.y2 = y2;
+            }
+            
+            draw(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.lineCap = 'round';
+                context.beginPath();
+                context.moveTo(this.x1, this.y1);
+                context.lineTo(this.x2, this.y2);
+                context.stroke();
+                context.restore();
+            }
+            
+            preview(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.setLineDash([5, 5]);
+                context.lineCap = 'round';
+                context.beginPath();
+                context.moveTo(this.x1, this.y1);
+                context.lineTo(this.x2, this.y2);
+                context.stroke();
+                context.setLineDash([]);
+                context.restore();
+            }
+        }
         
-        // 背景颜色选择功能
-        colorOptions.forEach(option => {
-            option.addEventListener('click', function() {
-                const type = this.getAttribute('data-type');
+        // 圆形类
+        class C4Circle extends C4Shape {
+            constructor(x1, y1, x2, y2, color, lineWidth) {
+                super(x1, y1, color, lineWidth);
+                this.x2 = x2;
+                this.y2 = y2;
+                this.radius = this.calculateRadius();
+            }
+            
+            calculateRadius() {
+                return Math.sqrt(Math.pow(this.x2 - this.x1, 2) + Math.pow(this.y2 - this.y1, 2));
+            }
+            
+            // 更新终点并重新计算半径
+            updateEndPoint(x2, y2) {
+                this.x2 = x2;
+                this.y2 = y2;
+                this.radius = this.calculateRadius();
+            }
+            
+            draw(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.beginPath();
+                context.arc(this.x1, this.y1, this.radius, 0, Math.PI * 2);
+                context.stroke();
+                context.restore();
+            }
+            
+            preview(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.setLineDash([5, 5]);
+                context.beginPath();
+                context.arc(this.x1, this.y1, this.radius, 0, Math.PI * 2);
+                context.stroke();
+                context.setLineDash([]);
+                context.restore();
+            }
+        }
+        
+        // 矩形类
+        class C4Rect extends C4Shape {
+            constructor(x1, y1, x2, y2, color, lineWidth) {
+                super(x1, y1, color, lineWidth);
+                this.x2 = x2;
+                this.y2 = y2;
+            }
+            
+            // 更新终点
+            updateEndPoint(x2, y2) {
+                this.x2 = x2;
+                this.y2 = y2;
+            }
+            
+            draw(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.beginPath();
+                
+                const x = Math.min(this.x1, this.x2);
+                const y = Math.min(this.y1, this.y2);
+                const width = Math.abs(this.x2 - this.x1);
+                const height = Math.abs(this.y2 - this.y1);
+                
+                context.rect(x, y, width, height);
+                context.stroke();
+                context.restore();
+            }
+            
+            preview(context) {
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.setLineDash([5, 5]);
+                context.beginPath();
+                
+                const x = Math.min(this.x1, this.x2);
+                const y = Math.min(this.y1, this.y2);
+                const width = Math.abs(this.x2 - this.x1);
+                const height = Math.abs(this.y2 - this.y1);
+                
+                context.rect(x, y, width, height);
+                context.stroke();
+                context.setLineDash([]);
+                context.restore();
+            }
+        }
+        
+        // 自由绘制类
+        class C4Freehand extends C4Shape {
+            constructor(x1, y1, color, lineWidth) {
+                super(x1, y1, color, lineWidth);
+                this.points = [{x: x1, y: y1}];
+            }
+            
+            // 添加新点
+            addPoint(x, y) {
+                this.points.push({x, y});
+            }
+            
+            draw(context) {
+                if (this.points.length < 2) return;
+                
+                context.save();
+                context.lineWidth = this.lineWidth;
+                context.strokeStyle = this.color;
+                context.lineCap = 'round';
+                context.lineJoin = 'round';
+                context.beginPath();
+                context.moveTo(this.points[0].x, this.points[0].y);
+                
+                for (let i = 1; i < this.points.length; i++) {
+                    context.lineTo(this.points[i].x, this.points[i].y);
+                }
+                
+                context.stroke();
+                context.restore();
+            }
+        }
+        
+        // 画布管理器类
+        class C4CanvasManager {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.context = this.canvas.getContext('2d');
+                this.shapes = [];
+                this.currentShape = null;
+                this.isDrawing = false;
+                this.drawMode = 'free'; // 默认自由绘制
+                this.currentColor = '#000000';
+                this.currentLineWidth = 5;
+                
+                // 绑定事件处理方法
+                this.bindEvents();
+                
+                // 初始化画布大小
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+            
+            // 绑定事件
+            bindEvents() {
+                // 鼠标事件
+                this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
+                this.canvas.addEventListener('mousemove', (e) => this.draw(e));
+                this.canvas.addEventListener('mouseup', () => this.stopDrawing());
+                this.canvas.addEventListener('mouseout', () => this.stopDrawing());
+                
+                // 触摸事件
+                this.canvas.addEventListener('touchstart', (e) => this.startDrawing(e));
+                this.canvas.addEventListener('touchmove', (e) => this.draw(e));
+                this.canvas.addEventListener('touchend', () => this.stopDrawing());
+            }
+            
+            // 调整画布大小
+            resizeCanvas() {
+                const rect = this.canvas.getBoundingClientRect();
+                this.canvas.width = rect.width;
+                this.canvas.height = rect.height;
+                this.redrawAll(); // 重绘所有图形
+            }
+            
+            // 设置绘制模式
+            setDrawMode(mode) {
+                this.drawMode = mode;
+            }
+            
+            // 设置画笔颜色
+            setColor(color) {
+                this.currentColor = color;
+            }
+            
+            // 设置画笔大小
+            setLineWidth(width) {
+                this.currentLineWidth = width;
+            }
+            
+            // 开始绘制
+            startDrawing(e) {
+                e.preventDefault();
+                this.isDrawing = true;
+                const [x, y] = this.getCoordinates(e);
+                
+                // 根据当前模式创建相应的图形对象
+                switch(this.drawMode) {
+                    case 'free':
+                        this.currentShape = new C4Freehand(x, y, this.currentColor, this.currentLineWidth);
+                        break;
+                    case 'line':
+                        this.currentShape = new C4Line(x, y, x, y, this.currentColor, this.currentLineWidth);
+                        break;
+                    case 'rect':
+                        this.currentShape = new C4Rect(x, y, x, y, this.currentColor, this.currentLineWidth);
+                        break;
+                    case 'circle':
+                        this.currentShape = new C4Circle(x, y, x, y, this.currentColor, this.currentLineWidth);
+                        break;
+                }
+            }
+            
+            // 绘制中
+            draw(e) {
+                if (!this.isDrawing || !this.currentShape) return;
+                e.preventDefault();
+                
+                const [x, y] = this.getCoordinates(e);
+                
+                // 根据当前形状类型更新
+                switch(this.drawMode) {
+                    case 'free':
+                        this.currentShape.addPoint(x, y);
+                        this.redrawAll();
+                        break;
+                    case 'line':
+                        this.currentShape.x2 = x;
+                        this.currentShape.y2 = y;
+                        this.redrawAll();
+                        this.currentShape.preview(this.context);
+                        break;
+                    case 'rect':
+                        this.currentShape.updateEndPoint(x, y);
+                        this.redrawAll();
+                        this.currentShape.preview(this.context);
+                        break;
+                    case 'circle':
+                        this.currentShape.updateEndPoint(x, y);
+                        this.redrawAll();
+                        this.currentShape.preview(this.context);
+                        break;
+                }
+            }
+            
+            // 停止绘制
+            stopDrawing() {
+                if (this.isDrawing && this.currentShape) {
+                    this.shapes.push(this.currentShape);
+                    this.currentShape = null;
+                    this.isDrawing = false;
+                    this.redrawAll();
+                }
+            }
+            
+            // 清空画布
+            clearCanvas() {
+                this.shapes = [];
+                this.redrawAll();
+            }
+            
+            // 重绘所有图形
+            redrawAll() {
+                // 清空画布
+                this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // 绘制所有保存的图形
+                this.shapes.forEach(shape => {
+                    shape.draw(this.context);
+                });
+            }
+            
+            // 获取坐标
+            getCoordinates(e) {
+                const rect = this.canvas.getBoundingClientRect();
+                let x, y;
+                
+                if (e.type.includes('touch')) {
+                    x = e.touches[0].clientX - rect.left;
+                    y = e.touches[0].clientY - rect.top;
+                } else {
+                    x = e.clientX - rect.left;
+                    y = e.clientY - rect.top;
+                }
+                
+                return [x, y];
+            }
+        }
+        
+        // 应用主控制器
+        class CanvasApp {
+            constructor() {
+                // 初始化画布管理器
+                this.canvasManager = new C4CanvasManager('drawing-canvas');
+                
+                // 获取DOM元素
+                this.settingsBtn = document.getElementById('settings_btn');
+                this.settingsWindow = document.getElementById('settings-window');
+                this.closeBtn = document.getElementById('close-btn');
+                this.colorOptions = document.querySelectorAll('.color-option');
+                this.canvasContainer = document.getElementById('canvas');
+                this.customColorInput = document.getElementById('custom-color-input');
+                this.applyCustomBtn = document.getElementById('apply_custom_btn');
+                this.windowHeader = document.getElementById('window-header');
+                this.freeDrawBtn = document.getElementById('free_draw_btn');
+                this.lineBtn = document.getElementById('line_btn');
+                this.rectBtn = document.getElementById('rect_btn');
+                this.circleBtn = document.getElementById('circle_btn');
+                this.clearBtn = document.getElementById('clear_btn');
+                this.gridToggleBtn = document.getElementById('grid_toggle');
+                this.gridOverlay = document.getElementById('grid-overlay');
+                this.tooltip = document.getElementById('tooltip');
+                this.brushSizeSlider = document.getElementById('brush-size');
+                this.brushSizeValue = document.getElementById('brush-size-value');
+                this.gridToggle = document.getElementById('grid-toggle');
+                this.gridStatus = document.getElementById('grid-status');
+                this.currentToolDisplay = document.getElementById('current-tool');
+                this.previewShape = document.getElementById('preview-shape');
+                
+                // 初始化变量
+                this.isDragging = false;
+                this.currentX = 0;
+                this.currentY = 0;
+                this.initialX = 0;
+                this.initialY = 0;
+                this.xOffset = 0;
+                this.yOffset = 0;
+                
+                // 初始化设置窗口位置
+                this.settingsWindow.style.top = '150px';
+                this.settingsWindow.style.left = '50%';
+                this.settingsWindow.style.transform = 'translateX(-50%)';
+                
+                // 绑定事件
+                this.bindEvents();
+                
+                // 初始化网格显示
+                this.gridToggle.dispatchEvent(new Event('change'));
+                
+                // 隐藏初始画布内容
+                document.querySelector('.canvas-content').style.display = 'none';
+            }
+            
+            // 绑定所有事件
+            bindEvents() {
+                // 设置按钮切换
+                this.settingsBtn.addEventListener('click', () => this.toggleSettingsWindow());
+                
+                // 关闭设置窗口
+                this.closeBtn.addEventListener('click', () => this.hideSettingsWindow());
+                
+                // 颜色选择
+                this.colorOptions.forEach(option => {
+                    option.addEventListener('click', (e) => this.selectColor(e.target));
+                });
+                
+                // 应用自定义颜色
+                this.applyCustomBtn.addEventListener('click', () => this.applyCustomColor());
+                
+                // 窗口拖动
+                this.windowHeader.addEventListener('mousedown', (e) => this.dragStart(e));
+                this.windowHeader.addEventListener('touchstart', (e) => this.dragStart(e));
+                document.addEventListener('mousemove', (e) => this.drag(e));
+                document.addEventListener('touchmove', (e) => this.drag(e));
+                document.addEventListener('mouseup', () => this.dragEnd());
+                document.addEventListener('touchend', () => this.dragEnd());
+                
+                // 工具选择
+                this.freeDrawBtn.addEventListener('click', () => this.selectTool('free'));
+                this.lineBtn.addEventListener('click', () => this.selectTool('line'));
+                this.rectBtn.addEventListener('click', () => this.selectTool('rect'));
+                this.circleBtn.addEventListener('click', () => this.selectTool('circle'));
+                
+                // 清空画布
+                this.clearBtn.addEventListener('click', () => this.clearCanvas());
+                
+                // 网格开关
+                this.gridToggle.addEventListener('change', () => this.toggleGrid());
+                this.gridToggleBtn.addEventListener('click', () => this.toggleGridBtn());
+                
+                // 画笔大小调整
+                this.brushSizeSlider.addEventListener('input', () => this.updateBrushSize());
+                
+                // 键盘快捷键
+                document.addEventListener('keydown', (e) => this.handleKeyboard(e));
+            }
+            
+            // 切换设置窗口显示
+            toggleSettingsWindow() {
+                if (this.settingsWindow.style.display === 'block') {
+                    this.hideSettingsWindow();
+                } else {
+                    this.showSettingsWindow();
+                }
+            }
+            
+            // 显示设置窗口
+            showSettingsWindow() {
+                this.settingsWindow.style.display = 'block';
+            }
+            
+            // 隐藏设置窗口
+            hideSettingsWindow() {
+                this.settingsWindow.style.display = 'none';
+            }
+            
+            // 选择颜色
+            selectColor(element) {
+                const type = element.getAttribute('data-type');
+                const color = element.getAttribute('data-color');
                 
                 // 画笔颜色选择
                 if (type === 'brush') {
@@ -696,10 +1091,10 @@
                     });
                     
                     // 为当前选项添加active类
-                    this.classList.add('active');
+                    element.classList.add('active');
                     
                     // 更新画笔颜色
-                    currentColor = this.getAttribute('data-color');
+                    this.canvasManager.setColor(color);
                     return;
                 }
                 
@@ -710,425 +1105,164 @@
                 });
                 
                 // 为当前选项添加active类
-                this.classList.add('active');
+                element.classList.add('active');
                 
                 // 更改画布背景
-                const color = this.getAttribute('data-color');
-                canvas.style.backgroundColor = color;
-            });
-        });
-        
-        // 应用自定义颜色
-        applyCustomBtn.addEventListener('click', () => {
-            const color = customColorInput.value;
-            if (isValidColor(color)) {
-                canvas.style.backgroundColor = color;
-                // 移除所有预设背景颜色的active类
-                document.querySelectorAll('.color-option:not([data-type])').forEach(opt => {
-                    opt.classList.remove('active');
-                });
-            } else {
-                alert('请输入有效的颜色值（如 #FFFFFF 或 rgb(255,255,255)');
-            }
-        });
-        
-        // 画笔大小调整
-        brushSizeSlider.addEventListener('input', () => {
-            currentBrushSize = brushSizeSlider.value;
-            brushSizeValue.textContent = currentBrushSize;
-        });
-        
-        // 网格开关
-        gridToggle.addEventListener('change', () => {
-            if (gridToggle.checked) {
-                gridOverlay.classList.remove('hidden');
-                gridStatus.textContent = '开';
-                gridToggleBtn.innerHTML = '<i class="fas fa-th"></i> <span>网格: 开</span>';
-            } else {
-                gridOverlay.classList.add('hidden');
-                gridStatus.textContent = '关';
-                gridToggleBtn.innerHTML = '<i class="fas fa-th"></i> <span>网格: 关</span>';
-            }
-        });
-        
-        // 网格切换按钮
-        gridToggleBtn.addEventListener('click', () => {
-            gridToggle.checked = !gridToggle.checked;
-            gridToggle.dispatchEvent(new Event('change'));
-        });
-        
-        // 工具选择功能
-        function selectTool(tool) {
-            // 重置所有按钮状态
-            freeDrawBtn.classList.remove('active');
-            lineBtn.classList.remove('active');
-            rectBtn.classList.remove('active');
-            circleBtn.classList.remove('active');
-            
-            // 设置当前工具按钮状态
-            switch(tool) {
-                case 'free':
-                    freeDrawBtn.classList.add('active');
-                    currentToolDisplay.textContent = '自由绘制';
-                    break;
-                case 'line':
-                    lineBtn.classList.add('active');
-                    currentToolDisplay.textContent = '直线';
-                    break;
-                case 'rect':
-                    rectBtn.classList.add('active');
-                    currentToolDisplay.textContent = '矩形';
-                    break;
-                case 'circle':
-                    circleBtn.classList.add('active');
-                    currentToolDisplay.textContent = '圆形';
-                    break;
+                this.canvasContainer.style.backgroundColor = color;
             }
             
-            // 更新绘图模式
-            drawMode = tool;
-            document.querySelector('.canvas-content').style.display = 'none';
-            drawingCanvas.style.display = 'block';
-            resizeCanvas();
-        }
-        
-        // 绑定工具按钮事件
-        freeDrawBtn.addEventListener('click', () => selectTool('free'));
-        lineBtn.addEventListener('click', () => selectTool('line'));
-        rectBtn.addEventListener('click', () => selectTool('rect'));
-        circleBtn.addEventListener('click', () => selectTool('circle'));
-        
-        // 清空画布
-        clearBtn.addEventListener('click', () => {
-            if (confirm('确定要清空画布吗？')) {
-                drawingContext.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
-            }
-        });
-        
-        // 验证颜色值是否有效
-        function isValidColor(color) {
-            const style = new Option().style;
-            style.color = color;
-            return style.color !== '';
-        }
-        
-        // 使窗口可移动
-        let isDragging = false;
-        let currentX;
-        let currentY;
-        let initialX;
-        let initialY;
-        let xOffset = 0;
-        let yOffset = 0;
-        
-        windowHeader.addEventListener('mousedown', dragStart);
-        windowHeader.addEventListener('touchstart', dragStart);
-        
-        function dragStart(e) {
-            if (e.type === "touchstart") {
-                initialX = e.touches[0].clientX - xOffset;
-                initialY = e.touches[0].clientY - yOffset;
-            } else {
-                initialX = e.clientX - xOffset;
-                initialY = e.clientY - yOffset;
-            }
-            
-            if (e.target === windowHeader) {
-                isDragging = true;
-            }
-        }
-        
-        document.addEventListener('mousemove', drag);
-        document.addEventListener('touchmove', drag);
-        
-        function drag(e) {
-            if (isDragging) {
-                e.preventDefault();
-                
-                if (e.type === "touchmove") {
-                    currentX = e.touches[0].clientX - initialX;
-                    currentY = e.touches[0].clientY - initialY;
+            // 应用自定义颜色
+            applyCustomColor() {
+                const color = this.customColorInput.value;
+                if (this.isValidColor(color)) {
+                    this.canvasContainer.style.backgroundColor = color;
+                    // 移除所有预设背景颜色的active类
+                    document.querySelectorAll('.color-option:not([data-type])').forEach(opt => {
+                        opt.classList.remove('active');
+                    });
                 } else {
-                    currentX = e.clientX - initialX;
-                    currentY = e.clientY - initialY;
+                    alert('请输入有效的颜色值（如 #FFFFFF 或 rgb(255,255,255)');
+                }
+            }
+            
+            // 验证颜色值是否有效
+            isValidColor(color) {
+                const style = new Option().style;
+                style.color = color;
+                return style.color !== '';
+            }
+            
+            // 拖动窗口开始
+            dragStart(e) {
+                if (e.type === "touchstart") {
+                    this.initialX = e.touches[0].clientX - this.xOffset;
+                    this.initialY = e.touches[0].clientY - this.yOffset;
+                } else {
+                    this.initialX = e.clientX - this.xOffset;
+                    this.initialY = e.clientY - this.yOffset;
                 }
                 
-                xOffset = currentX;
-                yOffset = currentY;
+                if (e.target === this.windowHeader) {
+                    this.isDragging = true;
+                }
+            }
+            
+            // 拖动窗口
+            drag(e) {
+                if (this.isDragging) {
+                    e.preventDefault();
+                    
+                    if (e.type === "touchmove") {
+                        this.currentX = e.touches[0].clientX - this.initialX;
+                        this.currentY = e.touches[0].clientY - this.initialY;
+                    } else {
+                        this.currentX = e.clientX - this.initialX;
+                        this.currentY = e.clientY - this.initialY;
+                    }
+                    
+                    this.xOffset = this.currentX;
+                    this.yOffset = this.currentY;
+                    
+                    this.setTranslate(this.currentX, this.currentY, this.settingsWindow);
+                }
+            }
+            
+            // 拖动窗口结束
+            dragEnd() {
+                this.initialX = this.currentX;
+                this.initialY = this.currentY;
+                this.isDragging = false;
+            }
+            
+            // 设置元素位置
+            setTranslate(xPos, yPos, el) {
+                el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
+            }
+            
+            // 选择工具
+            selectTool(tool) {
+                // 重置所有按钮状态
+                this.freeDrawBtn.classList.remove('active');
+                this.lineBtn.classList.remove('active');
+                this.rectBtn.classList.remove('active');
+                this.circleBtn.classList.remove('active');
                 
-                setTranslate(currentX, currentY, settingsWindow);
-            }
-        }
-        
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('touchend', dragEnd);
-        
-        function dragEnd() {
-            initialX = currentX;
-            initialY = currentY;
-            isDragging = false;
-        }
-        
-        function setTranslate(xPos, yPos, el) {
-            el.style.transform = "translate3d(" + xPos + "px, " + yPos + "px, 0)";
-        }
-        
-        // 添加键盘快捷键支持
-        document.addEventListener('keydown', (e) => {
-            // ESC键关闭设置窗口
-            if (e.key === 'Escape' && settingsWindow.style.display === 'block') {
-                settingsWindow.style.display = 'none';
+                // 设置当前工具按钮状态
+                switch(tool) {
+                    case 'free':
+                        this.freeDrawBtn.classList.add('active');
+                        this.currentToolDisplay.textContent = '自由绘制';
+                        break;
+                    case 'line':
+                        this.lineBtn.classList.add('active');
+                        this.currentToolDisplay.textContent = '直线';
+                        break;
+                    case 'rect':
+                        this.rectBtn.classList.add('active');
+                        this.currentToolDisplay.textContent = '矩形';
+                        break;
+                    case 'circle':
+                        this.circleBtn.classList.add('active');
+                        this.currentToolDisplay.textContent = '圆形';
+                        break;
+                }
+                
+                // 更新绘图模式
+                this.canvasManager.setDrawMode(tool);
             }
             
-            // 数字键1-4切换工具
-            if (e.key === '1') selectTool('free');
-            if (e.key === '2') selectTool('line');
-            if (e.key === '3') selectTool('rect');
-            if (e.key === '4') selectTool('circle');
+            // 清空画布
+            clearCanvas() {
+                if (confirm('确定要清空画布吗？')) {
+                    this.canvasManager.clearCanvas();
+                }
+            }
+            
+            // 切换网格显示
+            toggleGrid() {
+                if (this.gridToggle.checked) {
+                    this.gridOverlay.classList.remove('hidden');
+                    this.gridStatus.textContent = '开';
+                    this.gridToggleBtn.innerHTML = '<i class="fas fa-th"></i> <span>网格: 开</span>';
+                } else {
+                    this.gridOverlay.classList.add('hidden');
+                    this.gridStatus.textContent = '关';
+                    this.gridToggleBtn.innerHTML = '<i class="fas fa-th"></i> <span>网格: 关</span>';
+                }
+            }
+            
+            // 网格按钮切换
+            toggleGridBtn() {
+                this.gridToggle.checked = !this.gridToggle.checked;
+                this.toggleGrid();
+            }
+            
+            // 更新画笔大小
+            updateBrushSize() {
+                const size = this.brushSizeSlider.value;
+                this.brushSizeValue.textContent = size;
+                this.canvasManager.setLineWidth(size);
+            }
+            
+            // 处理键盘事件
+            handleKeyboard(e) {
+                // ESC键关闭设置窗口
+                if (e.key === 'Escape' && this.settingsWindow.style.display === 'block') {
+                    this.hideSettingsWindow();
+                }
+                
+                // 数字键1-4切换工具
+                if (e.key === '1') this.selectTool('free');
+                if (e.key === '2') this.selectTool('line');
+                if (e.key === '3') this.selectTool('rect');
+                if (e.key === '4') this.selectTool('circle');
+            }
+        }
+        
+        // 初始化应用
+        document.addEventListener('DOMContentLoaded', () => {
+            const app = new CanvasApp();
         });
-        
-        // 绘画功能
-        function startDrawing(e) {
-            if (!drawingMode) return;
-            
-            isDrawing = true;
-            const [x, y] = getCoordinates(e);
-            [lastX, lastY] = [x, y];
-            [startX, startY] = [x, y];
-            
-            // 显示工具提示
-            tooltip.style.opacity = '1';
-            tooltip.textContent = `画笔大小: ${currentBrushSize}px`;
-            tooltip.style.left = (x + 10) + 'px';
-            tooltip.style.top = (y - 30) + 'px';
-            
-            // 初始化绘图上下文
-            drawingContext.lineWidth = currentBrushSize;
-            drawingContext.lineCap = 'round';
-            drawingContext.lineJoin = 'round';
-            drawingContext.strokeStyle = currentColor;
-        }
-        
-        function draw(e) {
-            if (!isDrawing) return;
-            
-            const [x, y] = getCoordinates(e);
-            
-            // 根据当前模式绘制
-            switch(drawMode) {
-                case 'free':
-                    // 自由绘制
-                    drawingContext.beginPath();
-                    drawingContext.moveTo(lastX, lastY);
-                    drawingContext.lineTo(x, y);
-                    drawingContext.stroke();
-                    [lastX, lastY] = [x, y];
-                    break;
-                    
-                case 'line':
-                    // 直线预览
-                    showLinePreview(startX, startY, x, y);
-                    break;
-                    
-                case 'rect':
-                    // 矩形预览
-                    showRectPreview(startX, startY, x, y);
-                    break;
-                    
-                case 'circle':
-                    // 圆形预览
-                    showCirclePreview(startX, startY, x, y);
-                    break;
-            }
-            
-            // 更新工具提示位置
-            tooltip.style.left = (x + 10) + 'px';
-            tooltip.style.top = (y - 30) + 'px';
-        }
-        
-        function stopDrawing() {
-            if (!isDrawing) return;
-            
-            isDrawing = false;
-            tooltip.style.opacity = '0';
-            
-            // 根据当前模式完成绘制
-            switch(drawMode) {
-                case 'line':
-                    // 绘制最终直线
-                    drawLine(startX, startY, lastX, lastY);
-                    break;
-                    
-                case 'rect':
-                    // 绘制最终矩形
-                    drawRect(startX, startY, lastX, lastY);
-                    break;
-                    
-                case 'circle':
-                    // 绘制最终圆形
-                    drawCircle(startX, startY, lastX, lastY);
-                    break;
-            }
-            
-            // 隐藏预览
-            previewShape.style.display = 'none';
-        }
-        
-        // 绘制直线
-        function drawLine(x1, y1, x2, y2) {
-            drawingContext.beginPath();
-            drawingContext.moveTo(x1, y1);
-            drawingContext.lineTo(x2, y2);
-            drawingContext.stroke();
-        }
-        
-        // 绘制矩形
-        function drawRect(x1, y1, x2, y2) {
-            const width = x2 - x1;
-            const height = y2 - y1;
-            
-            drawingContext.beginPath();
-            drawingContext.rect(x1, y1, width, height);
-            drawingContext.stroke();
-        }
-        
-        // 绘制圆形
-        function drawCircle(x1, y1, x2, y2) {
-            const radius = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-            
-            drawingContext.beginPath();
-            drawingContext.arc(x1, y1, radius, 0, Math.PI * 2);
-            drawingContext.stroke();
-        }
-        
-        // 显示直线预览
-        function showLinePreview(x1, y1, x2, y2) {
-            previewShape.style.display = 'none';
-            
-            // 创建临时canvas用于预览
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // 设置临时canvas尺寸
-            const rect = drawingCanvas.getBoundingClientRect();
-            tempCanvas.width = rect.width;
-            tempCanvas.height = rect.height;
-            
-            // 绘制预览直线
-            tempCtx.lineWidth = currentBrushSize;
-            tempCtx.strokeStyle = currentColor;
-            tempCtx.setLineDash([5, 5]);
-            tempCtx.beginPath();
-            tempCtx.moveTo(x1, y1);
-            tempCtx.lineTo(x2, y2);
-            tempCtx.stroke();
-            
-            // 将临时canvas内容转为图片显示
-            const dataURL = tempCanvas.toDataURL();
-            previewShape.style.backgroundImage = `url(${dataURL})`;
-            previewShape.style.backgroundSize = '100% 100%';
-            previewShape.style.left = '0';
-            previewShape.style.top = '0';
-            previewShape.style.width = '100%';
-            previewShape.style.height = '100%';
-            previewShape.style.border = 'none';
-            previewShape.style.display = 'block';
-            
-            [lastX, lastY] = [x2, y2];
-        }
-        
-        // 显示矩形预览
-        function showRectPreview(x1, y1, x2, y2) {
-            const width = x2 - x1;
-            const height = y2 - y1;
-            
-            previewShape.style.left = Math.min(x1, x2) + 'px';
-            previewShape.style.top = Math.min(y1, y2) + 'px';
-            previewShape.style.width = Math.abs(width) + 'px';
-            previewShape.style.height = Math.abs(height) + 'px';
-            previewShape.style.display = 'block';
-            
-            [lastX, lastY] = [x2, y2];
-        }
-        
-        // 显示圆形预览
-        function showCirclePreview(x1, y1, x2, y2) {
-            previewShape.style.display = 'none';
-            
-            // 创建临时canvas用于预览
-            const tempCanvas = document.createElement('canvas');
-            const tempCtx = tempCanvas.getContext('2d');
-            
-            // 设置临时canvas尺寸
-            const rect = drawingCanvas.getBoundingClientRect();
-            tempCanvas.width = rect.width;
-            tempCanvas.height = rect.height;
-            
-            // 计算半径
-            const radius = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
-            
-            // 绘制预览圆形
-            tempCtx.lineWidth = currentBrushSize;
-            tempCtx.strokeStyle = currentColor;
-            tempCtx.setLineDash([5, 5]);
-            tempCtx.beginPath();
-            tempCtx.arc(x1, y1, radius, 0, Math.PI * 2);
-            tempCtx.stroke();
-            
-            // 将临时canvas内容转为图片显示
-            const dataURL = tempCanvas.toDataURL();
-            previewShape.style.backgroundImage = `url(${dataURL})`;
-            previewShape.style.backgroundSize = '100% 100%';
-            previewShape.style.left = '0';
-            previewShape.style.top = '0';
-            previewShape.style.width = '100%';
-            previewShape.style.height = '100%';
-            previewShape.style.border = 'none';
-            previewShape.style.display = 'block';
-            
-            [lastX, lastY] = [x2, y2];
-        }
-        
-        function getCoordinates(e) {
-            let x, y;
-            const rect = drawingCanvas.getBoundingClientRect();
-            
-            if (e.type.includes('touch')) {
-                x = e.touches[0].clientX - rect.left;
-                y = e.touches[0].clientY - rect.top;
-            } else {
-                x = e.clientX - rect.left;
-                y = e.clientY - rect.top;
-            }
-            
-            return [x, y];
-        }
-        
-        // 调整画布大小
-        function resizeCanvas() {
-            const rect = canvas.getBoundingClientRect();
-            drawingCanvas.width = rect.width;
-            drawingCanvas.height = rect.height;
-        }
-        
-        // 初始化画布事件
-        drawingCanvas.addEventListener('mousedown', startDrawing);
-        drawingCanvas.addEventListener('mousemove', draw);
-        drawingCanvas.addEventListener('mouseup', stopDrawing);
-        drawingCanvas.addEventListener('mouseout', stopDrawing);
-        
-        drawingCanvas.addEventListener('touchstart', startDrawing);
-        drawingCanvas.addEventListener('touchmove', draw);
-        drawingCanvas.addEventListener('touchend', stopDrawing);
-        
-        // 初始化网格显示
-        gridToggle.dispatchEvent(new Event('change'));
-        
-        // 窗口大小变化时调整画布
-        window.addEventListener('resize', resizeCanvas);
-        
-        // 初始调整画布
-        resizeCanvas();
     </script>
 </body>
 </html>
