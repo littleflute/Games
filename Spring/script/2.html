@@ -492,7 +492,7 @@
         <nav>
             <div class="logo">
                 <i class="fas fa-palette"></i>
-                <span>高级画布工作室 v1.14</span>
+                <span>高级画布工作室 v1.15</span>
             </div>
             <ul class="nav-links">
                 <li><a href="index.html">index.html</a></li>
@@ -803,6 +803,11 @@
                 context.stroke();
                 context.restore();
             }
+            
+            // 自由绘制预览方法，与实际绘制相同
+            preview(context) {
+                this.draw(context);
+            }
         }
         
         // 画布管理器类
@@ -896,7 +901,9 @@
                 switch(this.drawMode) {
                     case 'free':
                         this.currentShape.addPoint(x, y);
+                        // 自由绘制实时更新
                         this.redrawAll();
+                        this.currentShape.preview(this.context);
                         break;
                     case 'line':
                         this.currentShape.x2 = x;
