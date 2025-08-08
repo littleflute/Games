@@ -1,5 +1,5 @@
 // file: blclass.js   
-var g_ver_blClass = "CBlClass_bv1.7.35"
+var g_ver_blClass = "CBlClass_bv1.7.51"
 
 function myAjaxCmd(method, url, data, callback){
 	const getToken = function () {
@@ -2321,58 +2321,76 @@ function CBlClass ()
         return r;
     }
 	
-    this.blMD = function(id,html,x,y,w,h,bkClr){
-		var idBtn = "btn_"+id;
-		var s = "<button style='float:left;' id='"+idBtn+"'>sel2Move</button>"; 
-	    var md = this.blDiv(document.body, id,s+g_ver_blClass + ":" + html,bkClr);  
-		bl$(idBtn).onclick = function(_w,_btn,_md){
-			var b = false; 
-			return function(){
-				if(!b) {
-					b = true;
-					_btn.style.backgroundColor = "yellow";
-					_w.onmousedown = function(e){
-						_w.onmousedown = null;
-						_btn.click();
-						var c = _getXY();
-						blo0.blMove2XY(_md,c.x,c.y); 
+    this.blMD = function(id, html, x, y, w, h, bkClr) { 
+		var md = this.blDiv(document.body, id,  g_ver_blClass + ":" + html, bkClr); 
+ 
+
+		if (!md.run) {
+			md.run = true;
+			md.style.cssText = `
+				position: absolute;
+				z-index: 9;
+				background-color: #f1f1f1;
+				text-align: center;
+				border: 1px solid #d3d3d3;
+				left: ${x}px;
+				top: ${y}px;
+				width: ${w}px;
+				height: ${h}px;
+			`;
+
+			var title = blo0.blDiv(md, md.id + "Header", "Header");
+			title.style.cssText = `
+				padding: 10px;
+				z-index: 10;
+				cursor: move;
+				text-align: center;
+				border: 1px solid #fff;
+				background-color:rgb(124, 46, 126);
+				touch-action: none; /* 防止触摸滚动冲突 */
+			`;
+
+			// 使窗口可拖动（支持触摸设备）
+			title.addEventListener("mousedown", startDrag);
+			title.addEventListener("touchstart", startDrag, {passive: false});
+
+			function startDrag(e) {
+				e.preventDefault();
+				// 获取初始位置
+				var clientX = e.clientX || e.touches[0].clientX;
+				var clientY = e.clientY || e.touches[0].clientY;
+				
+				var startX = clientX - md.offsetLeft;
+				var startY = clientY - md.offsetTop;
+				
+				// 添加移动和结束事件的监听器
+				document.addEventListener("mousemove", drag);
+				document.addEventListener("touchmove", drag, {passive: false});
+				document.addEventListener("mouseup", stopDrag);
+				document.addEventListener("touchend", stopDrag);
+
+				function drag(e) {
+					e.preventDefault();
+					var clientX = e.clientX || (e.touches && e.touches[0].clientX);
+					var clientY = e.clientY || (e.touches && e.touches[0].clientY);
+					
+					if (clientX !== undefined && clientY !== undefined) {
+						md.style.left = (clientX - startX) + "px";
+						md.style.top = (clientY - startY) + "px";
 					}
 				}
-				else{
-					b = false;
-					_btn.style.backgroundColor = "grey";
-					_w.onmousedown = null;
+
+				function stopDrag() {
+					// 移除事件监听器
+					document.removeEventListener("mousemove", drag);
+					document.removeEventListener("touchmove", drag);
+					document.removeEventListener("mouseup", stopDrag);
+					document.removeEventListener("touchend", stopDrag);
 				}
 			}
-		}(window,bl$(idBtn),md);
-		if(!md.run){
-		    md.run = true; 
-			var style ="position: absolute;";
-			style += "z-index: 9;";
-			style += "background-color: #f1f1f1;";
-			style += "text-align: center;";
-			style += "border: 1px solid #d3d3d3;";
-			style += "left: 400px";
-			style += "top: 40px";
-			md .style =style;
-
-			var title = blo0.blDiv(md , md.id + "Header", "Header");
-			style ="padding: 10px;";
-			style += "z-index: 10;";
-			style += "cursor: move;";
-			style += "text-align: center;";
-			style += "border: 1px solid #fff;";
-			style += "background-color: #2196F3;";
-			title.style =style;
-
-			blo0.blMakeDivMovable(md );
-			md.style.left = x+"px";
-			md.style.top = y+"px";
-			md.style.width = w+"px";			
-			md.style.height = h+"px";
 		}
-	    return md;
-    }
+		return md;
+	};
 
     this.blMDiv = function (oBoss,id,html,x,y,w,h,bkClr){
 		var x1 = 0;
@@ -9384,3 +9402,5 @@ const 			blc_4_t_DOWNLOAD 		= 1;
 const 			blc_4_t_PARSE 			= 2;
 const			blc_4_t_MAKE_VIDEO 	= 3;
 const			blc_4_t_MP3LRC2BLS		= 4;
+ 
+		
