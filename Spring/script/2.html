@@ -1,53 +1,272 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh-CN">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
-<style>
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-.topnav {
-  overflow: hidden;
-  background-color: #333;
-}
-
-.topnav a {
-  float: left;
-  color: #f2f2f2;
-  text-align: center;
-  padding: 14px 16px;
-  text-decoration: none;
-  font-size: 17px;
-}
-
-.topnav a:hover {
-  background-color: #ddd;
-  color: black;
-}
-
-.topnav a.active {
-  background-color: #4CAF50;
-  color: white;
-}
-</style> 
-<title>2.html</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>墙面设计工具 0.4</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        .toolbar {
+            background-color: #4a6fa5;
+            padding: 10px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .toolbar button {
+            padding: 8px 12px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .toolbar button:hover {
+            background-color: #f0f0f0;
+        }
+        .controls {
+            background-color: #e0e0e0;
+            padding: 10px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .control-group label {
+            font-size: 14px;
+        }
+        .control-group select, .control-group input {
+            padding: 5px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+        .canvas {
+            flex: 1;
+            position: relative;
+            overflow: auto;
+            background-color: #fff;
+        }
+        .wall {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+        .wall.active {
+            display: block;
+        }
+        .brick {
+            position: absolute;
+            border: 1px solid rgba(0,0,0,0.2);
+            box-sizing: border-box;
+        }
+        /* 砖头样式 */
+        .quarter { width: 25%; height: 25%; }
+        .half { width: 50%; height: 25%; }
+        .full { width: 50%; height: 50%; }
+        .double { width: 100%; height: 50%; }
+        .quad { width: 100%; height: 100%; }
+        .red { background-color: #ff0000; }
+        .green { background-color: #00ff00; }
+        .blue { background-color: #0000ff; }
+        .yellow { background-color: #ffff00; }
+        .black { background-color: #000000; }
+        .white { background-color: #ffffff; }
+        .status-bar {
+            background-color: #333;
+            color: white;
+            padding: 5px 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+        }
+        #local_ip {
+            font-family: monospace;
+            color: #4CAF50;
+        }
+    </style>
 </head>
 <body>
+    <div class="toolbar">
+        <button onclick="showWall('random-wall')">随机墙</button>
+        <button onclick="showWall('colorful-wall')">彩色墙</button>
+        <button onclick="showWall('pattern-wall')">图案墙</button>
+        <button onclick="showWall('custom-wall')">自定义墙</button>
+    </div>
+    <div class="controls" id="custom-controls" style="display:none;">
+        <div class="control-group">
+            <label>砖块大小:</label>
+            <select id="brick-size">
+                <option value="quarter">1/4块</option>
+                <option value="half">半块</option>
+                <option value="full">整块</option>
+                <option value="double">两块连体</option>
+                <option value="quad">四块连体</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>砖块颜色:</label>
+            <select id="brick-color">
+                <option value="red">红色</option>
+                <option value="green">绿色</option>
+                <option value="blue">蓝色</option>
+                <option value="yellow">黄色</option>
+                <option value="black">黑色</option>
+                <option value="white">白色</option>
+            </select>
+        </div>
+        <div class="control-group">
+            <label>砖块数量:</label>
+            <input type="number" id="brick-count" min="1" max="50" value="10">
+        </div>
+        <button onclick="generateCustomWall()">生成</button>
+    </div>
+    <div class="canvas">
+        <div id="random-wall" class="wall active"></div>
+        <div id="colorful-wall" class="wall"></div>
+        <div id="pattern-wall" class="wall"></div>
+        <div id="custom-wall" class="wall"></div>
+    </div>
+    <div class="status-bar">
+        <span>版本号 0.13</span>
+        <span id="local_ip">正在获取IP...</span>
+    </div>
 
+    <script>
+        // 墙面生成功能
+        function showWall(wallId) {
+            document.querySelectorAll('.wall').forEach(wall => {
+                wall.classList.remove('active');
+                wall.innerHTML = '';
+            });
+            document.getElementById('custom-controls').style.display = 'none';
+            
+            const wall = document.getElementById(wallId);
+            wall.classList.add('active');
+            
+            if (wallId === 'custom-wall') {
+                document.getElementById('custom-controls').style.display = 'flex';
+                return;
+            }
+            
+            if (wallId === 'random-wall') generateRandomWall(wall);
+            else if (wallId === 'colorful-wall') generateColorfulWall(wall);
+            else if (wallId === 'pattern-wall') generatePatternWall(wall);
+        }
 
-<div class="topnav">
-  <a class="active" href="http://localhost:8080/">Home</a>
-  <a href="#">[2.html_v0.0.14]</a> 
-</div>
-<div>
-	<button id="plx_p1_btn">p1</button>
-</div>
+        function generateRandomWall(wall) {
+            const colors = ['red', 'green', 'blue', 'yellow', 'black', 'white'];
+            const sizes = ['quarter', 'half', 'full', 'double', 'quad'];
+            for (let i = 0; i < 20; i++) {
+                createBrick(wall, 
+                    sizes[Math.floor(Math.random() * sizes.length)],
+                    colors[Math.floor(Math.random() * colors.length)],
+                    Math.random() * 100,
+                    Math.random() * 100
+                );
+            }
+        }
 
-<script src="https://littleflute.github.io/JavaScript/w3.js" ></script>
-<script src="https://littleflute.github.io/JavaScript/blclass.js" ></script>
-<script src="plx/p1.js"></script>
+        function generateColorfulWall(wall) {
+            const colors = ['red', 'green', 'blue', 'yellow', 'black', 'white'];
+            const size = 'full';
+            for (let i = 0; i < 6; i++) {
+                for (let j = 0; j < 4; j++) {
+                    createBrick(wall, size, colors[i], j * 25, i * 16.66);
+                }
+            }
+        }
+
+        function generatePatternWall(wall) {
+            const pattern = [
+                ['full', 'red', 0, 0],
+                ['half', 'green', 50, 0],
+                ['quarter', 'blue', 75, 0],
+                ['double', 'yellow', 0, 50],
+                ['quad', 'black', 0, 0],
+                ['half', 'white', 50, 50]
+            ];
+            pattern.forEach(item => {
+                createBrick(wall, item[0], item[1], item[2], item[3]);
+            });
+        }
+
+        function generateCustomWall() {
+            const wall = document.getElementById('custom-wall');
+            wall.innerHTML = '';
+            
+            const size = document.getElementById('brick-size').value;
+            const color = document.getElementById('brick-color').value;
+            const count = parseInt(document.getElementById('brick-count').value);
+            
+            for (let i = 0; i < count; i++) {
+                createBrick(wall, size, color, 
+                    Math.random() * 100, 
+                    Math.random() * 100
+                );
+            }
+        }
+
+        function createBrick(wall, size, color, left, top) {
+            const brick = document.createElement('div');
+            brick.className = `brick ${size} ${color}`;
+            brick.style.left = `${left}%`;
+            brick.style.top = `${top}%`;
+            wall.appendChild(brick);
+        }
+
+        // 局域网IP检测功能
+        function getLocalIP() {
+            const RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;
+            const ipElement = document.getElementById('local_ip');
+            
+            if (!RTCPeerConnection) {
+                ipElement.textContent = "浏览器不支持IP检测";
+                return;
+            }
+
+            const pc = new RTCPeerConnection({ iceServers: [] });
+            pc.createDataChannel('');
+            pc.createOffer().then(offer => pc.setLocalDescription(offer));
+            
+            pc.onicecandidate = (e) => {
+                if (!e.candidate) return;
+                const ipRegex = /([0-9]{1,3}(\.[0-9]{1,3}){3})/;
+                const ipMatch = e.candidate.candidate.match(ipRegex);
+                if (ipMatch) {
+                    ipElement.textContent = `局域网IP: ${ipMatch[1]}`;
+                    pc.onicecandidate = null;
+                }
+            };
+
+            // 超时处理
+            setTimeout(() => {
+                if (!ipElement.textContent.includes('IP')) {
+                    ipElement.textContent = "IP获取超时";
+                }
+            }, 3000);
+        }
+
+        // 初始化
+        window.onload = function() {
+            generateRandomWall(document.getElementById('random-wall'));
+            getLocalIP();
+        };
+    </script>
 </body>
 </html>
