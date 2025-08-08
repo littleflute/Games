@@ -119,6 +119,10 @@
             box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
         }
         
+        .toolbar-btn.active {
+            background: linear-gradient(to right, #e74c3c, #c0392b);
+        }
+        
         /* 画布区域 */
         .canvas-container {
             flex: 1;
@@ -442,6 +446,14 @@
             transition: opacity 0.3s;
         }
         
+        /* 临时形状预览 */
+        .preview-shape {
+            position: absolute;
+            pointer-events: none;
+            border: 2px dashed rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        
         /* 响应式调整 */
         @media (max-width: 480px) {
             .nav-links li {
@@ -480,7 +492,7 @@
         <nav>
             <div class="logo">
                 <i class="fas fa-palette"></i>
-                <span>高级画布工作室 v1.11</span>
+                <span>高级画布工作室 v1.13</span>
             </div>
             <ul class="nav-links">
                 <li><a href="index.html">index.html</a></li>
@@ -495,9 +507,21 @@
                 <i class="fas fa-cog"></i>
                 <span>画布设置</span>
             </button>
-            <button class="toolbar-btn" id="draw_btn">
+            <button class="toolbar-btn active" id="free_draw_btn">
                 <i class="fas fa-pencil-alt"></i>
-                <span>开始绘画</span>
+                <span>自由绘制</span>
+            </button>
+            <button class="toolbar-btn" id="line_btn">
+                <i class="fas fa-minus"></i>
+                <span>直线</span>
+            </button>
+            <button class="toolbar-btn" id="rect_btn">
+                <i class="fas fa-square"></i>
+                <span>矩形</span>
+            </button>
+            <button class="toolbar-btn" id="circle_btn">
+                <i class="fas fa-circle"></i>
+                <span>圆形</span>
             </button>
             <button class="toolbar-btn" id="clear_btn">
                 <i class="fas fa-trash-alt"></i>
@@ -513,23 +537,24 @@
         <div class="canvas-container" id="canvas">
             <div class="canvas-content">
                 <h2>创意画布空间</h2>
-                <p>点击"开始绘画"按钮开始创作，使用"画布设置"自定义背景和画笔设置。</p>
-                <p>设置窗口可以拖动到任意位置，方便您的操作。</p>
+                <p>选择左侧工具开始创作，使用"画布设置"自定义背景和画笔设置。</p>
+                <p>支持自由绘制、直线、矩形和圆形，设置窗口可以拖动到任意位置。</p>
                 <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.05); border-radius: 10px;">
                     <i class="fas fa-info-circle" style="color: #3498db;"></i>
-                    <span style="font-size: 0.9rem;">修复版本：支持连续绘画和画笔颜色设置</span>
+                    <span style="font-size: 0.9rem;">修复版本：支持多种形状绘制和实时预览</span>
                 </div>
             </div>
             <div class="grid-overlay" id="grid-overlay"></div>
-            <canvas id="drawing-canvas" style="display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
+            <canvas id="drawing-canvas" style="display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
             <div class="tooltip" id="tooltip"></div>
+            <div class="preview-shape" id="preview-shape" style="display: none;"></div>
         </div>
         
         <!-- 状态栏 -->
         <footer>
             <div class="status-info">
                 <i class="fas fa-sync-alt"></i>
-                <span>已保存所有更改</span>
+                <span>当前工具: <span id="current-tool">自由绘制</span></span>
             </div>
             <div class="battery">
                 <div class="battery-level"></div>
@@ -609,7 +634,10 @@
         const customColorInput = document.getElementById('custom-color-input');
         const applyCustomBtn = document.getElementById('apply_custom_btn');
         const windowHeader = document.getElementById('window-header');
-        const drawBtn = document.getElementById('draw_btn');
+        const freeDrawBtn = document.getElementById('free_draw_btn');
+        const lineBtn = document.getElementById('line_btn');
+        const rectBtn = document.getElementById('rect_btn');
+        const circleBtn = document.getElementById('circle_btn');
         const clearBtn = document.getElementById('clear_btn');
         const gridToggleBtn = document.getElementById('grid_toggle');
         const gridOverlay = document.getElementById('grid-overlay');
@@ -619,15 +647,22 @@
         const brushSizeValue = document.getElementById('brush-size-value');
         const gridToggle = document.getElementById('grid-toggle');
         const gridStatus = document.getElementById('grid-status');
+        const currentToolDisplay = document.getElementById('current-tool');
+        const previewShape = document.getElementById('preview-shape');
         
         // 初始化变量
-        let drawingMode = false; // 是否处于绘画模式
-        let isDrawing = false;   // 当前是否正在绘制
+        let drawingMode = true; // 是否处于绘画模式
+        let isDrawing = false;  // 当前是否正在绘制
         let lastX = 0;
         let lastY = 0;
+        let startX = 0;
+        let startY = 0;
         let currentColor = '#000000';
         let currentBrushSize = 5;
         let drawingContext = drawingCanvas.getContext('2d');
+        
+        // 绘图模式：'free' 自由绘制, 'line' 直线, 'rect' 矩形, 'circle' 圆形
+        let drawMode = 'free';
         
         // 初始位置
         settingsWindow.style.top = '150px';
@@ -722,23 +757,46 @@
             gridToggle.dispatchEvent(new Event('change'));
         });
         
-        // 开始绘画功能
-        drawBtn.addEventListener('click', () => {
-            if (drawingMode) {
-                drawingMode = false;
-                drawBtn.innerHTML = '<i class="fas fa-pencil-alt"></i> <span>开始绘画</span>';
-                document.querySelector('.canvas-content').style.display = 'block';
-                drawingCanvas.style.display = 'none';
-            } else {
-                drawingMode = true;
-                drawBtn.innerHTML = '<i class="fas fa-stop"></i> <span>停止绘画</span>';
-                document.querySelector('.canvas-content').style.display = 'none';
-                drawingCanvas.style.display = 'block';
-                
-                // 调整画布尺寸
-                resizeCanvas();
+        // 工具选择功能
+        function selectTool(tool) {
+            // 重置所有按钮状态
+            freeDrawBtn.classList.remove('active');
+            lineBtn.classList.remove('active');
+            rectBtn.classList.remove('active');
+            circleBtn.classList.remove('active');
+            
+            // 设置当前工具按钮状态
+            switch(tool) {
+                case 'free':
+                    freeDrawBtn.classList.add('active');
+                    currentToolDisplay.textContent = '自由绘制';
+                    break;
+                case 'line':
+                    lineBtn.classList.add('active');
+                    currentToolDisplay.textContent = '直线';
+                    break;
+                case 'rect':
+                    rectBtn.classList.add('active');
+                    currentToolDisplay.textContent = '矩形';
+                    break;
+                case 'circle':
+                    circleBtn.classList.add('active');
+                    currentToolDisplay.textContent = '圆形';
+                    break;
             }
-        });
+            
+            // 更新绘图模式
+            drawMode = tool;
+            document.querySelector('.canvas-content').style.display = 'none';
+            drawingCanvas.style.display = 'block';
+            resizeCanvas();
+        }
+        
+        // 绑定工具按钮事件
+        freeDrawBtn.addEventListener('click', () => selectTool('free'));
+        lineBtn.addEventListener('click', () => selectTool('line'));
+        rectBtn.addEventListener('click', () => selectTool('rect'));
+        circleBtn.addEventListener('click', () => selectTool('circle'));
         
         // 清空画布
         clearBtn.addEventListener('click', () => {
@@ -821,6 +879,12 @@
             if (e.key === 'Escape' && settingsWindow.style.display === 'block') {
                 settingsWindow.style.display = 'none';
             }
+            
+            // 数字键1-4切换工具
+            if (e.key === '1') selectTool('free');
+            if (e.key === '2') selectTool('line');
+            if (e.key === '3') selectTool('rect');
+            if (e.key === '4') selectTool('circle');
         });
         
         // 绘画功能
@@ -828,13 +892,21 @@
             if (!drawingMode) return;
             
             isDrawing = true;
-            [lastX, lastY] = getCoordinates(e);
+            const [x, y] = getCoordinates(e);
+            [lastX, lastY] = [x, y];
+            [startX, startY] = [x, y];
             
             // 显示工具提示
             tooltip.style.opacity = '1';
             tooltip.textContent = `画笔大小: ${currentBrushSize}px`;
-            tooltip.style.left = (lastX + 10) + 'px';
-            tooltip.style.top = (lastY - 30) + 'px';
+            tooltip.style.left = (x + 10) + 'px';
+            tooltip.style.top = (y - 30) + 'px';
+            
+            // 初始化绘图上下文
+            drawingContext.lineWidth = currentBrushSize;
+            drawingContext.lineCap = 'round';
+            drawingContext.lineJoin = 'round';
+            drawingContext.strokeStyle = currentColor;
         }
         
         function draw(e) {
@@ -842,17 +914,32 @@
             
             const [x, y] = getCoordinates(e);
             
-            drawingContext.lineWidth = currentBrushSize;
-            drawingContext.lineCap = 'round';
-            drawingContext.lineJoin = 'round';
-            drawingContext.strokeStyle = currentColor;
-            
-            drawingContext.beginPath();
-            drawingContext.moveTo(lastX, lastY);
-            drawingContext.lineTo(x, y);
-            drawingContext.stroke();
-            
-            [lastX, lastY] = [x, y];
+            // 根据当前模式绘制
+            switch(drawMode) {
+                case 'free':
+                    // 自由绘制
+                    drawingContext.beginPath();
+                    drawingContext.moveTo(lastX, lastY);
+                    drawingContext.lineTo(x, y);
+                    drawingContext.stroke();
+                    [lastX, lastY] = [x, y];
+                    break;
+                    
+                case 'line':
+                    // 直线预览
+                    showLinePreview(startX, startY, x, y);
+                    break;
+                    
+                case 'rect':
+                    // 矩形预览
+                    showRectPreview(startX, startY, x, y);
+                    break;
+                    
+                case 'circle':
+                    // 圆形预览
+                    showCirclePreview(startX, startY, x, y);
+                    break;
+            }
             
             // 更新工具提示位置
             tooltip.style.left = (x + 10) + 'px';
@@ -860,8 +947,146 @@
         }
         
         function stopDrawing() {
+            if (!isDrawing) return;
+            
             isDrawing = false;
             tooltip.style.opacity = '0';
+            
+            // 根据当前模式完成绘制
+            switch(drawMode) {
+                case 'line':
+                    // 绘制最终直线
+                    drawLine(startX, startY, lastX, lastY);
+                    break;
+                    
+                case 'rect':
+                    // 绘制最终矩形
+                    drawRect(startX, startY, lastX, lastY);
+                    break;
+                    
+                case 'circle':
+                    // 绘制最终圆形
+                    drawCircle(startX, startY, lastX, lastY);
+                    break;
+            }
+            
+            // 隐藏预览
+            previewShape.style.display = 'none';
+        }
+        
+        // 绘制直线
+        function drawLine(x1, y1, x2, y2) {
+            drawingContext.beginPath();
+            drawingContext.moveTo(x1, y1);
+            drawingContext.lineTo(x2, y2);
+            drawingContext.stroke();
+        }
+        
+        // 绘制矩形
+        function drawRect(x1, y1, x2, y2) {
+            const width = x2 - x1;
+            const height = y2 - y1;
+            
+            drawingContext.beginPath();
+            drawingContext.rect(x1, y1, width, height);
+            drawingContext.stroke();
+        }
+        
+        // 绘制圆形
+        function drawCircle(x1, y1, x2, y2) {
+            const radius = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            
+            drawingContext.beginPath();
+            drawingContext.arc(x1, y1, radius, 0, Math.PI * 2);
+            drawingContext.stroke();
+        }
+        
+        // 显示直线预览
+        function showLinePreview(x1, y1, x2, y2) {
+            previewShape.style.display = 'none';
+            
+            // 创建临时canvas用于预览
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // 设置临时canvas尺寸
+            const rect = drawingCanvas.getBoundingClientRect();
+            tempCanvas.width = rect.width;
+            tempCanvas.height = rect.height;
+            
+            // 绘制预览直线
+            tempCtx.lineWidth = currentBrushSize;
+            tempCtx.strokeStyle = currentColor;
+            tempCtx.setLineDash([5, 5]);
+            tempCtx.beginPath();
+            tempCtx.moveTo(x1, y1);
+            tempCtx.lineTo(x2, y2);
+            tempCtx.stroke();
+            
+            // 将临时canvas内容转为图片显示
+            const dataURL = tempCanvas.toDataURL();
+            previewShape.style.backgroundImage = `url(${dataURL})`;
+            previewShape.style.backgroundSize = '100% 100%';
+            previewShape.style.left = '0';
+            previewShape.style.top = '0';
+            previewShape.style.width = '100%';
+            previewShape.style.height = '100%';
+            previewShape.style.border = 'none';
+            previewShape.style.display = 'block';
+            
+            [lastX, lastY] = [x2, y2];
+        }
+        
+        // 显示矩形预览
+        function showRectPreview(x1, y1, x2, y2) {
+            const width = x2 - x1;
+            const height = y2 - y1;
+            
+            previewShape.style.left = Math.min(x1, x2) + 'px';
+            previewShape.style.top = Math.min(y1, y2) + 'px';
+            previewShape.style.width = Math.abs(width) + 'px';
+            previewShape.style.height = Math.abs(height) + 'px';
+            previewShape.style.display = 'block';
+            
+            [lastX, lastY] = [x2, y2];
+        }
+        
+        // 显示圆形预览
+        function showCirclePreview(x1, y1, x2, y2) {
+            previewShape.style.display = 'none';
+            
+            // 创建临时canvas用于预览
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // 设置临时canvas尺寸
+            const rect = drawingCanvas.getBoundingClientRect();
+            tempCanvas.width = rect.width;
+            tempCanvas.height = rect.height;
+            
+            // 计算半径
+            const radius = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+            
+            // 绘制预览圆形
+            tempCtx.lineWidth = currentBrushSize;
+            tempCtx.strokeStyle = currentColor;
+            tempCtx.setLineDash([5, 5]);
+            tempCtx.beginPath();
+            tempCtx.arc(x1, y1, radius, 0, Math.PI * 2);
+            tempCtx.stroke();
+            
+            // 将临时canvas内容转为图片显示
+            const dataURL = tempCanvas.toDataURL();
+            previewShape.style.backgroundImage = `url(${dataURL})`;
+            previewShape.style.backgroundSize = '100% 100%';
+            previewShape.style.left = '0';
+            previewShape.style.top = '0';
+            previewShape.style.width = '100%';
+            previewShape.style.height = '100%';
+            previewShape.style.border = 'none';
+            previewShape.style.display = 'block';
+            
+            [lastX, lastY] = [x2, y2];
         }
         
         function getCoordinates(e) {
@@ -886,7 +1111,7 @@
             drawingCanvas.height = rect.height;
         }
         
-        // 初始化画布
+        // 初始化画布事件
         drawingCanvas.addEventListener('mousedown', startDrawing);
         drawingCanvas.addEventListener('mousemove', draw);
         drawingCanvas.addEventListener('mouseup', stopDrawing);
