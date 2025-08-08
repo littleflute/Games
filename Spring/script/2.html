@@ -471,6 +471,28 @@
             border-radius: 4px;
         }
         
+        /* 调整大小控制点 */
+        .resize-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: white;
+            border: 2px solid #e74c3c;
+            border-radius: 50%;
+            pointer-events: auto;
+            z-index: 150;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+        }
+        
+        .resize-handle.nw { top: -6px; left: -6px; cursor: nwse-resize; }
+        .resize-handle.ne { top: -6px; right: -6px; cursor: nesw-resize; }
+        .resize-handle.sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+        .resize-handle.se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+        .resize-handle.n { top: -6px; left: 50%; margin-left: -6px; cursor: ns-resize; }
+        .resize-handle.s { bottom: -6px; left: 50%; margin-left: -6px; cursor: ns-resize; }
+        .resize-handle.e { right: -6px; top: 50%; margin-top: -6px; cursor: ew-resize; }
+        .resize-handle.w { left: -6px; top: 50%; margin-top: -6px; cursor: ew-resize; }
+        
         /* 响应式调整 */
         @media (max-width: 480px) {
             .nav-links li {
@@ -500,6 +522,21 @@
                 width: 90%;
                 max-width: 300px;
             }
+            
+            /* 移动端优化控制点大小 */
+            .resize-handle {
+                width: 16px;
+                height: 16px;
+            }
+            
+            .resize-handle.nw { top: -8px; left: -8px; }
+            .resize-handle.ne { top: -8px; right: -8px; }
+            .resize-handle.sw { bottom: -8px; left: -8px; }
+            .resize-handle.se { bottom: -8px; right: -8px; }
+            .resize-handle.n { top: -8px; left: 50%; margin-left: -8px; }
+            .resize-handle.s { bottom: -8px; left: 50%; margin-left: -8px; }
+            .resize-handle.e { right: -8px; top: 50%; margin-top: -8px; }
+            .resize-handle.w { left: -8px; top: 50%; margin-top: -8px; }
         }
     </style>
 </head>
@@ -509,7 +546,7 @@
         <nav>
             <div class="logo">
                 <i class="fas fa-palette"></i>
-                <span>高级画布工作室 v1.22</span>
+                <span>高级画布工作室 v1.33</span>
             </div>
             <ul class="nav-links">
                 <li><a href="index.html">index.html</a></li>
@@ -542,7 +579,7 @@
             </button>
             <button class="toolbar-btn" id="select_btn">
                 <i class="fas fa-mouse-pointer"></i>
-                <span>选择/移动</span>
+                <span>选择/编辑</span>
             </button>
             <button class="toolbar-btn delete-btn" id="delete_btn">
                 <i class="fas fa-trash"></i>
@@ -563,10 +600,10 @@
             <div class="canvas-content">
                 <h2>创意画布空间</h2>
                 <p>选择左侧工具开始创作，使用"画布设置"自定义背景和画笔设置。</p>
-                <p>支持自由绘制、直线、矩形和圆形，使用"选择/移动"工具可以拖动图形，选中后点击"删除"按钮或按Delete键删除。</p>
+                <p>支持自由绘制、直线、矩形和圆形，使用"选择/编辑"工具可以拖动、缩放图形，选中后点击"删除"按钮或按Delete键删除。</p>
                 <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.05); border-radius: 10px;">
                     <i class="fas fa-info-circle" style="color: #3498db;"></i>
-                    <span style="font-size: 0.9rem;">更新版本：支持删除已绘制的图形</span>
+                    <span style="font-size: 0.9rem;">更新版本：支持调整图形大小</span>
                 </div>
             </div>
             <div class="grid-overlay" id="grid-overlay"></div>
@@ -574,6 +611,17 @@
             <div class="tooltip" id="tooltip"></div>
             <div class="preview-shape" id="preview-shape" style="display: none;"></div>
             <div class="selected-indicator" id="selected-indicator" style="display: none;"></div>
+            <!-- 调整大小控制点容器 -->
+            <div id="resize-handles" style="position: absolute; pointer-events: none; display: none;">
+                <div class="resize-handle nw"></div>
+                <div class="resize-handle ne"></div>
+                <div class="resize-handle sw"></div>
+                <div class="resize-handle se"></div>
+                <div class="resize-handle n"></div>
+                <div class="resize-handle s"></div>
+                <div class="resize-handle e"></div>
+                <div class="resize-handle w"></div>
+            </div>
         </div>
         
         <!-- 状态栏 -->
@@ -680,6 +728,11 @@
                 // 子类可以重写此方法以处理特定属性
             }
             
+            // 调整图形大小（子类应实现）
+            resize(handle, x, y) {
+                // 由子类实现具体的大小调整逻辑
+            }
+            
             // 检查点是否在图形上（子类应实现）
             isPointOnShape(x, y) {
                 return false;
@@ -734,6 +787,18 @@
                 super.move(dx, dy);
                 this.x2 += dx;
                 this.y2 += dy;
+            }
+            
+            // 调整直线大小（改变端点位置）
+            resize(handle, x, y) {
+                // 直线只有两个端点，根据拖动的控制点决定修改哪个端点
+                if (handle === 'nw' || handle === 'w' || handle === 'n') {
+                    this.x1 = x;
+                    this.y1 = y;
+                } else {
+                    this.x2 = x;
+                    this.y2 = y;
+                }
             }
             
             // 检查点是否在线段上（使用点到线段的距离）
@@ -836,6 +901,15 @@
                 super.move(dx, dy);
                 this.x2 += dx;
                 this.y2 += dy;
+                this.radius = this.calculateRadius();
+            }
+            
+            // 调整圆形大小（改变半径）
+            resize(handle, x, y) {
+                // 拖动任何控制点都会改变半径
+                this.x2 = x;
+                this.y2 = y;
+                this.radius = this.calculateRadius();
             }
             
             // 检查点是否在圆上
@@ -911,6 +985,37 @@
                 super.move(dx, dy);
                 this.x2 += dx;
                 this.y2 += dy;
+            }
+            
+            // 调整矩形大小
+            resize(handle, x, y) {
+                const originalMinX = Math.min(this.x1, this.x2);
+                const originalMinY = Math.min(this.y1, this.y2);
+                const originalMaxX = Math.max(this.x1, this.x2);
+                const originalMaxY = Math.max(this.y1, this.y2);
+                
+                // 确保矩形不会缩小到零或负数大小
+                if (handle.includes('w') && x >= originalMaxX - 10) return;
+                if (handle.includes('e') && x <= originalMinX + 10) return;
+                if (handle.includes('n') && y >= originalMaxY - 10) return;
+                if (handle.includes('s') && y <= originalMinY + 10) return;
+                
+                // 根据拖动的控制点调整相应的边
+                if (this.x1 === originalMinX) {
+                    if (handle.includes('w')) this.x1 = x;
+                    if (handle.includes('e')) this.x2 = x;
+                } else {
+                    if (handle.includes('w')) this.x2 = x;
+                    if (handle.includes('e')) this.x1 = x;
+                }
+                
+                if (this.y1 === originalMinY) {
+                    if (handle.includes('n')) this.y1 = y;
+                    if (handle.includes('s')) this.y2 = y;
+                } else {
+                    if (handle.includes('n')) this.y2 = y;
+                    if (handle.includes('s')) this.y1 = y;
+                }
             }
             
             // 检查点是否在矩形的边上
@@ -1022,6 +1127,49 @@
                 this.calculateBounds();
             }
             
+            // 调整自由绘制图形的大小（缩放）
+            resize(handle, x, y) {
+                // 获取原始边界
+                const originalMinX = this.minX;
+                const originalMinY = this.minY;
+                const originalMaxX = this.maxX;
+                const originalMaxY = this.maxY;
+                const originalWidth = originalMaxX - originalMinX;
+                const originalHeight = originalMaxY - originalMinY;
+                
+                // 计算新的边界
+                let newMinX = originalMinX;
+                let newMinY = originalMinY;
+                let newMaxX = originalMaxX;
+                let newMaxY = originalMaxY;
+                
+                // 根据拖动的控制点调整边界
+                if (handle.includes('w')) newMinX = x;
+                if (handle.includes('e')) newMaxX = x;
+                if (handle.includes('n')) newMinY = y;
+                if (handle.includes('s')) newMaxY = y;
+                
+                // 确保不会缩小到太小
+                const newWidth = newMaxX - newMinX;
+                const newHeight = newMaxY - newMinY;
+                if (newWidth < 10 || newHeight < 10) return;
+                
+                // 计算缩放比例和偏移量
+                const scaleX = newWidth / originalWidth;
+                const scaleY = newHeight / originalHeight;
+                const offsetX = newMinX - originalMinX * scaleX;
+                const offsetY = newMinY - originalMinY * scaleY;
+                
+                // 应用缩放和偏移到所有点
+                for (const point of this.points) {
+                    point.x = point.x * scaleX + offsetX;
+                    point.y = point.y * scaleY + offsetY;
+                }
+                
+                // 重新计算边界
+                this.calculateBounds();
+            }
+            
             // 检查点是否在自由绘制的路径上
             isPointOnShape(x, y) {
                 // 简化检查：如果点在边界框内，就认为选中了
@@ -1069,9 +1217,12 @@
                 this.currentLineWidth = 5;
                 this.selectedShape = null;
                 this.isMoving = false;
+                this.isResizing = false;
+                this.resizeHandle = null;
                 this.lastX = 0;
                 this.lastY = 0;
                 this.selectedIndicator = document.getElementById('selected-indicator');
+                this.resizeHandles = document.getElementById('resize-handles');
                 
                 // 绑定事件处理方法
                 this.bindEvents();
@@ -1079,6 +1230,9 @@
                 // 初始化画布大小
                 this.resizeCanvas();
                 window.addEventListener('resize', () => this.resizeCanvas());
+                
+                // 绑定调整大小控制点事件
+                this.bindResizeHandleEvents();
             }
             
             // 绑定事件
@@ -1095,6 +1249,37 @@
                 this.canvas.addEventListener('touchend', () => this.handlePointerUp());
             }
             
+            // 绑定调整大小控制点事件
+            bindResizeHandleEvents() {
+                const handles = this.resizeHandles.querySelectorAll('.resize-handle');
+                
+                handles.forEach(handle => {
+                    // 鼠标事件
+                    handle.addEventListener('mousedown', (e) => {
+                        e.stopPropagation(); // 防止事件冒泡到画布
+                        if (this.selectedShape) {
+                            this.isResizing = true;
+                            this.resizeHandle = handle.classList[1]; // 获取nw, ne等类名
+                            const [x, y] = this.getCoordinates(e);
+                            this.lastX = x;
+                            this.lastY = y;
+                        }
+                    });
+                    
+                    // 触摸事件
+                    handle.addEventListener('touchstart', (e) => {
+                        e.stopPropagation(); // 防止事件冒泡到画布
+                        if (this.selectedShape) {
+                            this.isResizing = true;
+                            this.resizeHandle = handle.classList[1]; // 获取nw, ne等类名
+                            const [x, y] = this.getCoordinates(e);
+                            this.lastX = x;
+                            this.lastY = y;
+                        }
+                    });
+                });
+            }
+            
             // 处理指针按下事件
             handlePointerDown(e) {
                 e.preventDefault();
@@ -1109,6 +1294,7 @@
                         this.lastX = x;
                         this.lastY = y;
                         this.updateSelectedIndicator();
+                        this.showResizeHandles();
                     } else {
                         // 未选中任何图形，清除选择状态
                         this.deselectShape();
@@ -1139,11 +1325,20 @@
             handlePointerMove(e) {
                 e.preventDefault();
                 
-                if (!this.isDrawing && !this.isMoving) return;
+                if (!this.isDrawing && !this.isMoving && !this.isResizing) return;
                 
                 const [x, y] = this.getCoordinates(e);
                 
-                if (this.isMoving && this.selectedShape) {
+                if (this.isResizing && this.selectedShape && this.resizeHandle) {
+                    // 调整选中图形的大小
+                    this.selectedShape.resize(this.resizeHandle, x, y);
+                    this.lastX = x;
+                    this.lastY = y;
+                    
+                    this.redrawAll();
+                    this.updateSelectedIndicator();
+                    this.updateResizeHandlesPosition();
+                } else if (this.isMoving && this.selectedShape) {
                     // 移动选中的图形
                     const dx = x - this.lastX;
                     const dy = y - this.lastY;
@@ -1154,6 +1349,7 @@
                     
                     this.redrawAll();
                     this.updateSelectedIndicator();
+                    this.updateResizeHandlesPosition();
                 } else if (this.isDrawing && this.currentShape) {
                     // 绘制中
                     switch(this.drawMode) {
@@ -1193,6 +1389,8 @@
                 }
                 
                 this.isMoving = false;
+                this.isResizing = false;
+                this.resizeHandle = null;
             }
             
             // 查找指定坐标处的图形
@@ -1220,10 +1418,37 @@
                 }
             }
             
+            // 显示调整大小控制点
+            showResizeHandles() {
+                if (this.selectedShape) {
+                    this.resizeHandles.style.display = 'block';
+                    this.updateResizeHandlesPosition();
+                } else {
+                    this.resizeHandles.style.display = 'none';
+                }
+            }
+            
+            // 更新调整大小控制点位置
+            updateResizeHandlesPosition() {
+                if (!this.selectedShape) return;
+                
+                const bounds = this.selectedShape.getBoundingBox();
+                const handles = this.resizeHandles.querySelectorAll('.resize-handle');
+                
+                // 设置控制点容器位置
+                this.resizeHandles.style.left = `${bounds.x}px`;
+                this.resizeHandles.style.top = `${bounds.y}px`;
+                this.resizeHandles.style.width = `${bounds.width}px`;
+                this.resizeHandles.style.height = `${bounds.height}px`;
+                this.resizeHandles.style.pointerEvents = 'auto';
+            }
+            
             // 取消选择图形
             deselectShape() {
                 this.selectedShape = null;
                 this.updateSelectedIndicator();
+                this.resizeHandles.style.display = 'none';
+                this.resizeHandles.style.pointerEvents = 'none';
             }
             
             // 删除选中的图形
@@ -1504,7 +1729,6 @@
                         this.currentY = e.touches[0].clientY - this.initialY;
                     } else {
                         this.currentX = e.clientX - this.initialX;
-                        this.currentY
                         this.currentY = e.clientY - this.initialY;
                     }
                     
@@ -1556,7 +1780,7 @@
                         break;
                     case 'select':
                         this.selectBtn.classList.add('active');
-                        this.currentToolDisplay.textContent = '选择/移动';
+                        this.currentToolDisplay.textContent = '选择/编辑';
                         break;
                 }
                 
@@ -1660,7 +1884,3 @@
     </script>
 </body>
 </html>
-<!--
-升级
-图形可变大小
--->
