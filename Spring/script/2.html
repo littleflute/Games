@@ -123,6 +123,14 @@
             background: linear-gradient(to right, #e74c3c, #c0392b);
         }
         
+        .toolbar-btn.delete-btn {
+            background: linear-gradient(to right, #e74c3c, #c0392b);
+        }
+        
+        .toolbar-btn.delete-btn:hover {
+            background: linear-gradient(to right, #c0392b, #9b2c2c);
+        }
+        
         /* 画布区域 */
         .canvas-container {
             flex: 1;
@@ -454,6 +462,37 @@
             background-color: rgba(0, 0, 0, 0.1);
         }
         
+        /* 选中形状的样式 */
+        .selected-indicator {
+            position: absolute;
+            pointer-events: none;
+            border: 2px dashed #e74c3c;
+            background-color: rgba(231, 76, 60, 0.1);
+            border-radius: 4px;
+        }
+        
+        /* 调整大小控制点 */
+        .resize-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background-color: white;
+            border: 2px solid #e74c3c;
+            border-radius: 50%;
+            pointer-events: auto;
+            z-index: 150;
+            box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.2);
+        }
+        
+        .resize-handle.nw { top: -6px; left: -6px; cursor: nwse-resize; }
+        .resize-handle.ne { top: -6px; right: -6px; cursor: nesw-resize; }
+        .resize-handle.sw { bottom: -6px; left: -6px; cursor: nesw-resize; }
+        .resize-handle.se { bottom: -6px; right: -6px; cursor: nwse-resize; }
+        .resize-handle.n { top: -6px; left: 50%; margin-left: -6px; cursor: ns-resize; }
+        .resize-handle.s { bottom: -6px; left: 50%; margin-left: -6px; cursor: ns-resize; }
+        .resize-handle.e { right: -6px; top: 50%; margin-top: -6px; cursor: ew-resize; }
+        .resize-handle.w { left: -6px; top: 50%; margin-top: -6px; cursor: ew-resize; }
+        
         /* 响应式调整 */
         @media (max-width: 480px) {
             .nav-links li {
@@ -483,6 +522,21 @@
                 width: 90%;
                 max-width: 300px;
             }
+            
+            /* 移动端优化控制点大小 */
+            .resize-handle {
+                width: 16px;
+                height: 16px;
+            }
+            
+            .resize-handle.nw { top: -8px; left: -8px; }
+            .resize-handle.ne { top: -8px; right: -8px; }
+            .resize-handle.sw { bottom: -8px; left: -8px; }
+            .resize-handle.se { bottom: -8px; right: -8px; }
+            .resize-handle.n { top: -8px; left: 50%; margin-left: -8px; }
+            .resize-handle.s { bottom: -8px; left: 50%; margin-left: -8px; }
+            .resize-handle.e { right: -8px; top: 50%; margin-top: -8px; }
+            .resize-handle.w { left: -8px; top: 50%; margin-top: -8px; }
         }
     </style>
 </head>
@@ -492,7 +546,7 @@
         <nav>
             <div class="logo">
                 <i class="fas fa-palette"></i>
-                <span>高级画布工作室 v1.15</span>
+                <span>高级画布工作室 v1.33</span>
             </div>
             <ul class="nav-links">
                 <li><a href="index.html">index.html</a></li>
@@ -523,6 +577,14 @@
                 <i class="fas fa-circle"></i>
                 <span>圆形</span>
             </button>
+            <button class="toolbar-btn" id="select_btn">
+                <i class="fas fa-mouse-pointer"></i>
+                <span>选择/编辑</span>
+            </button>
+            <button class="toolbar-btn delete-btn" id="delete_btn">
+                <i class="fas fa-trash"></i>
+                <span>删除</span>
+            </button>
             <button class="toolbar-btn" id="clear_btn">
                 <i class="fas fa-trash-alt"></i>
                 <span>清空画布</span>
@@ -538,16 +600,28 @@
             <div class="canvas-content">
                 <h2>创意画布空间</h2>
                 <p>选择左侧工具开始创作，使用"画布设置"自定义背景和画笔设置。</p>
-                <p>支持自由绘制、直线、矩形和圆形，设置窗口可以拖动到任意位置。</p>
+                <p>支持自由绘制、直线、矩形和圆形，使用"选择/编辑"工具可以拖动、缩放图形，选中后点击"删除"按钮或按Delete键删除。</p>
                 <div style="margin-top: 20px; padding: 15px; background: rgba(0,0,0,0.05); border-radius: 10px;">
                     <i class="fas fa-info-circle" style="color: #3498db;"></i>
-                    <span style="font-size: 0.9rem;">修复版本：支持多种形状绘制和实时预览</span>
+                    <span style="font-size: 0.9rem;">更新版本：支持调整图形大小</span>
                 </div>
             </div>
             <div class="grid-overlay" id="grid-overlay"></div>
             <canvas id="drawing-canvas" style="display: block; position: absolute; top: 0; left: 0; width: 100%; height: 100%;"></canvas>
             <div class="tooltip" id="tooltip"></div>
             <div class="preview-shape" id="preview-shape" style="display: none;"></div>
+            <div class="selected-indicator" id="selected-indicator" style="display: none;"></div>
+            <!-- 调整大小控制点容器 -->
+            <div id="resize-handles" style="position: absolute; pointer-events: none; display: none;">
+                <div class="resize-handle nw"></div>
+                <div class="resize-handle ne"></div>
+                <div class="resize-handle sw"></div>
+                <div class="resize-handle se"></div>
+                <div class="resize-handle n"></div>
+                <div class="resize-handle s"></div>
+                <div class="resize-handle e"></div>
+                <div class="resize-handle w"></div>
+            </div>
         </div>
         
         <!-- 状态栏 -->
@@ -632,6 +706,8 @@
                 this.y1 = y1;
                 this.color = color;
                 this.lineWidth = lineWidth;
+                this.offsetX = 0;
+                this.offsetY = 0;
             }
             
             // 每个子类都需要实现draw方法
@@ -643,6 +719,33 @@
             preview(context) {
                 // 默认使用正常绘制方法，子类可以重写
                 this.draw(context);
+            }
+            
+            // 移动图形
+            move(dx, dy) {
+                this.x1 += dx;
+                this.y1 += dy;
+                // 子类可以重写此方法以处理特定属性
+            }
+            
+            // 调整图形大小（子类应实现）
+            resize(handle, x, y) {
+                // 由子类实现具体的大小调整逻辑
+            }
+            
+            // 检查点是否在图形上（子类应实现）
+            isPointOnShape(x, y) {
+                return false;
+            }
+            
+            // 获取图形边界框（用于选中指示）
+            getBoundingBox() {
+                return {
+                    x: this.x1,
+                    y: this.y1,
+                    width: 0,
+                    height: 0
+                };
             }
         }
         
@@ -678,6 +781,77 @@
                 context.stroke();
                 context.setLineDash([]);
                 context.restore();
+            }
+            
+            move(dx, dy) {
+                super.move(dx, dy);
+                this.x2 += dx;
+                this.y2 += dy;
+            }
+            
+            // 调整直线大小（改变端点位置）
+            resize(handle, x, y) {
+                // 直线只有两个端点，根据拖动的控制点决定修改哪个端点
+                if (handle === 'nw' || handle === 'w' || handle === 'n') {
+                    this.x1 = x;
+                    this.y1 = y;
+                } else {
+                    this.x2 = x;
+                    this.y2 = y;
+                }
+            }
+            
+            // 检查点是否在线段上（使用点到线段的距离）
+            isPointOnShape(x, y) {
+                const distance = this.pointToLineDistance(x, y);
+                return distance <= this.lineWidth + 5; // 增加一点容错
+            }
+            
+            // 计算点到线段的距离
+            pointToLineDistance(x, y) {
+                const A = x - this.x1;
+                const B = y - this.y1;
+                const C = this.x2 - this.x1;
+                const D = this.y2 - this.y1;
+                
+                const dot = A * C + B * D;
+                const lenSq = C * C + D * D;
+                let param = -1;
+                
+                if (lenSq !== 0) param = dot / lenSq;
+                
+                let xx, yy;
+                
+                if (param < 0) {
+                    xx = this.x1;
+                    yy = this.y1;
+                } else if (param > 1) {
+                    xx = this.x2;
+                    yy = this.y2;
+                } else {
+                    xx = this.x1 + param * C;
+                    yy = this.y1 + param * D;
+                }
+                
+                const dx = x - xx;
+                const dy = y - yy;
+                return Math.sqrt(dx * dx + dy * dy);
+            }
+            
+            // 获取直线的边界框
+            getBoundingBox() {
+                const x = Math.min(this.x1, this.x2);
+                const y = Math.min(this.y1, this.y2);
+                const width = Math.abs(this.x2 - this.x1);
+                const height = Math.abs(this.y2 - this.y1);
+                
+                // 为边界框增加一些边距，使其更容易看到
+                return {
+                    x: x - 5,
+                    y: y - 5,
+                    width: width + 10,
+                    height: height + 10
+                };
             }
         }
         
@@ -721,6 +895,41 @@
                 context.stroke();
                 context.setLineDash([]);
                 context.restore();
+            }
+            
+            move(dx, dy) {
+                super.move(dx, dy);
+                this.x2 += dx;
+                this.y2 += dy;
+                this.radius = this.calculateRadius();
+            }
+            
+            // 调整圆形大小（改变半径）
+            resize(handle, x, y) {
+                // 拖动任何控制点都会改变半径
+                this.x2 = x;
+                this.y2 = y;
+                this.radius = this.calculateRadius();
+            }
+            
+            // 检查点是否在圆上
+            isPointOnShape(x, y) {
+                const dx = x - this.x1;
+                const dy = y - this.y1;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                // 检查点是否在圆的边缘附近（考虑线宽）
+                return Math.abs(distance - this.radius) <= this.lineWidth + 5;
+            }
+            
+            // 获取圆形的边界框
+            getBoundingBox() {
+                return {
+                    x: this.x1 - this.radius - 5,
+                    y: this.y1 - this.radius - 5,
+                    width: this.radius * 2 + 10,
+                    height: this.radius * 2 + 10
+                };
             }
         }
         
@@ -771,6 +980,82 @@
                 context.setLineDash([]);
                 context.restore();
             }
+            
+            move(dx, dy) {
+                super.move(dx, dy);
+                this.x2 += dx;
+                this.y2 += dy;
+            }
+            
+            // 调整矩形大小
+            resize(handle, x, y) {
+                const originalMinX = Math.min(this.x1, this.x2);
+                const originalMinY = Math.min(this.y1, this.y2);
+                const originalMaxX = Math.max(this.x1, this.x2);
+                const originalMaxY = Math.max(this.y1, this.y2);
+                
+                // 确保矩形不会缩小到零或负数大小
+                if (handle.includes('w') && x >= originalMaxX - 10) return;
+                if (handle.includes('e') && x <= originalMinX + 10) return;
+                if (handle.includes('n') && y >= originalMaxY - 10) return;
+                if (handle.includes('s') && y <= originalMinY + 10) return;
+                
+                // 根据拖动的控制点调整相应的边
+                if (this.x1 === originalMinX) {
+                    if (handle.includes('w')) this.x1 = x;
+                    if (handle.includes('e')) this.x2 = x;
+                } else {
+                    if (handle.includes('w')) this.x2 = x;
+                    if (handle.includes('e')) this.x1 = x;
+                }
+                
+                if (this.y1 === originalMinY) {
+                    if (handle.includes('n')) this.y1 = y;
+                    if (handle.includes('s')) this.y2 = y;
+                } else {
+                    if (handle.includes('n')) this.y2 = y;
+                    if (handle.includes('s')) this.y1 = y;
+                }
+            }
+            
+            // 检查点是否在矩形的边上
+            isPointOnShape(x, y) {
+                const rectX = Math.min(this.x1, this.x2);
+                const rectY = Math.min(this.y1, this.y2);
+                const rectWidth = Math.abs(this.x2 - this.x1);
+                const rectHeight = Math.abs(this.y2 - this.y1);
+                
+                // 检查点是否在矩形的边缘附近（考虑线宽）
+                const onLeftEdge = x >= rectX - this.lineWidth - 5 && x <= rectX + this.lineWidth + 5 &&
+                                  y >= rectY && y <= rectY + rectHeight;
+                                  
+                const onRightEdge = x >= rectX + rectWidth - this.lineWidth - 5 && x <= rectX + rectWidth + this.lineWidth + 5 &&
+                                   y >= rectY && y <= rectY + rectHeight;
+                                   
+                const onTopEdge = y >= rectY - this.lineWidth - 5 && y <= rectY + this.lineWidth + 5 &&
+                                 x >= rectX && x <= rectX + rectWidth;
+                                 
+                const onBottomEdge = y >= rectY + rectHeight - this.lineWidth - 5 && y <= rectY + rectHeight + this.lineWidth + 5 &&
+                                    x >= rectX && x <= rectX + rectWidth;
+                                    
+                return onLeftEdge || onRightEdge || onTopEdge || onBottomEdge;
+            }
+            
+            // 获取矩形的边界框
+            getBoundingBox() {
+                const x = Math.min(this.x1, this.x2);
+                const y = Math.min(this.y1, this.y2);
+                const width = Math.abs(this.x2 - this.x1);
+                const height = Math.abs(this.y2 - this.y1);
+                
+                // 为边界框增加一些边距
+                return {
+                    x: x - 5,
+                    y: y - 5,
+                    width: width + 10,
+                    height: height + 10
+                };
+            }
         }
         
         // 自由绘制类
@@ -778,11 +1063,35 @@
             constructor(x1, y1, color, lineWidth) {
                 super(x1, y1, color, lineWidth);
                 this.points = [{x: x1, y: y1}];
+                this.calculateBounds();
             }
             
             // 添加新点
             addPoint(x, y) {
                 this.points.push({x, y});
+                this.calculateBounds();
+            }
+            
+            // 计算自由绘制的边界
+            calculateBounds() {
+                if (this.points.length === 0) return;
+                
+                let minX = this.points[0].x;
+                let maxX = this.points[0].x;
+                let minY = this.points[0].y;
+                let maxY = this.points[0].y;
+                
+                for (const point of this.points) {
+                    minX = Math.min(minX, point.x);
+                    maxX = Math.max(maxX, point.x);
+                    minY = Math.min(minY, point.y);
+                    maxY = Math.max(maxY, point.y);
+                }
+                
+                this.minX = minX;
+                this.maxX = maxX;
+                this.minY = minY;
+                this.maxY = maxY;
             }
             
             draw(context) {
@@ -808,6 +1117,91 @@
             preview(context) {
                 this.draw(context);
             }
+            
+            move(dx, dy) {
+                super.move(dx, dy);
+                for (const point of this.points) {
+                    point.x += dx;
+                    point.y += dy;
+                }
+                this.calculateBounds();
+            }
+            
+            // 调整自由绘制图形的大小（缩放）
+            resize(handle, x, y) {
+                // 获取原始边界
+                const originalMinX = this.minX;
+                const originalMinY = this.minY;
+                const originalMaxX = this.maxX;
+                const originalMaxY = this.maxY;
+                const originalWidth = originalMaxX - originalMinX;
+                const originalHeight = originalMaxY - originalMinY;
+                
+                // 计算新的边界
+                let newMinX = originalMinX;
+                let newMinY = originalMinY;
+                let newMaxX = originalMaxX;
+                let newMaxY = originalMaxY;
+                
+                // 根据拖动的控制点调整边界
+                if (handle.includes('w')) newMinX = x;
+                if (handle.includes('e')) newMaxX = x;
+                if (handle.includes('n')) newMinY = y;
+                if (handle.includes('s')) newMaxY = y;
+                
+                // 确保不会缩小到太小
+                const newWidth = newMaxX - newMinX;
+                const newHeight = newMaxY - newMinY;
+                if (newWidth < 10 || newHeight < 10) return;
+                
+                // 计算缩放比例和偏移量
+                const scaleX = newWidth / originalWidth;
+                const scaleY = newHeight / originalHeight;
+                const offsetX = newMinX - originalMinX * scaleX;
+                const offsetY = newMinY - originalMinY * scaleY;
+                
+                // 应用缩放和偏移到所有点
+                for (const point of this.points) {
+                    point.x = point.x * scaleX + offsetX;
+                    point.y = point.y * scaleY + offsetY;
+                }
+                
+                // 重新计算边界
+                this.calculateBounds();
+            }
+            
+            // 检查点是否在自由绘制的路径上
+            isPointOnShape(x, y) {
+                // 简化检查：如果点在边界框内，就认为选中了
+                if (x < this.minX - this.lineWidth - 5 || x > this.maxX + this.lineWidth + 5 ||
+                    y < this.minY - this.lineWidth - 5 || y > this.maxY + this.lineWidth + 5) {
+                    return false;
+                }
+                
+                // 更精确的检查：检查点是否靠近任何线段
+                for (let i = 0; i < this.points.length - 1; i++) {
+                    const p1 = this.points[i];
+                    const p2 = this.points[i + 1];
+                    
+                    // 创建临时线段来检查距离
+                    const tempLine = new C4Line(p1.x, p1.y, p2.x, p2.y, this.color, this.lineWidth);
+                    if (tempLine.isPointOnShape(x, y)) {
+                        return true;
+                    }
+                }
+                
+                return false;
+            }
+            
+            // 获取自由绘制的边界框
+            getBoundingBox() {
+                return {
+                    x: this.minX - 5,
+                    y: this.minY - 5,
+                    width: this.maxX - this.minX + 10,
+                    height: this.maxY - this.minY + 10
+                };
+            }
         }
         
         // 画布管理器类
@@ -821,6 +1215,14 @@
                 this.drawMode = 'free'; // 默认自由绘制
                 this.currentColor = '#000000';
                 this.currentLineWidth = 5;
+                this.selectedShape = null;
+                this.isMoving = false;
+                this.isResizing = false;
+                this.resizeHandle = null;
+                this.lastX = 0;
+                this.lastY = 0;
+                this.selectedIndicator = document.getElementById('selected-indicator');
+                this.resizeHandles = document.getElementById('resize-handles');
                 
                 // 绑定事件处理方法
                 this.bindEvents();
@@ -828,20 +1230,239 @@
                 // 初始化画布大小
                 this.resizeCanvas();
                 window.addEventListener('resize', () => this.resizeCanvas());
+                
+                // 绑定调整大小控制点事件
+                this.bindResizeHandleEvents();
             }
             
             // 绑定事件
             bindEvents() {
                 // 鼠标事件
-                this.canvas.addEventListener('mousedown', (e) => this.startDrawing(e));
-                this.canvas.addEventListener('mousemove', (e) => this.draw(e));
-                this.canvas.addEventListener('mouseup', () => this.stopDrawing());
-                this.canvas.addEventListener('mouseout', () => this.stopDrawing());
+                this.canvas.addEventListener('mousedown', (e) => this.handlePointerDown(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handlePointerMove(e));
+                this.canvas.addEventListener('mouseup', () => this.handlePointerUp());
+                this.canvas.addEventListener('mouseout', () => this.handlePointerUp());
                 
                 // 触摸事件
-                this.canvas.addEventListener('touchstart', (e) => this.startDrawing(e));
-                this.canvas.addEventListener('touchmove', (e) => this.draw(e));
-                this.canvas.addEventListener('touchend', () => this.stopDrawing());
+                this.canvas.addEventListener('touchstart', (e) => this.handlePointerDown(e));
+                this.canvas.addEventListener('touchmove', (e) => this.handlePointerMove(e));
+                this.canvas.addEventListener('touchend', () => this.handlePointerUp());
+            }
+            
+            // 绑定调整大小控制点事件
+            bindResizeHandleEvents() {
+                const handles = this.resizeHandles.querySelectorAll('.resize-handle');
+                
+                handles.forEach(handle => {
+                    // 鼠标事件
+                    handle.addEventListener('mousedown', (e) => {
+                        e.stopPropagation(); // 防止事件冒泡到画布
+                        if (this.selectedShape) {
+                            this.isResizing = true;
+                            this.resizeHandle = handle.classList[1]; // 获取nw, ne等类名
+                            const [x, y] = this.getCoordinates(e);
+                            this.lastX = x;
+                            this.lastY = y;
+                        }
+                    });
+                    
+                    // 触摸事件
+                    handle.addEventListener('touchstart', (e) => {
+                        e.stopPropagation(); // 防止事件冒泡到画布
+                        if (this.selectedShape) {
+                            this.isResizing = true;
+                            this.resizeHandle = handle.classList[1]; // 获取nw, ne等类名
+                            const [x, y] = this.getCoordinates(e);
+                            this.lastX = x;
+                            this.lastY = y;
+                        }
+                    });
+                });
+            }
+            
+            // 处理指针按下事件
+            handlePointerDown(e) {
+                e.preventDefault();
+                const [x, y] = this.getCoordinates(e);
+                
+                if (this.drawMode === 'select') {
+                    // 选择模式：尝试选择图形
+                    this.selectedShape = this.findShapeAt(x, y);
+                    
+                    if (this.selectedShape) {
+                        this.isMoving = true;
+                        this.lastX = x;
+                        this.lastY = y;
+                        this.updateSelectedIndicator();
+                        this.showResizeHandles();
+                    } else {
+                        // 未选中任何图形，清除选择状态
+                        this.deselectShape();
+                    }
+                } else {
+                    // 绘制模式：开始绘制新图形
+                    this.isDrawing = true;
+                    
+                    // 根据当前模式创建相应的图形对象
+                    switch(this.drawMode) {
+                        case 'free':
+                            this.currentShape = new C4Freehand(x, y, this.currentColor, this.currentLineWidth);
+                            break;
+                        case 'line':
+                            this.currentShape = new C4Line(x, y, x, y, this.currentColor, this.currentLineWidth);
+                            break;
+                        case 'rect':
+                            this.currentShape = new C4Rect(x, y, x, y, this.currentColor, this.currentLineWidth);
+                            break;
+                        case 'circle':
+                            this.currentShape = new C4Circle(x, y, x, y, this.currentColor, this.currentLineWidth);
+                            break;
+                    }
+                }
+            }
+            
+            // 处理指针移动事件
+            handlePointerMove(e) {
+                e.preventDefault();
+                
+                if (!this.isDrawing && !this.isMoving && !this.isResizing) return;
+                
+                const [x, y] = this.getCoordinates(e);
+                
+                if (this.isResizing && this.selectedShape && this.resizeHandle) {
+                    // 调整选中图形的大小
+                    this.selectedShape.resize(this.resizeHandle, x, y);
+                    this.lastX = x;
+                    this.lastY = y;
+                    
+                    this.redrawAll();
+                    this.updateSelectedIndicator();
+                    this.updateResizeHandlesPosition();
+                } else if (this.isMoving && this.selectedShape) {
+                    // 移动选中的图形
+                    const dx = x - this.lastX;
+                    const dy = y - this.lastY;
+                    
+                    this.selectedShape.move(dx, dy);
+                    this.lastX = x;
+                    this.lastY = y;
+                    
+                    this.redrawAll();
+                    this.updateSelectedIndicator();
+                    this.updateResizeHandlesPosition();
+                } else if (this.isDrawing && this.currentShape) {
+                    // 绘制中
+                    switch(this.drawMode) {
+                        case 'free':
+                            this.currentShape.addPoint(x, y);
+                            // 自由绘制实时更新
+                            this.redrawAll();
+                            this.currentShape.preview(this.context);
+                            break;
+                        case 'line':
+                            this.currentShape.x2 = x;
+                            this.currentShape.y2 = y;
+                            this.redrawAll();
+                            this.currentShape.preview(this.context);
+                            break;
+                        case 'rect':
+                            this.currentShape.updateEndPoint(x, y);
+                            this.redrawAll();
+                            this.currentShape.preview(this.context);
+                            break;
+                        case 'circle':
+                            this.currentShape.updateEndPoint(x, y);
+                            this.redrawAll();
+                            this.currentShape.preview(this.context);
+                            break;
+                    }
+                }
+            }
+            
+            // 处理指针释放事件
+            handlePointerUp() {
+                if (this.isDrawing && this.currentShape) {
+                    this.shapes.push(this.currentShape);
+                    this.currentShape = null;
+                    this.isDrawing = false;
+                    this.redrawAll();
+                }
+                
+                this.isMoving = false;
+                this.isResizing = false;
+                this.resizeHandle = null;
+            }
+            
+            // 查找指定坐标处的图形
+            findShapeAt(x, y) {
+                // 从后往前查找，确保最新绘制的图形先被选中
+                for (let i = this.shapes.length - 1; i >= 0; i--) {
+                    if (this.shapes[i].isPointOnShape(x, y)) {
+                        return this.shapes[i];
+                    }
+                }
+                return null;
+            }
+            
+            // 更新选中指示器
+            updateSelectedIndicator() {
+                if (this.selectedShape) {
+                    const bounds = this.selectedShape.getBoundingBox();
+                    this.selectedIndicator.style.display = 'block';
+                    this.selectedIndicator.style.left = `${bounds.x}px`;
+                    this.selectedIndicator.style.top = `${bounds.y}px`;
+                    this.selectedIndicator.style.width = `${bounds.width}px`;
+                    this.selectedIndicator.style.height = `${bounds.height}px`;
+                } else {
+                    this.selectedIndicator.style.display = 'none';
+                }
+            }
+            
+            // 显示调整大小控制点
+            showResizeHandles() {
+                if (this.selectedShape) {
+                    this.resizeHandles.style.display = 'block';
+                    this.updateResizeHandlesPosition();
+                } else {
+                    this.resizeHandles.style.display = 'none';
+                }
+            }
+            
+            // 更新调整大小控制点位置
+            updateResizeHandlesPosition() {
+                if (!this.selectedShape) return;
+                
+                const bounds = this.selectedShape.getBoundingBox();
+                const handles = this.resizeHandles.querySelectorAll('.resize-handle');
+                
+                // 设置控制点容器位置
+                this.resizeHandles.style.left = `${bounds.x}px`;
+                this.resizeHandles.style.top = `${bounds.y}px`;
+                this.resizeHandles.style.width = `${bounds.width}px`;
+                this.resizeHandles.style.height = `${bounds.height}px`;
+                this.resizeHandles.style.pointerEvents = 'auto';
+            }
+            
+            // 取消选择图形
+            deselectShape() {
+                this.selectedShape = null;
+                this.updateSelectedIndicator();
+                this.resizeHandles.style.display = 'none';
+                this.resizeHandles.style.pointerEvents = 'none';
+            }
+            
+            // 删除选中的图形
+            removeSelectedShape() {
+                if (this.selectedShape) {
+                    const index = this.shapes.indexOf(this.selectedShape);
+                    if (index !== -1) {
+                        this.shapes.splice(index, 1);
+                    }
+                    this.deselectShape();
+                    this.redrawAll();
+                    return true;
+                }
+                return false;
             }
             
             // 调整画布大小
@@ -855,6 +1476,10 @@
             // 设置绘制模式
             setDrawMode(mode) {
                 this.drawMode = mode;
+                // 切换模式时取消选择
+                if (mode !== 'select') {
+                    this.deselectShape();
+                }
             }
             
             // 设置画笔颜色
@@ -867,76 +1492,10 @@
                 this.currentLineWidth = width;
             }
             
-            // 开始绘制
-            startDrawing(e) {
-                e.preventDefault();
-                this.isDrawing = true;
-                const [x, y] = this.getCoordinates(e);
-                
-                // 根据当前模式创建相应的图形对象
-                switch(this.drawMode) {
-                    case 'free':
-                        this.currentShape = new C4Freehand(x, y, this.currentColor, this.currentLineWidth);
-                        break;
-                    case 'line':
-                        this.currentShape = new C4Line(x, y, x, y, this.currentColor, this.currentLineWidth);
-                        break;
-                    case 'rect':
-                        this.currentShape = new C4Rect(x, y, x, y, this.currentColor, this.currentLineWidth);
-                        break;
-                    case 'circle':
-                        this.currentShape = new C4Circle(x, y, x, y, this.currentColor, this.currentLineWidth);
-                        break;
-                }
-            }
-            
-            // 绘制中
-            draw(e) {
-                if (!this.isDrawing || !this.currentShape) return;
-                e.preventDefault();
-                
-                const [x, y] = this.getCoordinates(e);
-                
-                // 根据当前形状类型更新
-                switch(this.drawMode) {
-                    case 'free':
-                        this.currentShape.addPoint(x, y);
-                        // 自由绘制实时更新
-                        this.redrawAll();
-                        this.currentShape.preview(this.context);
-                        break;
-                    case 'line':
-                        this.currentShape.x2 = x;
-                        this.currentShape.y2 = y;
-                        this.redrawAll();
-                        this.currentShape.preview(this.context);
-                        break;
-                    case 'rect':
-                        this.currentShape.updateEndPoint(x, y);
-                        this.redrawAll();
-                        this.currentShape.preview(this.context);
-                        break;
-                    case 'circle':
-                        this.currentShape.updateEndPoint(x, y);
-                        this.redrawAll();
-                        this.currentShape.preview(this.context);
-                        break;
-                }
-            }
-            
-            // 停止绘制
-            stopDrawing() {
-                if (this.isDrawing && this.currentShape) {
-                    this.shapes.push(this.currentShape);
-                    this.currentShape = null;
-                    this.isDrawing = false;
-                    this.redrawAll();
-                }
-            }
-            
             // 清空画布
             clearCanvas() {
                 this.shapes = [];
+                this.deselectShape();
                 this.redrawAll();
             }
             
@@ -987,6 +1546,8 @@
                 this.lineBtn = document.getElementById('line_btn');
                 this.rectBtn = document.getElementById('rect_btn');
                 this.circleBtn = document.getElementById('circle_btn');
+                this.selectBtn = document.getElementById('select_btn');
+                this.deleteBtn = document.getElementById('delete_btn');
                 this.clearBtn = document.getElementById('clear_btn');
                 this.gridToggleBtn = document.getElementById('grid_toggle');
                 this.gridOverlay = document.getElementById('grid-overlay');
@@ -1051,6 +1612,10 @@
                 this.lineBtn.addEventListener('click', () => this.selectTool('line'));
                 this.rectBtn.addEventListener('click', () => this.selectTool('rect'));
                 this.circleBtn.addEventListener('click', () => this.selectTool('circle'));
+                this.selectBtn.addEventListener('click', () => this.selectTool('select'));
+                
+                // 删除选中图形
+                this.deleteBtn.addEventListener('click', () => this.deleteSelectedShape());
                 
                 // 清空画布
                 this.clearBtn.addEventListener('click', () => this.clearCanvas());
@@ -1193,6 +1758,7 @@
                 this.lineBtn.classList.remove('active');
                 this.rectBtn.classList.remove('active');
                 this.circleBtn.classList.remove('active');
+                this.selectBtn.classList.remove('active');
                 
                 // 设置当前工具按钮状态
                 switch(tool) {
@@ -1212,10 +1778,48 @@
                         this.circleBtn.classList.add('active');
                         this.currentToolDisplay.textContent = '圆形';
                         break;
+                    case 'select':
+                        this.selectBtn.classList.add('active');
+                        this.currentToolDisplay.textContent = '选择/编辑';
+                        break;
                 }
                 
                 // 更新绘图模式
                 this.canvasManager.setDrawMode(tool);
+            }
+            
+            // 删除选中的图形
+            deleteSelectedShape() {
+                // 如果没有选中的图形，提示用户
+                if (!this.canvasManager.selectedShape) {
+                    // 短暂显示提示
+                    this.showTooltip("请先选择一个图形", 2000);
+                    return;
+                }
+                
+                // 调用画布管理器的删除方法
+                const deleted = this.canvasManager.removeSelectedShape();
+                if (deleted) {
+                    this.showTooltip("图形已删除", 1000);
+                }
+            }
+            
+            // 显示工具提示
+            showTooltip(text, duration = 2000) {
+                const tooltip = document.getElementById('tooltip');
+                tooltip.textContent = text;
+                tooltip.style.opacity = '1';
+                
+                // 定位在画布中央
+                const canvas = document.getElementById('canvas');
+                const rect = canvas.getBoundingClientRect();
+                tooltip.style.left = (rect.width / 2 - tooltip.offsetWidth / 2) + 'px';
+                tooltip.style.top = (rect.height / 2 - 50) + 'px';
+                
+                // 定时隐藏
+                setTimeout(() => {
+                    tooltip.style.opacity = '0';
+                }, duration);
             }
             
             // 清空画布
@@ -1258,11 +1862,18 @@
                     this.hideSettingsWindow();
                 }
                 
-                // 数字键1-4切换工具
+                // Delete键删除选中图形
+                if (e.key === 'Delete' || e.key === 'Backspace') {
+                    e.preventDefault();
+                    this.deleteSelectedShape();
+                }
+                
+                // 数字键1-5切换工具
                 if (e.key === '1') this.selectTool('free');
                 if (e.key === '2') this.selectTool('line');
                 if (e.key === '3') this.selectTool('rect');
                 if (e.key === '4') this.selectTool('circle');
+                if (e.key === '5') this.selectTool('select');
             }
         }
         
@@ -1273,3 +1884,7 @@
     </script>
 </body>
 </html>
+<!--
+升级
+让选择的图形可以整体移动
+-->
