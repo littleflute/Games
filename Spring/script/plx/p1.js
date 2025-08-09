@@ -298,6 +298,12 @@ function CStoryBoard(parentDiv){
                 }
             }(tb.btnCurStory);
 
+            
+            tb.btnRemoveAllCards = blo0.blBtn(tb,"id_4_btnRemoveAllCards","+1",blColor[2]);
+            tb.btnRemoveAllCards.style.float="left";
+            tb.btnRemoveAllCards.onclick = function(){
+                 //code11: to remove all cards.
+            }
             tb.btnAddCard = blo0.blBtn(tb,"id_4_btnAddCard","+1",blGrey[2]);
             tb.btnAddCard.style.float="left";
             tb.btnAddCard.onclick = function(){
@@ -942,3 +948,10 @@ o.rect = function(ctx,x,y,w,h,c){
     var b = bl$("btnServer");    
     o.addClass(b,"w3-button"); 
     o.addClass(b,"w3-brown"); 
+
+
+/**
+ * 升级以上代码
+ * to code11
+ * return all new code
+ */
