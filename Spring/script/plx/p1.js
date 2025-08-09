@@ -787,17 +787,14 @@ o.addCard= function(_ls){
         b.inf.y = 80;
         b.inf.w = 1920;
         b.inf.h = 1080;
-        b.inf.music = o.music;//"1.mp3";
+        b.inf.music = o.music; 
         b.inf.duration = o.duration;
         b.inf.rate = "1";
         b.inf.objects = [];
         b.inf.bgColor = "skyblue";
-        b.inf.text = "Card.txt"; 
-      //  o.AddObj2Frame(b.inf.objects,o.newObj("circle",111,111,222,222,5,"red"));
-      // o.AddObj2Frame(b.inf.objects,o.newObj("rect",111,10,100,100,5,"blue"));
-       // o.AddObj2Frame(b.inf.objects,o.newTextObj("test",10,10,60,"0,255,255"));
-        o.AddObj2Frame(b.inf.objects,o.newObj("text",15,110,333,222,5,"255,255,1"));
-        o.AddObj2Frame(b.inf.objects,o.newObj("line",15,110,333,222,5,"255,255,1"));
+        b.inf.text = "Card.txt";  
+        o.AddObj2Frame(b.inf.objects,o.newObj("card" + (b.inf.index + 1),155,22,333,222,15,"255,11,1"));
+        o.AddObj2Frame(b.inf.objects,o.newObj("line",111,110,333,222,5,"255,255,1"));
         o.AddObj2Frame(b.inf.objects,o.newObj("line",15,222,333,111,5,"255,1,1"));
         b.inf2JSON = function(_this){
             return function(){
@@ -809,8 +806,7 @@ o.addCard= function(_ls){
                 var f = o.newFrame(1,120,"1,100,200");                
                 for(i in b.inf.objects){
                     o.AddObj2Frame(f.objects,b.inf.objects[i]);
-                }
-                //o.AddObj2Frame(f.objects,o.newObj("line",111,111,333,111,5,"255,0,0"));
+                } 
                 o.AddFrame2Script(r,f);
                 
                 var s = JSON.stringify(r); 
@@ -973,3 +969,10 @@ o.rect = function(ctx,x,y,w,h,c){
     var b = bl$("btnServer");    
     o.addClass(b,"w3-button"); 
     o.addClass(b,"w3-brown"); 
+
+    /**
+     * 升级 
+     * 把 text1 改成 card + 当前序号
+     * 
+     * return all new code
+     */
