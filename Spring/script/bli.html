@@ -1,10 +1,22 @@
 <!DOCTYPE HTML>
 <html>
-
-<body>
+<head>
+</head>
+<body> 
+  <script src="w3.js"></script>
+  <script src="blclass.js"></script>
+  <script src="myplx1.js"></script>
   <canvas id="myCanvas" width="2048" height="1536"></canvas>
-  <script src="./myplx1.js"></script>
+  <script>
+    var md = blo0.blMD("id_4_MD_frame","xd:d=",33,1,222,55,blGrey[0]);
+    const tb1 = blo0.blDiv(md,md.id+"tb1","tb1",blGrey[0]);
+    const v1 = blo0.blDiv(md,md.id+"v1","v1",blColor[1]);
+    const cvs = blo0.blCanvas2(v1,55,44);
+    var b1 = blo0.blBtn(tb1,tb1.id+"b1","b1",blColor[2]);	
+
+  </script>
   <script type="text/javascript">
+ 
 
     var time = 0;
     var fun = function () {
