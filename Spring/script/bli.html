@@ -247,6 +247,7 @@
     </div>
 
     <script>
+        let time = 0;
         // 获取DOM元素
         const clockBtn = document.getElementById('clockBtn');
         const clockDisplay = document.getElementById('clock');
@@ -345,6 +346,7 @@
         
         // 动画循环
         function animate() {
+            animateFrame(time++);
             ctx.fillStyle = 'rgba(18, 18, 18, 0.05)';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
@@ -352,7 +354,6 @@
                 particle.update();
                 particle.draw();
             });
-            
             animationFrame = requestAnimationFrame(animate);
         }
         
