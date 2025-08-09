@@ -246,12 +246,13 @@ function CStoryBoard(parentDiv){
                         vta.innerHTML = "";
                         vta.v1 = blo0.blDiv(vta,vta.id+"v1","v1" ,blGrey[1]); 
                         vta.v2 = blo0.blDiv(vta,vta.id+"v2","v2" ,blGrey[2]); 
+                        vta.v3 = blo0.blDiv(vta,vta.id+"v3","v3" ,blColor[2]); 
         
                         var ta = blo0.blTextarea(vta.v1,vta.v1.id+"ta","ta","lightgreen");
                         ta.style.width = 100 + "%";
                         ta.value = _btn.inf2JSON();
         
-                        vta.v2.saveAs_v3 = blo0.blBtn(vta.v2,vta.v2.id+"b1","saveAs_v3.json",blGrey[0]);
+                        vta.v2.saveAs_v3 = blo0.blBtn(vta.v2,vta.v2.id+"b1","saveAs_2_v3.json",blGrey[0]);
                         vta.v2.saveAs_v3.onclick = function(){ 
                             var data = ta.value;
                             var xhr = new XMLHttpRequest();
@@ -265,6 +266,14 @@ function CStoryBoard(parentDiv){
                             xhr.setRequestHeader("Content-Type", "text/plain");
                             xhr.send(data);
                         }
+                        vta.v2.btn_v3_2_mp4 = blo0.blBtn(vta.v2,vta.v2.id+"b2","v3.json_2_mp4",blColor[1]);
+                        vta.v2.btn_v3_2_mp4.onclick = function(_v,_f,_mp4){ 
+                            return function(){ 
+                                var url = "http://localhost:8080/image/json2video?script=" + _f + "&video=" + _mp4 + ".mp4"; 
+                                b._2do = function(txt){_v.innerHTML = txt};
+                                blo0.blAjx(b,url);
+                            }
+                        }(vta.v3,"v3.json","v3.mp4");
                     }
                 }(_this);
                 return function(){
