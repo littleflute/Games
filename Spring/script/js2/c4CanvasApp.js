@@ -1,6 +1,6 @@
 
-        // 应用主控制器
-        class C4CanvasApp {
+// 应用主控制器
+class C4CanvasApp {
             constructor() {
                 // 初始化画布管理器
                 this.canvasManager = new C4CanvasManager('drawing-canvas');
@@ -347,5 +347,5 @@
                 if (e.key === '4') this.selectTool('circle');
                 if (e.key === '5') this.selectTool('select');
             }
-        }
+}
         

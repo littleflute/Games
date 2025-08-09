@@ -1,7 +1,7 @@
 
-        // 画布管理器类
-        class C4CanvasManager {
-            constructor(canvasId) {
+// 画布管理器类
+class C4CanvasManager {
+    constructor(canvasId) {
                 this.canvas = document.getElementById(canvasId);
                 this.context = this.canvas.getContext('2d');
                 this.shapes = [];
@@ -20,7 +20,7 @@
                 this.resizeHandles = document.getElementById('resize-handles');
                 
                 // 绑定事件处理方法
-                this.bindEvents();
+                this.#bindEvents();
                 
                 // 初始化画布大小
                 this.resizeCanvas();
@@ -28,10 +28,10 @@
                 
                 // 绑定调整大小控制点事件
                 this.bindResizeHandleEvents();
-            }
+    }
             
-            // 绑定事件
-            bindEvents() {
+    // 绑定事件
+    #bindEvents() {
                 // 鼠标事件
                 this.canvas.addEventListener('mousedown', (e) => this.handlePointerDown(e));
                 this.canvas.addEventListener('mousemove', (e) => this.handlePointerMove(e));
@@ -42,10 +42,10 @@
                 this.canvas.addEventListener('touchstart', (e) => this.handlePointerDown(e));
                 this.canvas.addEventListener('touchmove', (e) => this.handlePointerMove(e));
                 this.canvas.addEventListener('touchend', () => this.handlePointerUp());
-            }
+    }
             
-            // 绑定调整大小控制点事件
-            bindResizeHandleEvents() {
+    // 绑定调整大小控制点事件
+    bindResizeHandleEvents() {
                 const handles = this.resizeHandles.querySelectorAll('.resize-handle');
                 
                 handles.forEach(handle => {
@@ -73,10 +73,10 @@
                         }
                     });
                 });
-            }
+    }
             
-            // 处理指针按下事件
-            handlePointerDown(e) {
+    // 处理指针按下事件
+    handlePointerDown(e) {
                 e.preventDefault();
                 const [x, y] = this.getCoordinates(e);
                 
@@ -114,10 +114,10 @@
                             break;
                     }
                 }
-            }
+    }
             
-            // 处理指针移动事件
-            handlePointerMove(e) {
+    // 处理指针移动事件
+    handlePointerMove(e) {
                 e.preventDefault();
                 
                 if (!this.isDrawing && !this.isMoving && !this.isResizing) return;
@@ -172,10 +172,10 @@
                             break;
                     }
                 }
-            }
+    }
             
-            // 处理指针释放事件
-            handlePointerUp() {
+    // 处理指针释放事件
+    handlePointerUp() {
                 if (this.isDrawing && this.currentShape) {
                     this.shapes.push(this.currentShape);
                     this.currentShape = null;
@@ -186,7 +186,7 @@
                 this.isMoving = false;
                 this.isResizing = false;
                 this.resizeHandle = null;
-            }
+    }
             
             // 查找指定坐标处的图形
             findShapeAt(x, y) {
@@ -320,5 +320,5 @@
                 
                 return [x, y];
             }
-        }
+}
         

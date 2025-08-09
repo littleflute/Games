@@ -1,10 +1,10 @@
 // 直线类
-        class C4Line extends C4Shape {
-            constructor(x1, y1, x2, y2, color, lineWidth) {
+class C4Line extends C4Shape {
+    constructor(x1, y1, x2, y2, color, lineWidth) {
                 super(x1, y1, color, lineWidth);
                 this.x2 = x2;
                 this.y2 = y2;
-            }
+    }
             
             draw(context) {
                 context.save();
@@ -33,6 +33,7 @@
             }
             
             move(dx, dy) {
+                console.log(Date() + ":" + dx + "," + dy);
                 super.move(dx, dy);
                 this.x2 += dx;
                 this.y2 += dy;
@@ -40,6 +41,7 @@
             
             // 调整直线大小（改变端点位置）
             resize(handle, x, y) {
+                console.log(Date() + ":" + x + "," + y);
                 // 直线只有两个端点，根据拖动的控制点决定修改哪个端点
                 if (handle === 'nw' || handle === 'w' || handle === 'n') {
                     this.x1 = x;
