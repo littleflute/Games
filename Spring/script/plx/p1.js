@@ -113,7 +113,7 @@ function CPlayground(parentDiv){
 
     this.show = function(b){
         if(!ui){
-            ui=blo0.blMDiv(p,"id_mdiv_4_playground","playground",11,111,w,111,blGrey[0]);
+            ui=blo0.blMDiv(p,"id_mdiv_4_playground","playground",11,222,w,111,blGrey[0]);
             ui.inf = {};
             ui.inf.x = 0;
             ui.inf.y = 0;
@@ -202,6 +202,23 @@ function CStoryBoard(parentDiv){
 
             var tb =blo0.blDiv(ui,"tb4StoryBoard","tb2",blGrey[1]);
             tb.b1 = o.dbgBtn(tb,"id_btn_4_StoryBoardDbg","dbg");
+            tb.btnAllWhite = blo0.blBtn(tb,"id_4_btnAllWhite","allWhite","white");
+            tb.btnAllWhite.style.float="left";
+            tb.btnAllWhite.onclick = function(){
+                let n = 0;
+                for(i in o.listCards){
+                    o.listCards[i].inf.bgColor = "white"; 
+                } 
+            }
+            tb.btnClearObjs = blo0.blBtn(tb,"id_4_btnClearObjs","clearObjs","gray");
+            tb.btnClearObjs.style.float="left";
+            tb.btnClearObjs.onclick = function(){
+                let n = 0;
+                for(i in o.listCards){
+                    o.listCards[i].inf.objects = []; 
+                } 
+            }
+
             tb.btnCurStory = blo0.blBtn(tb,"id_4_btnCurStory","curStory",blGrey[2]);
             tb.btnCurStory.style.float="left";
             tb.btnCurStory.onclick = function(_this){  
