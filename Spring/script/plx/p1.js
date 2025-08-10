@@ -1,4 +1,4 @@
-﻿const p1Tag = "[plx/p1.js_v0.112]";
+﻿const p1Tag = "[plx/p1.js_v0.113]";
 
 const btn4p1 = bl$("plx_p1_btn");
 
@@ -665,7 +665,7 @@ function CClient(){
     };
 }
 
-function CTmp(){
+function CHelper(){
     this.newScript = function(v,w,h,m,r){ 
         var json = {}; 
         json.request = {}; 
@@ -867,7 +867,7 @@ function CTmp(){
         }
     }
 }
-var o = new CTmp();
+var o = new CHelper();
 
 o.music = "1.mp3";
 o.duration = 120;
@@ -928,7 +928,7 @@ o.drawObj = function(ctx,obj){
     // 判断是否为选中对象
     const isSelected = obj === o.selectedObj;
     
-    o.text(ctx, obj.graphic , obj.attribute.left,150);
+    o.text(ctx, obj.graphic , obj.attribute.left,obj.attribute.top);
 
     if(obj.graphic=="line"){
         ctx.moveTo(obj.attribute.left,obj.attribute.top);
