@@ -128,6 +128,22 @@ function CPlayground(parentDiv){
             }
             tb.b1 = o.dbgBtn(tb,"id_btn_4_dbgPlayground","dbg");
 
+            const lsDrawMode = 
+            [
+                { 
+                    name :
+                    'drawCircle', 
+                    id:1,
+                },
+                { 
+                    name :
+                    'drawRect',
+                    id:1,
+                },]; 
+            for(i in lsDrawMode){ 
+                tb.btnPlay = blo0.blBtn(tb,tb.id + lsDrawMode[i].name,lsDrawMode[i].name,blGrey[2]);
+
+            }
             var vStatus = blo0.blDiv(ui,"id_4_vStatus","status::",blGrey[3]);   
             var v1 = blo0.blDiv(ui,ui.id+"v1","",blGrey[1]);          
                 
@@ -971,8 +987,8 @@ o.rect = function(ctx,x,y,w,h,c){
     o.addClass(b,"w3-brown"); 
 
     /**
-     * 升级 
-     * 把 text1 改成 card + 当前序号
-     * 
+     * 升级 lsDrawMode
+     *  在当前卡片画圆，矩形
+     *  按钮互斥，在鼠标位置画随机图形，添加到对象数组中。
      * return all new code
      */
