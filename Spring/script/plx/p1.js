@@ -1,4 +1,4 @@
-﻿const p1Tag = "[plx/p1.js_v0.53]";
+﻿const p1Tag = "[plx/p1.js_v0.54]";
 
 const btn4p1 = bl$("plx_p1_btn");
 
@@ -134,7 +134,8 @@ function CPlayground(parentDiv){
             // 升级绘图模式定义
             const lsToolMode = [
                 { name: 'drawCircle', id: 1, label: 'Circle' },
-                { name: 'drawRect', id: 2, label: 'Rectangle' }
+                { name: 'drawRect', id: 2, label: 'Rectangle' },
+                { name: 'selectMove', id: 3, label: 'Select/Move' } // 新增选择/移动模式
             ]; 
             
             // 重置当前绘图模式
@@ -162,6 +163,11 @@ function CPlayground(parentDiv){
                     
                     // 更新当前绘图模式
                     o.currentDrawMode = this.mode;
+                    
+                    // 清除选中状态
+                    if (this.mode !== 'selectMove') {
+                        o.selectedObj = null;
+                    }
                 };
             }
 
@@ -177,7 +183,7 @@ function CPlayground(parentDiv){
 
             v1.appendChild(cvs);
             
-            // 增强画布点击事件 - 根据当前模式绘制图形
+            // 增强画布点击事件 - 根据当前模式绘制图形或选择对象
             cvs.addEventListener('mousedown', function (e) {
                 var x = e.offsetX;
                 var y = e.offsetY;
@@ -185,7 +191,32 @@ function CPlayground(parentDiv){
                 o.mousedown(ctx, x, y);
                 
                 // 检查是否有选中的绘图模式和当前卡片
-                if (o.currentDrawMode && o.curCard > 0 && o.listCards.length > 0) {
+                if (o.currentDrawMode === 'selectMove' && o.curCard > 0 && o.listCards.length > 0) {
+                    // 尝试选择图形
+                    const curCard = o.listCards[o.curCard - 1];
+                    if (curCard.inf && curCard.inf.objects) {
+                        // 从后往前检查，确保顶层图形先被选中
+                        for (let i = curCard.inf.objects.length - 1; i >= 0; i--) {
+                            const obj = curCard.inf.objects[i];
+                            if (o.isPointInObject(obj, x, y)) {
+                                o.selectedObj = obj;
+                                o.isDragging = true;
+                                // 计算鼠标在对象内的偏移量
+                                o.offsetX = x - o.getObjectCenterX(obj);
+                                o.offsetY = y - o.getObjectCenterY(obj);
+                                ui.inf.click = `Selected ${obj.graphic} #${i}`;
+                                o.status(curCard);
+                                return; // 只选中一个对象
+                            }
+                        }
+                        // 如果没选中任何对象，清除选中状态
+                        o.selectedObj = null;
+                        ui.inf.click = "No object selected";
+                        o.status(curCard);
+                    }
+                }
+                // 绘图模式
+                else if (o.currentDrawMode && o.currentDrawMode !== 'selectMove' && o.curCard > 0 && o.listCards.length > 0) {
                     const curCard = o.listCards[o.curCard - 1];
                     let newObj;
                     
@@ -231,6 +262,46 @@ function CPlayground(parentDiv){
                         o.status(curCard); // 更新状态显示
                     }
                 }
+            });
+            
+            // 鼠标移动事件 - 处理拖拽
+            cvs.addEventListener('mousemove', function(e) {
+                if (o.isDragging && o.selectedObj && o.currentDrawMode === 'selectMove') {
+                    const x = e.offsetX;
+                    const y = e.offsetY;
+                    const curCard = o.listCards[o.curCard - 1];
+                    
+                    // 计算新的中心位置（考虑偏移量）
+                    const newCenterX = x - o.offsetX;
+                    const newCenterY = y - o.offsetY;
+                    
+                    // 根据图形类型更新位置
+                    if (o.selectedObj.graphic === 'circle') {
+                        const radius = (o.selectedObj.attribute.right - o.selectedObj.attribute.left) / 2;
+                        o.selectedObj.attribute.left = newCenterX - radius;
+                        o.selectedObj.attribute.top = newCenterY - radius;
+                        o.selectedObj.attribute.right = newCenterX + radius;
+                        o.selectedObj.attribute.bottom = newCenterY + radius;
+                    } else if (o.selectedObj.graphic === 'rect') {
+                        const width = o.selectedObj.attribute.right;
+                        const height = o.selectedObj.attribute.bottom;
+                        o.selectedObj.attribute.left = newCenterX - width / 2;
+                        o.selectedObj.attribute.top = newCenterY - height / 2;
+                    }
+                    
+                    ui.inf.click = `Moved to (${Math.round(x)},${Math.round(y)})`;
+                    o.status(curCard);
+                }
+            });
+            
+            // 鼠标释放事件 - 结束拖拽
+            cvs.addEventListener('mouseup', function() {
+                o.isDragging = false;
+            });
+            
+            // 鼠标离开画布事件 - 结束拖拽
+            cvs.addEventListener('mouseleave', function() {
+                o.isDragging = false;
             });
             
             ui.mousedown = function(x,y){   
@@ -736,7 +807,11 @@ o.curCard = 0;
 o.bPlay = false;
 // 新增：跟踪当前绘图模式
 o.currentDrawMode = null;
-
+// 新增：图形选择和移动相关变量
+o.selectedObj = null;    // 当前选中的图形对象
+o.isDragging = false;    // 是否正在拖拽
+o.offsetX = 0;           // 鼠标在对象内的X偏移
+o.offsetY = 0;           // 鼠标在对象内的Y偏移
 
 
 o.newFrame = function(number,time,backgroundColor){
@@ -770,12 +845,18 @@ o.newTextObj = function(txt,x,y,size,color){
     return r;
 }
 
+// 升级：绘制对象时添加选中状态的视觉反馈
 o.drawObj = function(ctx,obj){
+    // 判断是否为选中对象
+    const isSelected = obj === o.selectedObj;
+    
     o.text(ctx, obj.graphic , obj.attribute.left,150);
 
     if(obj.graphic=="line"){
         ctx.moveTo(obj.attribute.left,obj.attribute.top);
         ctx.lineTo(obj.attribute.right,obj.attribute.bottom);
+        ctx.strokeStyle = isSelected ? "yellow" : `rgb(${obj.attribute.color})`;
+        ctx.lineWidth = isSelected ? 3 : 1;
         ctx.stroke();
     }
     else if(obj.graphic=="circle"){
@@ -786,22 +867,79 @@ o.drawObj = function(ctx,obj){
             (obj.attribute.right - obj.attribute.left)/2,
             0, 2 * Math.PI
         );
-        ctx.strokeStyle = obj.attribute.color;
+        ctx.strokeStyle = isSelected ? "yellow" : `rgb(${obj.attribute.color})`;
+        ctx.lineWidth = isSelected ? 3 : 1;
         ctx.stroke();
+        
+        // 选中时绘制中心点
+        if (isSelected) {
+            const centerX = obj.attribute.left + (obj.attribute.right - obj.attribute.left)/2;
+            const centerY = obj.attribute.top + (obj.attribute.bottom - obj.attribute.top)/2;
+            ctx.fillStyle = "yellow";
+            ctx.fillRect(centerX - 2, centerY - 2, 4, 4);
+        }
     }
     else if(obj.graphic=="rect"){
-        ctx.strokeStyle = obj.attribute.color;
+        ctx.strokeStyle = isSelected ? "yellow" : `rgb(${obj.attribute.color})`;
+        ctx.lineWidth = isSelected ? 3 : 1;
         ctx.strokeRect(
             obj.attribute.left, 
             obj.attribute.top, 
             obj.attribute.right, 
             obj.attribute.bottom
         );
+        
+        // 选中时绘制中心点
+        if (isSelected) {
+            const centerX = obj.attribute.left + obj.attribute.right / 2;
+            const centerY = obj.attribute.top + obj.attribute.bottom / 2;
+            ctx.fillStyle = "yellow";
+            ctx.fillRect(centerX - 2, centerY - 2, 4, 4);
+        }
     }
     else if(obj.graphic=="text"){
         o.text(ctx,"TEXT",obj.attribute.left, obj.attribute.top);
     }
 }
+
+// 新增：检查点是否在对象内
+o.isPointInObject = function(obj, x, y) {
+    if (obj.graphic === 'circle') {
+        const centerX = obj.attribute.left + (obj.attribute.right - obj.attribute.left) / 2;
+        const centerY = obj.attribute.top + (obj.attribute.bottom - obj.attribute.top) / 2;
+        const radius = (obj.attribute.right - obj.attribute.left) / 2;
+        const dx = x - centerX;
+        const dy = y - centerY;
+        return dx * dx + dy * dy <= radius * radius;
+    } else if (obj.graphic === 'rect') {
+        return x >= obj.attribute.left && 
+               x <= obj.attribute.left + obj.attribute.right && 
+               y >= obj.attribute.top && 
+               y <= obj.attribute.top + obj.attribute.bottom;
+    }
+    return false;
+}
+
+// 新增：获取对象中心X坐标
+o.getObjectCenterX = function(obj) {
+    if (obj.graphic === 'circle') {
+        return obj.attribute.left + (obj.attribute.right - obj.attribute.left) / 2;
+    } else if (obj.graphic === 'rect') {
+        return obj.attribute.left + obj.attribute.right / 2;
+    }
+    return 0;
+}
+
+// 新增：获取对象中心Y坐标
+o.getObjectCenterY = function(obj) {
+    if (obj.graphic === 'circle') {
+        return obj.attribute.top + (obj.attribute.bottom - obj.attribute.top) / 2;
+    } else if (obj.graphic === 'rect') {
+        return obj.attribute.top + obj.attribute.bottom / 2;
+    }
+    return 0;
+}
+
 o.img = function(ctx,f,x,y,w,h){
     var i = new Image();
     i.src = "http://localhost:8080/"+f; 
