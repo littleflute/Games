@@ -1566,3 +1566,7 @@ o.rect = function(ctx,x,y,w,h,c){
     var b = bl$("btnServer");    
     o.addClass(b,"w3-button"); 
     o.addClass(b,"w3-brown"); 
+/**
+ * 升级
+ * 可删除对象
+ */
