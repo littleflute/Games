@@ -1,5 +1,4 @@
-﻿
-const p1Tag = "[plx/p1.js_v0.41]";
+﻿const p1Tag = "[plx/p1.js_v0.115]";
 
 const btn4p1 = bl$("plx_p1_btn");
 
@@ -99,6 +98,7 @@ function CServer(parentDiv){
         b.style.background = b.style.background=="red"?blGrey[5]:blColor[4];    
     }
 }
+
 function CPlayground(parentDiv){
     var p = parentDiv;
     var ui = null;
@@ -109,11 +109,208 @@ function CPlayground(parentDiv){
     var wDbg = 20;
     var hDbg = 20;
     var cDbg = "brown";
+    // 存储所有绘图模式按钮，用于互斥控制
+    var drawModeButtons = [];
 
+    // 提取指针按下处理逻辑（同时支持鼠标和触摸）
+    const handleCanvasPointerDown = (ctx, x, y) => {
+        o.mousedown(ctx, x, y);
+        
+        // 检查是否有选中的绘图模式和当前卡片
+        if (o.currentDrawMode === 'selectMove' && o.curCard > 0 && o.listCards.length > 0) {
+            const curCard = o.listCards[o.curCard - 1];
+            
+            // 先检查是否点击了调整大小的控制点
+            if (o.selectedObj) {
+                const handle = o.checkResizeHandle(o.selectedObj, x, y);
+                if (handle) {
+                    o.resizeHandle = handle; // 存储选中的控制点
+                    o.isResizing = true;
+                    o.isDragging = false;
+                    ui.inf.click = `Resizing ${o.selectedObj.graphic}`;
+                    o.status(curCard);
+                    return;
+                }
+            }
+            
+            // 尝试选择图形
+            if (curCard.inf && curCard.inf.objects) {
+                // 从后往前检查，确保顶层图形先被选中
+                for (let i = curCard.inf.objects.length - 1; i >= 0; i--) {
+                    const obj = curCard.inf.objects[i];
+                    if (o.isPointInObject(obj, x, y)) {
+                        o.selectedObj = obj;
+                        o.isDragging = true;
+                        o.isResizing = false;
+                        o.resizeHandle = null; // 清除调整大小状态
+                        // 计算鼠标在对象内的偏移量
+                        o.offsetX = x - o.getObjectCenterX(obj);
+                        o.offsetY = y - o.getObjectCenterY(obj);
+                        ui.inf.click = `Selected ${obj.graphic} #${i}`;
+                        o.status(curCard);
+                        return; // 只选中一个对象
+                    }
+                }
+                // 如果没选中任何对象，清除选中状态
+                o.selectedObj = null;
+                o.isDragging = false;
+                o.isResizing = false;
+                o.resizeHandle = null;
+                ui.inf.click = "No object selected";
+                o.status(curCard);
+            }
+        }
+        // 绘图模式
+        else if (o.currentDrawMode && o.currentDrawMode !== 'selectMove' && o.curCard > 0 && o.listCards.length > 0) {
+            const curCard = o.listCards[o.curCard - 1];
+            let newObj;
+            
+            // 根据当前模式创建不同的图形对象
+            switch(o.currentDrawMode) {
+                case 'drawCircle':
+                    // 创建圆形对象 (使用随机半径 10-30)
+                    const radius = 10 + Math.random() * 20;
+                    newObj = o.newObj(
+                        'circle',
+                        Math.round(x - radius),
+                        Math.round(y - radius),
+                        Math.round(x + radius),
+                        Math.round(y + radius),
+                        Math.round(radius),
+                        // 对RGB值进行取整处理
+                        `${Math.round(Math.random()*255)},${Math.round(Math.random()*255)},${Math.round(Math.random()*255)}`
+                    );
+                    break;
+                    
+                case 'drawRect':
+                    // 创建矩形对象 (使用随机尺寸 20-60)
+                    const rectW = 20 + Math.random() * 40;
+                    const rectH = 20 + Math.random() * 40;
+                    newObj = o.newObj(
+                        'rect',
+                        Math.round(x - rectW/2),
+                        Math.round(y - rectH/2),
+                        Math.round(rectW),
+                        Math.round(rectH),
+                        Math.round(Math.max(rectW, rectH)),
+                        // 对RGB值进行取整处理
+                        `${Math.round(Math.random()*255)},${Math.round(Math.random()*255)},${Math.round(Math.random()*255)}`
+                    );
+                    break;
+                    
+                case 'drawLine':
+                    // 创建直线对象 (使用随机长度 30-100)
+                    const length = 30 + Math.random() * 70;
+                    const angle = Math.random() * Math.PI * 2; // 随机角度
+                    const endX = x + Math.cos(angle) * length;
+                    const endY = y + Math.sin(angle) * length;
+                    
+                    newObj = o.newObj(
+                        'line',
+                        Math.round(x),
+                        Math.round(y),
+                        Math.round(endX),
+                        Math.round(endY),
+                        Math.round(length),
+                        // 对RGB值进行取整处理
+                        `${Math.round(Math.random()*255)},${Math.round(Math.random()*255)},${Math.round(Math.random()*255)}`
+                    );
+                    break;
+            }
+            
+            // 将新图形添加到当前卡片的对象数组
+            if (newObj && curCard.inf && curCard.inf.objects) {
+                curCard.inf.objects.push(newObj);
+                ui.inf.click = `Drew ${o.currentDrawMode} at (${x},${y})`;
+                o.status(curCard); // 更新状态显示
+            }
+        }
+    };
+
+    // 提取指针移动处理逻辑（同时支持鼠标和触摸）
+    const handleCanvasPointerMove = (x, y) => {
+        const curCard = o.listCards[o.curCard - 1];
+        
+        // 处理调整大小
+        if (o.isResizing && o.selectedObj && o.currentDrawMode === 'selectMove' && o.resizeHandle) {
+            o.resizeObject(o.selectedObj, x, y);
+            ui.inf.click = `Resized to (${Math.round(x)},${Math.round(y)})`;
+            o.status(curCard);
+        }
+        // 处理拖拽
+        else if (o.isDragging && o.selectedObj && o.currentDrawMode === 'selectMove') {
+            // 计算新的中心位置（考虑偏移量）
+            const newCenterX = x - o.offsetX;
+            const newCenterY = y - o.offsetY;
+            
+            // 根据图形类型更新位置
+            if (o.selectedObj.graphic === 'circle') {
+                const radius = (o.selectedObj.attribute.right - o.selectedObj.attribute.left) / 2;
+                o.selectedObj.attribute.left = newCenterX - radius;
+                o.selectedObj.attribute.top = newCenterY - radius;
+                o.selectedObj.attribute.right = newCenterX + radius;
+                o.selectedObj.attribute.bottom = newCenterY + radius;
+            } else if (o.selectedObj.graphic === 'rect') {
+                const width = o.selectedObj.attribute.right;
+                const height = o.selectedObj.attribute.bottom;
+                o.selectedObj.attribute.left = newCenterX - width / 2;
+                o.selectedObj.attribute.top = newCenterY - height / 2;
+            } else if (o.selectedObj.graphic === 'line') {
+                // 计算直线的长度和角度
+                const dx = o.selectedObj.attribute.right - o.selectedObj.attribute.left;
+                const dy = o.selectedObj.attribute.bottom - o.selectedObj.attribute.top;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx);
+                
+                // 计算新的起点和终点
+                o.selectedObj.attribute.left = newCenterX - Math.cos(angle) * length / 2;
+                o.selectedObj.attribute.top = newCenterY - Math.sin(angle) * length / 2;
+                o.selectedObj.attribute.right = newCenterX + Math.cos(angle) * length / 2;
+                o.selectedObj.attribute.bottom = newCenterY + Math.sin(angle) * length / 2;
+            }
+            
+            ui.inf.click = `Moved to (${Math.round(x)},${Math.round(y)})`;
+            o.status(curCard);
+        }
+        // 显示鼠标悬停在控制点上的效果
+        else if (o.selectedObj && o.currentDrawMode === 'selectMove') {
+            const handle = o.checkResizeHandle(o.selectedObj, x, y);
+            // 触摸设备不需要光标样式
+        }
+    };
+
+    // 添加删除选中对象的函数
+    const deleteSelectedObject = () => {
+        // 检查是否有选中的对象和当前卡片
+        if (o.selectedObj && o.curCard > 0 && o.listCards.length > 0) {
+            const curCard = o.listCards[o.curCard - 1];
+            
+            // 找到对象在数组中的索引
+            const objIndex = curCard.inf.objects.findIndex(obj => obj === o.selectedObj);
+            
+            if (objIndex !== -1) {
+                // 从数组中移除对象
+                curCard.inf.objects.splice(objIndex, 1);
+                ui.inf.click = `Deleted ${o.selectedObj.graphic}`;
+                
+                // 清除选中状态
+                o.selectedObj = null;
+                o.isDragging = false;
+                o.isResizing = false;
+                o.resizeHandle = null;
+                
+                // 更新状态显示
+                o.status(curCard);
+            }
+        } else {
+            ui.inf.click = "No object selected to delete";
+            o.status(ui);
+        }
+    };
 
     this.show = function(b){
         if(!ui){
-            ui=blo0.blMDiv(p,"id_mdiv_4_playground","playground",11,111,w,111,blGrey[0]);
+            ui=blo0.blMDiv(p,"id_mdiv_4_playground","playground",11,222,w,111,blGrey[0]);
             ui.inf = {};
             ui.inf.x = 0;
             ui.inf.y = 0;
@@ -129,6 +326,56 @@ function CPlayground(parentDiv){
             }
             tb.b1 = o.dbgBtn(tb,"id_btn_4_dbgPlayground","dbg");
 
+            // 升级绘图模式定义，添加直线模式
+            const lsToolMode = [
+                { name: 'drawCircle', id: 1, label: 'Circle' },
+                { name: 'drawRect', id: 2, label: 'Rectangle' },
+                { name: 'drawLine', id: 4, label: 'Line' }, // 新增直线模式
+                { name: 'selectMove', id: 3, label: 'Select/Move' } // 选择/移动/调整大小模式
+            ]; 
+            
+            // 重置当前绘图模式
+            o.currentDrawMode = null;
+            
+            // 创建绘图模式按钮并实现互斥
+            for(let i in lsToolMode){ 
+                const mode = lsToolMode[i];
+                const btn = blo0.blBtn(tb, tb.id + mode.name, mode.label, blGrey[2]);
+                btn.style.float = "left";
+                btn.mode = mode.name;
+                drawModeButtons.push(btn);
+                
+                // 按钮点击事件 - 实现互斥
+                btn.onclick = function() {
+                    // 重置所有按钮样式
+                    drawModeButtons.forEach(b => {
+                        b.style.backgroundColor = blGrey[2];
+                        b.style.color = "black";
+                    });
+                    
+                    // 设置当前按钮为选中状态
+                    this.style.backgroundColor = "blue";
+                    this.style.color = "white";
+                    
+                    // 更新当前绘图模式
+                    o.currentDrawMode = this.mode;
+                    
+                    // 清除选中状态
+                    if (this.mode !== 'selectMove') {
+                        o.selectedObj = null;
+                        o.isResizing = false;
+                        o.resizeHandle = null;
+                    }
+                };
+            }
+
+            // 添加删除按钮
+            const deleteBtn = blo0.blBtn(tb, tb.id + "deleteObj", "Delete", "red");
+            deleteBtn.style.float = "left";
+            deleteBtn.style.color = "white";
+            deleteBtn.onclick = deleteSelectedObject;
+            drawModeButtons.push(deleteBtn);
+
             var vStatus = blo0.blDiv(ui,"id_4_vStatus","status::",blGrey[3]);   
             var v1 = blo0.blDiv(ui,ui.id+"v1","",blGrey[1]);          
                 
@@ -141,10 +388,62 @@ function CPlayground(parentDiv){
 
             v1.appendChild(cvs);
             
+            // 鼠标按下事件 - 桌面设备
             cvs.addEventListener('mousedown', function (e) {
-                var x = e.offsetX;
-                var y = e.offsetY;
-                o.mousedown(cvs.getContext("2d"),x,y);                
+                const x = e.offsetX;
+                const y = e.offsetY;
+                const ctx = cvs.getContext("2d");
+                handleCanvasPointerDown(ctx, x, y);
+            });
+            
+            // 触摸开始事件 - 移动设备
+            cvs.addEventListener('touchstart', function(e) {
+                e.preventDefault(); // 阻止默认行为（如滚动）
+                const touch = e.touches[0];
+                const rect = cvs.getBoundingClientRect();
+                // 计算触摸点在canvas中的相对位置
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                const ctx = cvs.getContext("2d");
+                handleCanvasPointerDown(ctx, x, y);
+            });
+            
+            // 鼠标移动事件 - 桌面设备
+            cvs.addEventListener('mousemove', function(e) {
+                const x = e.offsetX;
+                const y = e.offsetY;
+                handleCanvasPointerMove(x, y);
+            });
+            
+            // 触摸移动事件 - 移动设备
+            cvs.addEventListener('touchmove', function(e) {
+                e.preventDefault(); // 阻止默认行为
+                const touch = e.touches[0];
+                const rect = cvs.getBoundingClientRect();
+                const x = touch.clientX - rect.left;
+                const y = touch.clientY - rect.top;
+                handleCanvasPointerMove(x, y);
+            });
+            
+            // 鼠标释放事件 - 桌面设备
+            cvs.addEventListener('mouseup', function() {
+                o.isDragging = false;
+                o.isResizing = false;
+                o.resizeHandle = null;
+            });
+            
+            // 触摸结束事件 - 移动设备
+            cvs.addEventListener('touchend', function() {
+                o.isDragging = false;
+                o.isResizing = false;
+                o.resizeHandle = null;
+            });
+            
+            // 鼠标离开画布事件 - 桌面设备
+            cvs.addEventListener('mouseleave', function() {
+                o.isDragging = false;
+                o.isResizing = false;
+                o.resizeHandle = null;
             });
             
             ui.mousedown = function(x,y){   
@@ -178,6 +477,7 @@ function CPlayground(parentDiv){
         b.style.background = b.style.background=="red"?blGrey[5]:blColor[4];   
     }; 
 }
+
 function CStoryBoard(parentDiv){
 
     var v = "CStoryBoard v0.13";
@@ -202,6 +502,23 @@ function CStoryBoard(parentDiv){
 
             var tb =blo0.blDiv(ui,"tb4StoryBoard","tb2",blGrey[1]);
             tb.b1 = o.dbgBtn(tb,"id_btn_4_StoryBoardDbg","dbg");
+            tb.btnAllWhite = blo0.blBtn(tb,"id_4_btnAllWhite","allWhite","white");
+            tb.btnAllWhite.style.float="left";
+            tb.btnAllWhite.onclick = function(){
+                let n = 0;
+                for(i in o.listCards){
+                    o.listCards[i].inf.bgColor = "white"; 
+                } 
+            }
+            tb.btnClearObjs = blo0.blBtn(tb,"id_4_btnClearObjs","clearObjs","gray");
+            tb.btnClearObjs.style.float="left";
+            tb.btnClearObjs.onclick = function(){
+                let n = 0;
+                for(i in o.listCards){
+                    o.listCards[i].inf.objects = []; 
+                } 
+            }
+
             tb.btnCurStory = blo0.blBtn(tb,"id_4_btnCurStory","curStory",blGrey[2]);
             tb.btnCurStory.style.float="left";
             tb.btnCurStory.onclick = function(_this){  
@@ -246,12 +563,13 @@ function CStoryBoard(parentDiv){
                         vta.innerHTML = "";
                         vta.v1 = blo0.blDiv(vta,vta.id+"v1","v1" ,blGrey[1]); 
                         vta.v2 = blo0.blDiv(vta,vta.id+"v2","v2" ,blGrey[2]); 
+                        vta.v3 = blo0.blDiv(vta,vta.id+"v3","v3" ,blColor[2]); 
         
                         var ta = blo0.blTextarea(vta.v1,vta.v1.id+"ta","ta","lightgreen");
                         ta.style.width = 100 + "%";
                         ta.value = _btn.inf2JSON();
         
-                        vta.v2.saveAs_v3 = blo0.blBtn(vta.v2,vta.v2.id+"b1","saveAs_v3.json",blGrey[0]);
+                        vta.v2.saveAs_v3 = blo0.blBtn(vta.v2,vta.v2.id+"b1","saveAs_2_v3.json",blGrey[0]);
                         vta.v2.saveAs_v3.onclick = function(){ 
                             var data = ta.value;
                             var xhr = new XMLHttpRequest();
@@ -265,6 +583,14 @@ function CStoryBoard(parentDiv){
                             xhr.setRequestHeader("Content-Type", "text/plain");
                             xhr.send(data);
                         }
+                        vta.v2.btn_v3_2_mp4 = blo0.blBtn(vta.v2,vta.v2.id+"b2","v3.json_2_mp4",blColor[1]);
+                        vta.v2.btn_v3_2_mp4.onclick = function(_v,_f,_mp4){ 
+                            return function(){ 
+                                var url = "http://localhost:8080/image/json2video?script=" + _f + "&video=" + _mp4 + ".mp4"; 
+                                b._2do = function(txt){_v.innerHTML = txt};
+                                blo0.blAjx(b,url);
+                            }
+                        }(vta.v3,"v3.json","v3.mp4");
                     }
                 }(_this);
                 return function(){
@@ -272,6 +598,12 @@ function CStoryBoard(parentDiv){
                 }
             }(tb.btnCurStory);
 
+            
+            tb.btnRemoveAllCards = blo0.blBtn(tb,"id_4_btnRemoveAllCards","- All",blColor[2]);
+            tb.btnRemoveAllCards.style.float="left";
+            tb.btnRemoveAllCards.onclick = function(){
+                 o.removeAllCards(this);
+            }
             tb.btnAddCard = blo0.blBtn(tb,"id_4_btnAddCard","+1",blGrey[2]);
             tb.btnAddCard.style.float="left";
             tb.btnAddCard.onclick = function(){
@@ -400,7 +732,7 @@ function CClient(){
     };
 }
 
-function CTmp(){
+function CHelper(){
     this.newScript = function(v,w,h,m,r){ 
         var json = {}; 
         json.request = {}; 
@@ -602,7 +934,7 @@ function CTmp(){
         }
     }
 }
-var o = new CTmp();
+var o = new CHelper();
 
 o.music = "1.mp3";
 o.duration = 120;
@@ -615,7 +947,16 @@ o.listMousedown = [];
 o.listCards = [];
 o.curCard = 0;
 o.bPlay = false;
-
+// 绘图模式
+o.currentDrawMode = null;
+// 图形选择和移动相关变量
+o.selectedObj = null;    // 当前选中的图形对象
+o.isDragging = false;    // 是否正在拖拽
+o.offsetX = 0;           // 鼠标在对象内的X偏移
+o.offsetY = 0;           // 鼠标在对象内的Y偏移
+// 新增：图形调整大小相关变量
+o.isResizing = false;    // 是否正在调整大小
+o.resizeHandle = null;   // 当前调整的控制点
 
 
 o.newFrame = function(number,time,backgroundColor){
@@ -649,29 +990,348 @@ o.newTextObj = function(txt,x,y,size,color){
     return r;
 }
 
+// 升级：绘制对象时添加选中状态和调整大小控制点
 o.drawObj = function(ctx,obj){
-    o.text(ctx, obj.graphic , obj.attribute.left,150);
+    // 判断是否为选中对象
+    const isSelected = obj === o.selectedObj;
+    
+    o.text(ctx, obj.graphic , obj.attribute.left,obj.attribute.top);
 
     if(obj.graphic=="line"){
+        ctx.beginPath();
         ctx.moveTo(obj.attribute.left,obj.attribute.top);
         ctx.lineTo(obj.attribute.right,obj.attribute.bottom);
+        ctx.strokeStyle = isSelected ? "yellow" : `rgb(${obj.attribute.color})`;
+        ctx.lineWidth = isSelected ? 3 : 1;
         ctx.stroke();
+        
+        // 选中时绘制端点控制点和中心点
+        if (isSelected) {
+            // 起点控制点
+            ctx.fillStyle = "red";
+            ctx.fillRect(obj.attribute.left - 3, obj.attribute.top - 3, 6, 6);
+            
+            // 终点控制点
+            ctx.fillStyle = "blue";
+            ctx.fillRect(obj.attribute.right - 3, obj.attribute.bottom - 3, 6, 6);
+            
+            // 中心点
+            const centerX = (obj.attribute.left + obj.attribute.right) / 2;
+            const centerY = (obj.attribute.top + obj.attribute.bottom) / 2;
+            ctx.fillStyle = "yellow";
+            ctx.fillRect(centerX - 2, centerY - 2, 4, 4);
+        }
     }
     else if(obj.graphic=="circle"){
         ctx.beginPath();
-        ctx.arc(obj.attribute.left + (obj.attribute.right-obj.attribute.left)/2,
-                obj.attribute.top + (obj.attribute.bottom-obj.attribute.right)/2,
-                20,
-                0, 2 * Math.PI);
+        const centerX = obj.attribute.left + (obj.attribute.right - obj.attribute.left)/2;
+        const centerY = obj.attribute.top + (obj.attribute.bottom - obj.attribute.top)/2;
+        const radius = (obj.attribute.right - obj.attribute.left)/2;
+        
+        ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+        ctx.strokeStyle = isSelected ? "yellow" : `rgb(${obj.attribute.color})`;
+        ctx.lineWidth = isSelected ? 3 : 1;
         ctx.stroke();
+        
+        // 选中时绘制控制点和中心点
+        if (isSelected) {
+            // 右侧控制点（用于调整大小）
+            ctx.fillStyle = "red";
+            ctx.fillRect(centerX + radius - 3, centerY - 3, 6, 6);
+            
+            // 中心点
+            ctx.fillStyle = "yellow";
+            ctx.fillRect(centerX - 2, centerY - 2, 4, 4);
+        }
     }
     else if(obj.graphic=="rect"){
-        ctx.strokeRect(obj.attribute.left, obj.attribute.top, obj.attribute.right, obj.attribute.bottom);
+        ctx.strokeStyle = isSelected ? "yellow" : `rgb(${obj.attribute.color})`;
+        ctx.lineWidth = isSelected ? 3 : 1;
+        ctx.strokeRect(
+            obj.attribute.left, 
+            obj.attribute.top, 
+            obj.attribute.right, 
+            obj.attribute.bottom
+        );
+        
+        // 选中时绘制四个角的控制点
+        if (isSelected) {
+            const handleSize = 6;
+            // 左上角
+            ctx.fillStyle = "red";
+            ctx.fillRect(
+                obj.attribute.left - handleSize/2, 
+                obj.attribute.top - handleSize/2, 
+                handleSize, 
+                handleSize
+            );
+            // 右上角
+            ctx.fillRect(
+                obj.attribute.left + obj.attribute.right - handleSize/2, 
+                obj.attribute.top - handleSize/2, 
+                handleSize, 
+                handleSize
+            );
+            // 左下角
+            ctx.fillRect(
+                obj.attribute.left - handleSize/2, 
+                obj.attribute.top + obj.attribute.bottom - handleSize/2, 
+                handleSize, 
+                handleSize
+            );
+            // 右下角
+            ctx.fillRect(
+                obj.attribute.left + obj.attribute.right - handleSize/2, 
+                obj.attribute.top + obj.attribute.bottom - handleSize/2, 
+                handleSize, 
+                handleSize
+            );
+            
+            // 中心点
+            ctx.fillStyle = "yellow";
+            const centerX = obj.attribute.left + obj.attribute.right / 2;
+            const centerY = obj.attribute.top + obj.attribute.bottom / 2;
+            ctx.fillRect(centerX - 2, centerY - 2, 4, 4);
+        }
     }
     else if(obj.graphic=="text"){
         o.text(ctx,"TEXT",obj.attribute.left, obj.attribute.top);
     }
 }
+
+// 新增：检查点是否在调整大小的控制点上
+o.checkResizeHandle = function(obj, x, y) {
+    const handleSize = 6; // 控制点大小
+    
+    if (obj.graphic === 'line') {
+        // 起点控制点
+        if (x >= obj.attribute.left - handleSize/2 && 
+            x <= obj.attribute.left + handleSize/2 && 
+            y >= obj.attribute.top - handleSize/2 && 
+            y <= obj.attribute.top + handleSize/2) {
+            return { type: 'line-start', cursor: 'move' };
+        }
+        // 终点控制点
+        if (x >= obj.attribute.right - handleSize/2 && 
+            x <= obj.attribute.right + handleSize/2 && 
+            y >= obj.attribute.bottom - handleSize/2 && 
+            y <= obj.attribute.bottom + handleSize/2) {
+            return { type: 'line-end', cursor: 'move' };
+        }
+    }
+    else if (obj.graphic === 'circle') {
+        const centerX = obj.attribute.left + (obj.attribute.right - obj.attribute.left)/2;
+        const centerY = obj.attribute.top + (obj.attribute.bottom - obj.attribute.top)/2;
+        const radius = (obj.attribute.right - obj.attribute.left)/2;
+        
+        // 右侧控制点
+        if (x >= centerX + radius - handleSize/2 && 
+            x <= centerX + radius + handleSize/2 && 
+            y >= centerY - handleSize/2 && 
+            y <= centerY + handleSize/2) {
+            return { type: 'circle-right', cursor: 'ew-resize' };
+        }
+    } 
+    else if (obj.graphic === 'rect') {
+        // 左上角
+        if (x >= obj.attribute.left - handleSize/2 && 
+            x <= obj.attribute.left + handleSize/2 && 
+            y >= obj.attribute.top - handleSize/2 && 
+            y <= obj.attribute.top + handleSize/2) {
+            return { type: 'rect-tl', cursor: 'nwse-resize' };
+        }
+        // 右上角
+        if (x >= obj.attribute.left + obj.attribute.right - handleSize/2 && 
+            x <= obj.attribute.left + obj.attribute.right + handleSize/2 && 
+            y >= obj.attribute.top - handleSize/2 && 
+            y <= obj.attribute.top + handleSize/2) {
+            return { type: 'rect-tr', cursor: 'nesw-resize' };
+        }
+        // 左下角
+        if (x >= obj.attribute.left - handleSize/2 && 
+            x <= obj.attribute.left + handleSize/2 && 
+            y >= obj.attribute.top + obj.attribute.bottom - handleSize/2 && 
+            y <= obj.attribute.top + obj.attribute.bottom + handleSize/2) {
+            return { type: 'rect-bl', cursor: 'nesw-resize' };
+        }
+        // 右下角
+        if (x >= obj.attribute.left + obj.attribute.right - handleSize/2 && 
+            x <= obj.attribute.left + obj.attribute.right + handleSize/2 && 
+            y >= obj.attribute.top + obj.attribute.bottom - handleSize/2 && 
+            y <= obj.attribute.top + obj.attribute.bottom + handleSize/2) {
+            return { type: 'rect-br', cursor: 'nwse-resize' };
+        }
+    }
+    
+    return null;
+}
+
+// 新增：调整对象大小
+o.resizeObject = function(obj, x, y) {
+    if (obj.graphic === 'line') {
+        // 根据选中的控制点调整直线
+        if (o.resizeHandle?.type === 'line-start') {
+            obj.attribute.left = x;
+            obj.attribute.top = y;
+        } else if (o.resizeHandle?.type === 'line-end') {
+            obj.attribute.right = x;
+            obj.attribute.bottom = y;
+        }
+        // 更新直线长度属性
+        const dx = obj.attribute.right - obj.attribute.left;
+        const dy = obj.attribute.bottom - obj.attribute.top;
+        obj.attribute.size = Math.sqrt(dx * dx + dy * dy);
+    }
+    else if (obj.graphic === 'circle') {
+        const centerX = obj.attribute.left + (obj.attribute.right - obj.attribute.left)/2;
+        const centerY = obj.attribute.top + (obj.attribute.bottom - obj.attribute.top)/2;
+        
+        // 计算新半径（基于鼠标位置与圆心的距离）
+        const dx = x - centerX;
+        const newRadius = Math.max(5, Math.abs(dx)); // 最小半径为5
+        
+        // 更新圆形属性
+        obj.attribute.left = centerX - newRadius;
+        obj.attribute.top = centerY - newRadius;
+        obj.attribute.right = centerX + newRadius;
+        obj.attribute.bottom = centerY + newRadius;
+        obj.attribute.size = newRadius;
+    } 
+    else if (obj.graphic === 'rect') {
+        const originalLeft = obj.attribute.left;
+        const originalTop = obj.attribute.top;
+        const originalWidth = obj.attribute.right;
+        const originalHeight = obj.attribute.bottom;
+        
+        // 根据不同的控制点调整大小
+        switch(o.resizeHandle?.type) {
+            case 'rect-tl':
+                // 左上角：同时调整位置和大小
+                const newWidth = originalWidth + (originalLeft - x);
+                const newHeight = originalHeight + (originalTop - y);
+                if (newWidth > 10 && newHeight > 10) { // 最小尺寸限制
+                    obj.attribute.left = x;
+                    obj.attribute.top = y;
+                    obj.attribute.right = newWidth;
+                    obj.attribute.bottom = newHeight;
+                }
+                break;
+            case 'rect-tr':
+                // 右上角
+                const newWidthTr = x - originalLeft;
+                const newHeightTr = originalHeight + (originalTop - y);
+                if (newWidthTr > 10 && newHeightTr > 10) {
+                    obj.attribute.top = y;
+                    obj.attribute.right = newWidthTr;
+                    obj.attribute.bottom = newHeightTr;
+                }
+                break;
+            case 'rect-bl':
+                // 左下角
+                const newWidthBl = originalWidth + (originalLeft - x);
+                const newHeightBl = y - originalTop;
+                if (newWidthBl > 10 && newHeightBl > 10) {
+                    obj.attribute.left = x;
+                    obj.attribute.right = newWidthBl;
+                    obj.attribute.bottom = newHeightBl;
+                }
+                break;
+            case 'rect-br':
+                // 右下角
+                const newWidthBr = x - originalLeft;
+                const newHeightBr = y - originalTop;
+                if (newWidthBr > 10 && newHeightBr > 10) {
+                    obj.attribute.right = newWidthBr;
+                    obj.attribute.bottom = newHeightBr;
+                }
+                break;
+        }
+    }
+}
+
+// 检查点是否在对象内
+o.isPointInObject = function(obj, x, y) {
+    if (obj.graphic === 'line') {
+        // 直线的起点和终点
+        const x1 = obj.attribute.left;
+        const y1 = obj.attribute.top;
+        const x2 = obj.attribute.right;
+        const y2 = obj.attribute.bottom;
+        
+        // 计算点到直线的距离
+        const A = x - x1;
+        const B = y - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+        
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        let param = -1;
+        
+        if (lenSq !== 0) param = dot / lenSq;
+        
+        let xx, yy;
+        
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+        
+        const dx = x - xx;
+        const dy = y - yy;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // 如果距离小于3像素，则认为点在直线上
+        return distance < 3;
+    }
+    else if (obj.graphic === 'circle') {
+        const centerX = obj.attribute.left + (obj.attribute.right - obj.attribute.left) / 2;
+        const centerY = obj.attribute.top + (obj.attribute.bottom - obj.attribute.top) / 2;
+        const radius = (obj.attribute.right - obj.attribute.left) / 2;
+        const dx = x - centerX;
+        const dy = y - centerY;
+        return dx * dx + dy * dy <= radius * radius;
+    } else if (obj.graphic === 'rect') {
+        return x >= obj.attribute.left && 
+               x <= obj.attribute.left + obj.attribute.right && 
+               y >= obj.attribute.top && 
+               y <= obj.attribute.top + obj.attribute.bottom;
+    }
+    return false;
+}
+
+// 获取对象中心X坐标
+o.getObjectCenterX = function(obj) {
+    if (obj.graphic === 'line') {
+        return (obj.attribute.left + obj.attribute.right) / 2;
+    }
+    else if (obj.graphic === 'circle') {
+        return obj.attribute.left + (obj.attribute.right - obj.attribute.left) / 2;
+    } else if (obj.graphic === 'rect') {
+        return obj.attribute.left + obj.attribute.right / 2;
+    }
+    return 0;
+}
+
+// 获取对象中心Y坐标
+o.getObjectCenterY = function(obj) {
+    if (obj.graphic === 'line') {
+        return (obj.attribute.top + obj.attribute.bottom) / 2;
+    }
+    else if (obj.graphic === 'circle') {
+        return obj.attribute.top + (obj.attribute.bottom - obj.attribute.top) / 2;
+    } else if (obj.graphic === 'rect') {
+        return obj.attribute.top + obj.attribute.bottom / 2;
+    }
+    return 0;
+}
+
 o.img = function(ctx,f,x,y,w,h){
     var i = new Image();
     i.src = "http://localhost:8080/"+f; 
@@ -682,6 +1342,32 @@ o.rendFile = function(ctx,f,x,y,w,h){
     o.img(ctx,f,x,y,w,h);
 }  
  
+o.removeAllCards = function(_ls){
+    return function(btn){
+        // 获取卡片容器
+        const cardContainer = bl$("id_4_cardV");
+        if (!cardContainer) return;
+        
+        // 遍历并移除所有卡片元素
+        for (let i = 0; i < _ls.length; i++) {
+            if (_ls[i] && _ls[i].parentNode === cardContainer) {
+                cardContainer.removeChild(_ls[i]);
+            }
+        }
+        
+        // 清空卡片列表
+        _ls.length = 0;
+        
+        // 重置当前卡片索引
+        o.curCard = 0;
+        
+        // 更新状态显示
+        const statusDiv = bl$("id_4_vStatus");
+        if (statusDiv) {
+            statusDiv.innerHTML = "All cards removed";
+        }
+    }
+}(o.listCards);
 
 o.addCard= function(_ls){
     return function(btn){
@@ -730,18 +1416,16 @@ o.addCard= function(_ls){
         b.inf.y = 80;
         b.inf.w = 1920;
         b.inf.h = 1080;
-        b.inf.music = o.music;//"1.mp3";
+        b.inf.music = o.music; 
         b.inf.duration = o.duration;
         b.inf.rate = "1";
         b.inf.objects = [];
         b.inf.bgColor = "skyblue";
-        b.inf.text = "Card.txt"; 
-      //  o.AddObj2Frame(b.inf.objects,o.newObj("circle",111,111,222,222,5,"red"));
-      // o.AddObj2Frame(b.inf.objects,o.newObj("rect",111,10,100,100,5,"blue"));
-       // o.AddObj2Frame(b.inf.objects,o.newTextObj("test",10,10,60,"0,255,255"));
-        o.AddObj2Frame(b.inf.objects,o.newObj("text",15,110,333,222,5,"255,255,1"));
-        o.AddObj2Frame(b.inf.objects,o.newObj("line",15,110,333,222,5,"255,255,1"));
-        o.AddObj2Frame(b.inf.objects,o.newObj("line",15,222,333,111,5,"255,1,1"));
+        b.inf.text = "Card.txt";  
+        // 添加示例直线对象
+        o.AddObj2Frame(b.inf.objects,o.newObj("line",100,100,300,200,223,"255,11,1"));
+        o.AddObj2Frame(b.inf.objects,o.newObj("circle",155,22,333,222,15,"255,11,1"));
+        o.AddObj2Frame(b.inf.objects,o.newObj("rect",111,110,200,100,5,"255,255,1"));
         b.inf2JSON = function(_this){
             return function(){
                 var r = o.newScript(b.inf.version,
@@ -752,8 +1436,7 @@ o.addCard= function(_ls){
                 var f = o.newFrame(1,120,"1,100,200");                
                 for(i in b.inf.objects){
                     o.AddObj2Frame(f.objects,b.inf.objects[i]);
-                }
-                //o.AddObj2Frame(f.objects,o.newObj("line",111,111,333,111,5,"255,0,0"));
+                } 
                 o.AddFrame2Script(r,f);
                 
                 var s = JSON.stringify(r); 
@@ -837,6 +1520,7 @@ o.reg2draw  = function(user){
 }
 o.regMousedown = function(user){
     o.listMousedown.push(user);
+    o.listMousedown.push(user);
 }
 o.dbgBtn = function(tb,id,html){
     var btn = blo0.blBtn(tb,id,html,"grey"); 
@@ -857,7 +1541,9 @@ o.dbgBtn = function(tb,id,html){
     }(tb); 
     return btn;            
 }
-o.mousedown = function(ctx,x,y){
+o.mousedown = function(ctx,x,y){ 
+    x = Math.round(x);
+    y = Math.round(y);
     o.s = x + ":" + y;
     o.x = x;
     o.y = y;    
