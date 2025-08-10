@@ -1,4 +1,4 @@
-﻿const p1Tag = "[plx/p1.js_v0.113]";
+﻿const p1Tag = "[plx/p1.js_v0.114]";
 
 const btn4p1 = bl$("plx_p1_btn");
 
@@ -180,7 +180,6 @@ function CPlayground(parentDiv){
                         // 对RGB值进行取整处理
                         `${Math.round(Math.random()*255)},${Math.round(Math.random()*255)},${Math.round(Math.random()*255)}`
                     );
-
                     break;
                     
                 case 'drawRect':
@@ -194,6 +193,25 @@ function CPlayground(parentDiv){
                         Math.round(rectW),
                         Math.round(rectH),
                         Math.round(Math.max(rectW, rectH)),
+                        // 对RGB值进行取整处理
+                        `${Math.round(Math.random()*255)},${Math.round(Math.random()*255)},${Math.round(Math.random()*255)}`
+                    );
+                    break;
+                    
+                case 'drawLine':
+                    // 创建直线对象 (使用随机长度 30-100)
+                    const length = 30 + Math.random() * 70;
+                    const angle = Math.random() * Math.PI * 2; // 随机角度
+                    const endX = x + Math.cos(angle) * length;
+                    const endY = y + Math.sin(angle) * length;
+                    
+                    newObj = o.newObj(
+                        'line',
+                        Math.round(x),
+                        Math.round(y),
+                        Math.round(endX),
+                        Math.round(endY),
+                        Math.round(length),
                         // 对RGB值进行取整处理
                         `${Math.round(Math.random()*255)},${Math.round(Math.random()*255)},${Math.round(Math.random()*255)}`
                     );
@@ -237,6 +255,18 @@ function CPlayground(parentDiv){
                 const height = o.selectedObj.attribute.bottom;
                 o.selectedObj.attribute.left = newCenterX - width / 2;
                 o.selectedObj.attribute.top = newCenterY - height / 2;
+            } else if (o.selectedObj.graphic === 'line') {
+                // 计算直线的长度和角度
+                const dx = o.selectedObj.attribute.right - o.selectedObj.attribute.left;
+                const dy = o.selectedObj.attribute.bottom - o.selectedObj.attribute.top;
+                const length = Math.sqrt(dx * dx + dy * dy);
+                const angle = Math.atan2(dy, dx);
+                
+                // 计算新的起点和终点
+                o.selectedObj.attribute.left = newCenterX - Math.cos(angle) * length / 2;
+                o.selectedObj.attribute.top = newCenterY - Math.sin(angle) * length / 2;
+                o.selectedObj.attribute.right = newCenterX + Math.cos(angle) * length / 2;
+                o.selectedObj.attribute.bottom = newCenterY + Math.sin(angle) * length / 2;
             }
             
             ui.inf.click = `Moved to (${Math.round(x)},${Math.round(y)})`;
@@ -267,10 +297,11 @@ function CPlayground(parentDiv){
             }
             tb.b1 = o.dbgBtn(tb,"id_btn_4_dbgPlayground","dbg");
 
-            // 升级绘图模式定义
+            // 升级绘图模式定义，添加直线模式
             const lsToolMode = [
                 { name: 'drawCircle', id: 1, label: 'Circle' },
                 { name: 'drawRect', id: 2, label: 'Rectangle' },
+                { name: 'drawLine', id: 4, label: 'Line' }, // 新增直线模式
                 { name: 'selectMove', id: 3, label: 'Select/Move' } // 选择/移动/调整大小模式
             ]; 
             
@@ -931,11 +962,29 @@ o.drawObj = function(ctx,obj){
     o.text(ctx, obj.graphic , obj.attribute.left,obj.attribute.top);
 
     if(obj.graphic=="line"){
+        ctx.beginPath();
         ctx.moveTo(obj.attribute.left,obj.attribute.top);
         ctx.lineTo(obj.attribute.right,obj.attribute.bottom);
         ctx.strokeStyle = isSelected ? "yellow" : `rgb(${obj.attribute.color})`;
         ctx.lineWidth = isSelected ? 3 : 1;
         ctx.stroke();
+        
+        // 选中时绘制端点控制点和中心点
+        if (isSelected) {
+            // 起点控制点
+            ctx.fillStyle = "red";
+            ctx.fillRect(obj.attribute.left - 3, obj.attribute.top - 3, 6, 6);
+            
+            // 终点控制点
+            ctx.fillStyle = "blue";
+            ctx.fillRect(obj.attribute.right - 3, obj.attribute.bottom - 3, 6, 6);
+            
+            // 中心点
+            const centerX = (obj.attribute.left + obj.attribute.right) / 2;
+            const centerY = (obj.attribute.top + obj.attribute.bottom) / 2;
+            ctx.fillStyle = "yellow";
+            ctx.fillRect(centerX - 2, centerY - 2, 4, 4);
+        }
     }
     else if(obj.graphic=="circle"){
         ctx.beginPath();
@@ -1018,7 +1067,23 @@ o.drawObj = function(ctx,obj){
 o.checkResizeHandle = function(obj, x, y) {
     const handleSize = 6; // 控制点大小
     
-    if (obj.graphic === 'circle') {
+    if (obj.graphic === 'line') {
+        // 起点控制点
+        if (x >= obj.attribute.left - handleSize/2 && 
+            x <= obj.attribute.left + handleSize/2 && 
+            y >= obj.attribute.top - handleSize/2 && 
+            y <= obj.attribute.top + handleSize/2) {
+            return { type: 'line-start', cursor: 'move' };
+        }
+        // 终点控制点
+        if (x >= obj.attribute.right - handleSize/2 && 
+            x <= obj.attribute.right + handleSize/2 && 
+            y >= obj.attribute.bottom - handleSize/2 && 
+            y <= obj.attribute.bottom + handleSize/2) {
+            return { type: 'line-end', cursor: 'move' };
+        }
+    }
+    else if (obj.graphic === 'circle') {
         const centerX = obj.attribute.left + (obj.attribute.right - obj.attribute.left)/2;
         const centerY = obj.attribute.top + (obj.attribute.bottom - obj.attribute.top)/2;
         const radius = (obj.attribute.right - obj.attribute.left)/2;
@@ -1067,7 +1132,21 @@ o.checkResizeHandle = function(obj, x, y) {
 
 // 新增：调整对象大小
 o.resizeObject = function(obj, x, y) {
-    if (obj.graphic === 'circle') {
+    if (obj.graphic === 'line') {
+        // 根据选中的控制点调整直线
+        if (o.resizeHandle?.type === 'line-start') {
+            obj.attribute.left = x;
+            obj.attribute.top = y;
+        } else if (o.resizeHandle?.type === 'line-end') {
+            obj.attribute.right = x;
+            obj.attribute.bottom = y;
+        }
+        // 更新直线长度属性
+        const dx = obj.attribute.right - obj.attribute.left;
+        const dy = obj.attribute.bottom - obj.attribute.top;
+        obj.attribute.size = Math.sqrt(dx * dx + dy * dy);
+    }
+    else if (obj.graphic === 'circle') {
         const centerX = obj.attribute.left + (obj.attribute.right - obj.attribute.left)/2;
         const centerY = obj.attribute.top + (obj.attribute.bottom - obj.attribute.top)/2;
         
@@ -1136,7 +1215,46 @@ o.resizeObject = function(obj, x, y) {
 
 // 检查点是否在对象内
 o.isPointInObject = function(obj, x, y) {
-    if (obj.graphic === 'circle') {
+    if (obj.graphic === 'line') {
+        // 直线的起点和终点
+        const x1 = obj.attribute.left;
+        const y1 = obj.attribute.top;
+        const x2 = obj.attribute.right;
+        const y2 = obj.attribute.bottom;
+        
+        // 计算点到直线的距离
+        const A = x - x1;
+        const B = y - y1;
+        const C = x2 - x1;
+        const D = y2 - y1;
+        
+        const dot = A * C + B * D;
+        const lenSq = C * C + D * D;
+        let param = -1;
+        
+        if (lenSq !== 0) param = dot / lenSq;
+        
+        let xx, yy;
+        
+        if (param < 0) {
+            xx = x1;
+            yy = y1;
+        } else if (param > 1) {
+            xx = x2;
+            yy = y2;
+        } else {
+            xx = x1 + param * C;
+            yy = y1 + param * D;
+        }
+        
+        const dx = x - xx;
+        const dy = y - yy;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        
+        // 如果距离小于3像素，则认为点在直线上
+        return distance < 3;
+    }
+    else if (obj.graphic === 'circle') {
         const centerX = obj.attribute.left + (obj.attribute.right - obj.attribute.left) / 2;
         const centerY = obj.attribute.top + (obj.attribute.bottom - obj.attribute.top) / 2;
         const radius = (obj.attribute.right - obj.attribute.left) / 2;
@@ -1154,7 +1272,10 @@ o.isPointInObject = function(obj, x, y) {
 
 // 获取对象中心X坐标
 o.getObjectCenterX = function(obj) {
-    if (obj.graphic === 'circle') {
+    if (obj.graphic === 'line') {
+        return (obj.attribute.left + obj.attribute.right) / 2;
+    }
+    else if (obj.graphic === 'circle') {
         return obj.attribute.left + (obj.attribute.right - obj.attribute.left) / 2;
     } else if (obj.graphic === 'rect') {
         return obj.attribute.left + obj.attribute.right / 2;
@@ -1164,7 +1285,10 @@ o.getObjectCenterX = function(obj) {
 
 // 获取对象中心Y坐标
 o.getObjectCenterY = function(obj) {
-    if (obj.graphic === 'circle') {
+    if (obj.graphic === 'line') {
+        return (obj.attribute.top + obj.attribute.bottom) / 2;
+    }
+    else if (obj.graphic === 'circle') {
         return obj.attribute.top + (obj.attribute.bottom - obj.attribute.top) / 2;
     } else if (obj.graphic === 'rect') {
         return obj.attribute.top + obj.attribute.bottom / 2;
@@ -1262,9 +1386,10 @@ o.addCard= function(_ls){
         b.inf.objects = [];
         b.inf.bgColor = "skyblue";
         b.inf.text = "Card.txt";  
-        o.AddObj2Frame(b.inf.objects,o.newObj("card" + (b.inf.index + 1),155,22,333,222,15,"255,11,1"));
-        o.AddObj2Frame(b.inf.objects,o.newObj("line",111,110,333,222,5,"255,255,1"));
-        o.AddObj2Frame(b.inf.objects,o.newObj("line",15,222,333,111,5,"255,1,1"));
+        // 添加示例直线对象
+        o.AddObj2Frame(b.inf.objects,o.newObj("line",100,100,300,200,223,"255,11,1"));
+        o.AddObj2Frame(b.inf.objects,o.newObj("circle",155,22,333,222,15,"255,11,1"));
+        o.AddObj2Frame(b.inf.objects,o.newObj("rect",111,110,200,100,5,"255,255,1"));
         b.inf2JSON = function(_this){
             return function(){
                 var r = o.newScript(b.inf.version,
@@ -1359,6 +1484,7 @@ o.reg2draw  = function(user){
 }
 o.regMousedown = function(user){
     o.listMousedown.push(user);
+    o.listMousedown.push(user);
 }
 o.dbgBtn = function(tb,id,html){
     var btn = blo0.blBtn(tb,id,html,"grey"); 
@@ -1440,7 +1566,3 @@ o.rect = function(ctx,x,y,w,h,c){
     var b = bl$("btnServer");    
     o.addClass(b,"w3-button"); 
     o.addClass(b,"w3-brown"); 
-/**
- * 升级
- * 添加直线对象，跟圆一样
- */
