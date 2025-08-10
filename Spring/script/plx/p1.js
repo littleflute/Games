@@ -1,4 +1,4 @@
-﻿const p1Tag = "[plx/p1.js_v0.55]";
+﻿const p1Tag = "[plx/p1.js_v0.111]";
 
 const btn4p1 = bl$("plx_p1_btn");
 
@@ -197,12 +197,16 @@ function CPlayground(parentDiv){
                     const curCard = o.listCards[o.curCard - 1];
                     
                     // 先检查是否点击了调整大小的控制点
-                    if (o.selectedObj && o.checkResizeHandle(o.selectedObj, x, y)) {
-                        o.isResizing = true;
-                        o.isDragging = false;
-                        ui.inf.click = `Resizing ${o.selectedObj.graphic}`;
-                        o.status(curCard);
-                        return;
+                    if (o.selectedObj) {
+                        const handle = o.checkResizeHandle(o.selectedObj, x, y);
+                        if (handle) {
+                            o.resizeHandle = handle; // 存储选中的控制点
+                            o.isResizing = true;
+                            o.isDragging = false;
+                            ui.inf.click = `Resizing ${o.selectedObj.graphic}`;
+                            o.status(curCard);
+                            return;
+                        }
                     }
                     
                     // 尝试选择图形
@@ -214,6 +218,7 @@ function CPlayground(parentDiv){
                                 o.selectedObj = obj;
                                 o.isDragging = true;
                                 o.isResizing = false;
+                                o.resizeHandle = null; // 清除调整大小状态
                                 // 计算鼠标在对象内的偏移量
                                 o.offsetX = x - o.getObjectCenterX(obj);
                                 o.offsetY = y - o.getObjectCenterY(obj);
@@ -226,6 +231,7 @@ function CPlayground(parentDiv){
                         o.selectedObj = null;
                         o.isDragging = false;
                         o.isResizing = false;
+                        o.resizeHandle = null;
                         ui.inf.click = "No object selected";
                         o.status(curCard);
                     }
@@ -286,7 +292,7 @@ function CPlayground(parentDiv){
                 const curCard = o.listCards[o.curCard - 1];
                 
                 // 处理调整大小
-                if (o.isResizing && o.selectedObj && o.currentDrawMode === 'selectMove') {
+                if (o.isResizing && o.selectedObj && o.currentDrawMode === 'selectMove' && o.resizeHandle) {
                     o.resizeObject(o.selectedObj, x, y);
                     ui.inf.click = `Resized to (${Math.round(x)},${Math.round(y)})`;
                     o.status(curCard);
@@ -333,12 +339,14 @@ function CPlayground(parentDiv){
             cvs.addEventListener('mouseup', function() {
                 o.isDragging = false;
                 o.isResizing = false;
+                o.resizeHandle = null; // 清除调整大小状态
             });
             
             // 鼠标离开画布事件 - 结束拖拽和调整大小
             cvs.addEventListener('mouseleave', function() {
                 o.isDragging = false;
                 o.isResizing = false;
+                o.resizeHandle = null; // 清除调整大小状态
             });
             
             ui.mousedown = function(x,y){   
@@ -1402,9 +1410,3 @@ o.rect = function(ctx,x,y,w,h,c){
     var b = bl$("btnServer");    
     o.addClass(b,"w3-button"); 
     o.addClass(b,"w3-brown"); 
-/**
- * 修复
- * 矩形不能改大小
- * 圆可以
- * 
- */
