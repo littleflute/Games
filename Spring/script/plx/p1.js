@@ -1,4 +1,4 @@
-﻿const p1Tag = "[plx/p1.js_v0.41]";
+﻿const p1Tag = "[plx/p1.js_v0.53]";
 
 const btn4p1 = bl$("plx_p1_btn");
 
@@ -98,6 +98,7 @@ function CServer(parentDiv){
         b.style.background = b.style.background=="red"?blGrey[5]:blColor[4];    
     }
 }
+
 function CPlayground(parentDiv){
     var p = parentDiv;
     var ui = null;
@@ -108,6 +109,8 @@ function CPlayground(parentDiv){
     var wDbg = 20;
     var hDbg = 20;
     var cDbg = "brown";
+    // 存储所有绘图模式按钮，用于互斥控制
+    var drawModeButtons = [];
 
 
     this.show = function(b){
@@ -128,22 +131,40 @@ function CPlayground(parentDiv){
             }
             tb.b1 = o.dbgBtn(tb,"id_btn_4_dbgPlayground","dbg");
 
-            const lsDrawMode = 
-            [
-                { 
-                    name :
-                    'drawCircle', 
-                    id:1,
-                },
-                { 
-                    name :
-                    'drawRect',
-                    id:1,
-                },]; 
-            for(i in lsDrawMode){ 
-                tb.btnPlay = blo0.blBtn(tb,tb.id + lsDrawMode[i].name,lsDrawMode[i].name,blGrey[2]);
-
+            // 升级绘图模式定义
+            const lsToolMode = [
+                { name: 'drawCircle', id: 1, label: 'Circle' },
+                { name: 'drawRect', id: 2, label: 'Rectangle' }
+            ]; 
+            
+            // 重置当前绘图模式
+            o.currentDrawMode = null;
+            
+            // 创建绘图模式按钮并实现互斥
+            for(let i in lsToolMode){ 
+                const mode = lsToolMode[i];
+                const btn = blo0.blBtn(tb, tb.id + mode.name, mode.label, blGrey[2]);
+                btn.style.float = "left";
+                btn.mode = mode.name;
+                drawModeButtons.push(btn);
+                
+                // 按钮点击事件 - 实现互斥
+                btn.onclick = function() {
+                    // 重置所有按钮样式
+                    drawModeButtons.forEach(b => {
+                        b.style.backgroundColor = blGrey[2];
+                        b.style.color = "black";
+                    });
+                    
+                    // 设置当前按钮为选中状态
+                    this.style.backgroundColor = "blue";
+                    this.style.color = "white";
+                    
+                    // 更新当前绘图模式
+                    o.currentDrawMode = this.mode;
+                };
             }
+
             var vStatus = blo0.blDiv(ui,"id_4_vStatus","status::",blGrey[3]);   
             var v1 = blo0.blDiv(ui,ui.id+"v1","",blGrey[1]);          
                 
@@ -156,10 +177,60 @@ function CPlayground(parentDiv){
 
             v1.appendChild(cvs);
             
+            // 增强画布点击事件 - 根据当前模式绘制图形
             cvs.addEventListener('mousedown', function (e) {
                 var x = e.offsetX;
                 var y = e.offsetY;
-                o.mousedown(cvs.getContext("2d"),x,y);                
+                const ctx = cvs.getContext("2d");
+                o.mousedown(ctx, x, y);
+                
+                // 检查是否有选中的绘图模式和当前卡片
+                if (o.currentDrawMode && o.curCard > 0 && o.listCards.length > 0) {
+                    const curCard = o.listCards[o.curCard - 1];
+                    let newObj;
+                    
+                    // 根据当前模式创建不同的图形对象
+                    switch(o.currentDrawMode) {
+                        case 'drawCircle':
+                            // 创建圆形对象 (使用随机半径 10-30)
+                            const radius = 10 + Math.random() * 20;
+                            newObj = o.newObj(
+                                'circle',
+                                Math.round(x - radius),
+                                Math.round(y - radius),
+                                Math.round(x + radius),
+                                Math.round(y + radius),
+                                Math.round(radius),
+                                // 对RGB值进行取整处理
+                                `${Math.round(Math.random()*255)},${Math.round(Math.random()*255)},${Math.round(Math.random()*255)}`
+                            );
+
+                            break;
+                            
+                        case 'drawRect':
+                            // 创建矩形对象 (使用随机尺寸 20-60)
+                            const rectW = 20 + Math.random() * 40;
+                            const rectH = 20 + Math.random() * 40;
+                            newObj = o.newObj(
+                                'rect',
+                                Math.round(x - rectW/2),
+                                Math.round(y - rectH/2),
+                                Math.round(rectW),
+                                Math.round(rectH),
+                                Math.round(Math.max(rectW, rectH)),
+                                // 对RGB值进行取整处理
+                                `${Math.round(Math.random()*255)},${Math.round(Math.random()*255)},${Math.round(Math.random()*255)}`
+                            );
+                            break;
+                    }
+                    
+                    // 将新图形添加到当前卡片的对象数组
+                    if (newObj && curCard.inf && curCard.inf.objects) {
+                        curCard.inf.objects.push(newObj);
+                        ui.inf.click = `Drew ${o.currentDrawMode} at (${x},${y})`;
+                        o.status(curCard); // 更新状态显示
+                    }
+                }
             });
             
             ui.mousedown = function(x,y){   
@@ -193,6 +264,7 @@ function CPlayground(parentDiv){
         b.style.background = b.style.background=="red"?blGrey[5]:blColor[4];   
     }; 
 }
+
 function CStoryBoard(parentDiv){
 
     var v = "CStoryBoard v0.13";
@@ -662,6 +734,8 @@ o.listMousedown = [];
 o.listCards = [];
 o.curCard = 0;
 o.bPlay = false;
+// 新增：跟踪当前绘图模式
+o.currentDrawMode = null;
 
 
 
@@ -706,14 +780,23 @@ o.drawObj = function(ctx,obj){
     }
     else if(obj.graphic=="circle"){
         ctx.beginPath();
-        ctx.arc(obj.attribute.left + (obj.attribute.right-obj.attribute.left)/2,
-                obj.attribute.top + (obj.attribute.bottom-obj.attribute.right)/2,
-                20,
-                0, 2 * Math.PI);
+        ctx.arc(
+            obj.attribute.left + (obj.attribute.right - obj.attribute.left)/2,
+            obj.attribute.top + (obj.attribute.bottom - obj.attribute.top)/2,
+            (obj.attribute.right - obj.attribute.left)/2,
+            0, 2 * Math.PI
+        );
+        ctx.strokeStyle = obj.attribute.color;
         ctx.stroke();
     }
     else if(obj.graphic=="rect"){
-        ctx.strokeRect(obj.attribute.left, obj.attribute.top, obj.attribute.right, obj.attribute.bottom);
+        ctx.strokeStyle = obj.attribute.color;
+        ctx.strokeRect(
+            obj.attribute.left, 
+            obj.attribute.top, 
+            obj.attribute.right, 
+            obj.attribute.bottom
+        );
     }
     else if(obj.graphic=="text"){
         o.text(ctx,"TEXT",obj.attribute.left, obj.attribute.top);
@@ -926,7 +1009,9 @@ o.dbgBtn = function(tb,id,html){
     }(tb); 
     return btn;            
 }
-o.mousedown = function(ctx,x,y){
+o.mousedown = function(ctx,x,y){ 
+    x = Math.round(x);
+    y = Math.round(y);
     o.s = x + ":" + y;
     o.x = x;
     o.y = y;    
@@ -985,10 +1070,3 @@ o.rect = function(ctx,x,y,w,h,c){
     var b = bl$("btnServer");    
     o.addClass(b,"w3-button"); 
     o.addClass(b,"w3-brown"); 
-
-    /**
-     * 升级 lsDrawMode
-     *  在当前卡片画圆，矩形
-     *  按钮互斥，在鼠标位置画随机图形，添加到对象数组中。
-     * return all new code
-     */
