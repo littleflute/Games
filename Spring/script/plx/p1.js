@@ -1402,3 +1402,9 @@ o.rect = function(ctx,x,y,w,h,c){
     var b = bl$("btnServer");    
     o.addClass(b,"w3-button"); 
     o.addClass(b,"w3-brown"); 
+/**
+ * 修复
+ * 矩形不能改大小
+ * 圆可以
+ * 
+ */
