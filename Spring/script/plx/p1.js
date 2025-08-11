@@ -322,7 +322,7 @@ function CPlayground(parentDiv){
             tb.btnPlay = blo0.blBtn(tb,"id_4_btnPlay","play",blGrey[2]);
             tb.btnPlay.style.float = "left";
             tb.btnPlay.onclick = function(){
-                o.play(this);
+                o.playVideo(this);
             }
             tb.b1 = o.dbgBtn(tb,"id_btn_4_dbgPlayground","dbg");
 
@@ -1482,7 +1482,7 @@ o.addCard= function(_ls){
     }
 }(o.listCards);
 
-o.play = function(btn){
+o.playVideo = function(btn){
     if(o.bPlay){
         o.bPlay = false;
         btn.innerHTML = "play";
@@ -1602,3 +1602,8 @@ o.rect = function(ctx,x,y,w,h,c){
     var b = bl$("btnServer");    
     o.addClass(b,"w3-button"); 
     o.addClass(b,"w3-brown"); 
+
+    /**
+     * code o.playVideo
+     * 在画布上实现视频播放功能，把当前帧序号显示出来
+     */
