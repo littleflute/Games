@@ -1,4 +1,4 @@
-﻿const p1Tag = "[plx/p1.js_v0.114]";
+﻿const p1Tag = "[plx/p1.js_v0.115]";
 
 const btn4p1 = bl$("plx_p1_btn");
 
@@ -279,6 +279,35 @@ function CPlayground(parentDiv){
         }
     };
 
+    // 添加删除选中对象的函数
+    const deleteSelectedObject = () => {
+        // 检查是否有选中的对象和当前卡片
+        if (o.selectedObj && o.curCard > 0 && o.listCards.length > 0) {
+            const curCard = o.listCards[o.curCard - 1];
+            
+            // 找到对象在数组中的索引
+            const objIndex = curCard.inf.objects.findIndex(obj => obj === o.selectedObj);
+            
+            if (objIndex !== -1) {
+                // 从数组中移除对象
+                curCard.inf.objects.splice(objIndex, 1);
+                ui.inf.click = `Deleted ${o.selectedObj.graphic}`;
+                
+                // 清除选中状态
+                o.selectedObj = null;
+                o.isDragging = false;
+                o.isResizing = false;
+                o.resizeHandle = null;
+                
+                // 更新状态显示
+                o.status(curCard);
+            }
+        } else {
+            ui.inf.click = "No object selected to delete";
+            o.status(ui);
+        }
+    };
+
     this.show = function(b){
         if(!ui){
             ui=blo0.blMDiv(p,"id_mdiv_4_playground","playground",11,222,w,111,blGrey[0]);
@@ -339,6 +368,13 @@ function CPlayground(parentDiv){
                     }
                 };
             }
+
+            // 添加删除按钮
+            const deleteBtn = blo0.blBtn(tb, tb.id + "deleteObj", "Delete", "red");
+            deleteBtn.style.float = "left";
+            deleteBtn.style.color = "white";
+            deleteBtn.onclick = deleteSelectedObject;
+            drawModeButtons.push(deleteBtn);
 
             var vStatus = blo0.blDiv(ui,"id_4_vStatus","status::",blGrey[3]);   
             var v1 = blo0.blDiv(ui,ui.id+"v1","",blGrey[1]);          
