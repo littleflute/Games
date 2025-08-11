@@ -1,4 +1,4 @@
-﻿const p1Tag = "[plx/p1.js_v0.115]";
+﻿const p1Tag = "[plx/p1.js_v0.121]";
 
 const btn4p1 = bl$("plx_p1_btn");
 
@@ -322,7 +322,7 @@ function CPlayground(parentDiv){
             tb.btnPlay = blo0.blBtn(tb,"id_4_btnPlay","play",blGrey[2]);
             tb.btnPlay.style.float = "left";
             tb.btnPlay.onclick = function(){
-                o.play(this);
+                o.playVideo(this);
             }
             tb.b1 = o.dbgBtn(tb,"id_btn_4_dbgPlayground","dbg");
 
@@ -368,6 +368,35 @@ function CPlayground(parentDiv){
                     }
                 };
             }
+
+            // 添加播放速度控制
+            const speedControls = blo0.blDiv(tb, tb.id + "speedControls", "Speed:", blGrey[2]);
+            speedControls.style.float = "left";
+            speedControls.style.marginLeft = "10px";
+
+            const speeds = [0.5, 1, 2, 4]; // 速度倍数选项
+            for (let s of speeds) {
+                const speedBtn = blo0.blBtn(speedControls, tb.id + "speed" + s, s + "x", blGrey[2]);
+                speedBtn.style.float = "left";
+                speedBtn.onclick = function() {
+                    o.setPlaybackSpeed(parseFloat(this.innerHTML));
+                    // 更新按钮样式以显示当前选中的速度
+                    const buttons = speedControls.getElementsByTagName("button");
+                    for (let b of buttons) {
+                        b.style.backgroundColor = blGrey[2];
+                    }
+                    this.style.backgroundColor = "blue";
+                    this.style.color = "white";
+                };
+            }
+
+            // 默认选中1x速度
+            const defaultSpeedBtn = bl$(tb.id + "speed1");
+            if (defaultSpeedBtn) {
+                defaultSpeedBtn.style.backgroundColor = "blue";
+                defaultSpeedBtn.style.color = "white";
+            }
+
 
             // 添加删除按钮
             const deleteBtn = blo0.blBtn(tb, tb.id + "deleteObj", "Delete", "red");
@@ -935,7 +964,10 @@ function CHelper(){
     }
 }
 var o = new CHelper();
-
+// 新增变量定义
+o.currentFrame = 0;       // 当前播放的帧索引
+o.frameInterval = 1000;   // 帧间隔时间(毫秒)，控制播放速度
+o.playbackInterval = null; // 播放定时器ID
 o.music = "1.mp3";
 o.duration = 120;
 o.x = 50;
@@ -1482,16 +1514,70 @@ o.addCard= function(_ls){
     }
 }(o.listCards);
 
-o.play = function(btn){
-    if(o.bPlay){
+// 新增播放视频函数，实现帧播放逻辑
+o.playVideo = function(btn) {
+    if (o.bPlay) {
+        // 停止播放
         o.bPlay = false;
         btn.innerHTML = "play";
-    }
-    else{
+        if (o.playbackInterval) {
+            clearInterval(o.playbackInterval);
+            o.playbackInterval = null;
+        }
+    } else {
+        // 开始播放
         o.bPlay = true;
         btn.innerHTML = "stop";
+        
+        // 重置当前帧为0
+        o.currentFrame = 0;
+        
+        // 启动播放定时器
+        o.playbackInterval = setInterval(function() {
+            // 切换到下一帧
+            o.currentFrame++;
+            
+            // 如果到达最后一帧，循环回到开始
+            if (o.currentFrame >= o.listCards.length) {
+                o.currentFrame = 0;
+            }
+            
+            // 更新当前选中的卡片
+            o.curCard = o.currentFrame + 1;
+            
+            // 更新卡片显示状态
+            for (let i = 0; i < o.listCards.length; i++) {
+                if (i === o.currentFrame) {
+                    o.listCards[i].style.backgroundColor = "yellow";
+                } else {
+                    o.listCards[i].style.backgroundColor = "grey";
+                }
+            }
+        }, o.frameInterval);
     }
-}
+};
+// 新增播放速度控制函数
+o.setPlaybackSpeed = function(speed) {
+    // speed为倍数，1.0为正常速度
+    o.frameInterval = 1000 / speed;
+    
+    // 如果正在播放，重新启动定时器以应用新速度
+    if (o.bPlay && o.playbackInterval) {
+        clearInterval(o.playbackInterval);
+        o.playbackInterval = setInterval(function() {
+            o.currentFrame++;
+            if (o.currentFrame >= o.listCards.length) {
+                o.currentFrame = 0;
+            }
+            o.curCard = o.currentFrame + 1;
+            
+            for (let i = 0; i < o.listCards.length; i++) {
+                o.listCards[i].style.backgroundColor = i === o.currentFrame ? "yellow" : "grey";
+            }
+        }, o.frameInterval);
+    }
+};
+
 o.inRect = function(x,y,x0,y0,w,h){
     var b = false;
     if(x<x0 || x>(x0+w) || y<y0 || y>(y0+h)){
@@ -1507,14 +1593,22 @@ o._2drawCurCard = function(ctx){
     o.listCards[o.curCard-1]._2_draw(ctx);
 }
  
-o.draw = function(ctx){
+// 修改绘图函数，添加帧序号显示
+o.draw = function(ctx) {
     o._2drawCurCard(ctx);
 
-    for(i in o.list2draw){
-        o.list2draw[i].draw(ctx);
+    // 显示当前帧序号和总帧数
+    if (o.listCards.length > 0) {
+        const frameInfo = `Frame: ${o.currentFrame + 1}/${o.listCards.length}`;
+        ctx.font = "16px Arial";
+        ctx.fillStyle = "red";
+        ctx.fillText(frameInfo, 10, 30);
     }
 
-}
+    for (let i in o.list2draw) {
+        o.list2draw[i].draw(ctx);
+    }
+};
 o.reg2draw  = function(user){
     o.list2draw.push(user);
 }
