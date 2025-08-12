@@ -1,4 +1,4 @@
-﻿const p1Tag = "[plx/p1.js_v0.121]";
+﻿const p1Tag = "[plx/p1.js_v0.124]";
 
 const btn4p1 = bl$("plx_p1_btn");
 
@@ -147,7 +147,7 @@ function CPlayground(parentDiv){
                         o.offsetX = x - o.getObjectCenterX(obj);
                         o.offsetY = y - o.getObjectCenterY(obj);
                         ui.inf.click = `Selected ${obj.graphic} #${i}`;
-                        o.status(curCard);
+                        o.status(obj);
                         return; // 只选中一个对象
                     }
                 }
@@ -170,7 +170,7 @@ function CPlayground(parentDiv){
                 case 'drawCircle':
                     // 创建圆形对象 (使用随机半径 10-30)
                     const radius = 10 + Math.random() * 20;
-                    newObj = o.newObj(
+                    newObj = o.createObj(
                         'circle',
                         Math.round(x - radius),
                         Math.round(y - radius),
@@ -186,7 +186,7 @@ function CPlayground(parentDiv){
                     // 创建矩形对象 (使用随机尺寸 20-60)
                     const rectW = 20 + Math.random() * 40;
                     const rectH = 20 + Math.random() * 40;
-                    newObj = o.newObj(
+                    newObj = o.createObj(
                         'rect',
                         Math.round(x - rectW/2),
                         Math.round(y - rectH/2),
@@ -205,7 +205,7 @@ function CPlayground(parentDiv){
                     const endX = x + Math.cos(angle) * length;
                     const endY = y + Math.sin(angle) * length;
                     
-                    newObj = o.newObj(
+                    newObj = o.createObj(
                         'line',
                         Math.round(x),
                         Math.round(y),
@@ -531,12 +531,12 @@ function CStoryBoard(parentDiv){
 
             var tb =blo0.blDiv(ui,"tb4StoryBoard","tb2",blGrey[1]);
             tb.b1 = o.dbgBtn(tb,"id_btn_4_StoryBoardDbg","dbg");
-            tb.btnAllWhite = blo0.blBtn(tb,"id_4_btnAllWhite","allWhite","white");
-            tb.btnAllWhite.style.float="left";
-            tb.btnAllWhite.onclick = function(){
+            tb.btnAllGray = blo0.blBtn(tb,"id_4_btnAllGray","allGray","gray");
+            tb.btnAllGray.style.float="left";
+            tb.btnAllGray.onclick = function(){
                 let n = 0;
                 for(i in o.listCards){
-                    o.listCards[i].inf.bgColor = "white"; 
+                    o.listCards[i].inf.bgColor = "lightGray";
                 } 
             }
             tb.btnClearObjs = blo0.blBtn(tb,"id_4_btnClearObjs","clearObjs","gray");
@@ -762,6 +762,20 @@ function CClient(){
 }
 
 function CHelper(){
+    this.createObj = function(type,left,top,right,bottom,size,color){
+        var r = {};
+        r.graphic = type; 
+        r.attribute = {};
+        r.attribute.left = left; 
+        r.attribute.top = top;
+        r.attribute.right = right;
+        r.attribute.bottom = bottom;
+        r.attribute.size = size;
+        r.attribute.color = color;  
+        r.inf={};
+        r.inf.type = type;
+        return r;
+    }
     this.newScript = function(v,w,h,m,r){ 
         var json = {}; 
         json.request = {}; 
@@ -884,7 +898,7 @@ function CHelper(){
     this.status = function(me){
         var d = bl$("id_4_vStatus");
         d.innerHTML = "";
-        var md = blo0.blMDiv(d,d.id+"md","o._status "+me.id+":"+me.style.backgroundColor,3,340,555,100,blGrey[0]); 
+        var md = blo0.blMDiv(d,d.id+"md","o._status "+me.id ,3,340,555,100,blGrey[0]); 
         var vs = blo0.blDiv(md,md.id+"vs","",blGrey[1]);
         var v1 = blo0.blDiv(md,md.id+"v1","v1",blGrey[1]);
         var n = 0; 
@@ -999,18 +1013,7 @@ o.newFrame = function(number,time,backgroundColor){
     r.backgroundColor = backgroundColor;
     return r;
 }
-o.newObj = function(type,left,top,right,bottom,size,color){
-    var r = {};
-    r.graphic = type; 
-    r.attribute = {};
-    r.attribute.left = left; 
-    r.attribute.top = top;
-    r.attribute.right = right;
-    r.attribute.bottom = bottom;
-    r.attribute.size = size;
-    r.attribute.color = color;  
-    return r;
-}
+
 
 o.newTextObj = function(txt,x,y,size,color){
     var r = {};
@@ -1455,9 +1458,9 @@ o.addCard= function(_ls){
         b.inf.bgColor = "skyblue";
         b.inf.text = "Card.txt";  
         // 添加示例直线对象
-        o.AddObj2Frame(b.inf.objects,o.newObj("line",100,100,300,200,223,"255,11,1"));
-        o.AddObj2Frame(b.inf.objects,o.newObj("circle",155,22,333,222,15,"255,11,1"));
-        o.AddObj2Frame(b.inf.objects,o.newObj("rect",111,110,200,100,5,"255,255,1"));
+        o.AddObj2Frame(b.inf.objects,o.createObj("line",100,100,300,200,223,"255,11,1"));
+        o.AddObj2Frame(b.inf.objects,o.createObj("circle",155,22,333,222,15,"255,11,1"));
+        o.AddObj2Frame(b.inf.objects,o.createObj("rect",111,110,200,100,5,"255,255,1"));
         b.inf2JSON = function(_this){
             return function(){
                 var r = o.newScript(b.inf.version,
@@ -1589,8 +1592,7 @@ o.inRect = function(x,y,x0,y0,w,h){
     return b;
 }
 o._2drawCurCard = function(ctx){
-     
-    o.listCards[o.curCard-1]._2_draw(ctx);
+    if(o.curCard > 0)    o.listCards[o.curCard-1]._2_draw(ctx);
 }
  
 // 修改绘图函数，添加帧序号显示
