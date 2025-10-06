@@ -13,7 +13,17 @@
     <script> 
         class C4Note {
             constructor(note, duration, chord = null) {
-                this.note = note;
+                // 解析音符中的八度信息
+                this.octave = 0;
+                if (note.includes("'")) {
+                    this.octave = 1; // 高八度
+                    this.note = note.replace("'", "");
+                } else if (note.includes(",")) {
+                    this.octave = -1; // 低八度
+                    this.note = note.replace(",", "");
+                } else {
+                    this.note = note;
+                }
                 this.duration = duration;
                 this.chord = chord;
             }
@@ -35,26 +45,45 @@
                     ctx.strokeStyle = '#333';
                 }
 
+                // 绘制和弦标记（位置上移以留出八度点空间）
                 if (this.chord) {
                     ctx.font = '12px Arial';
                     ctx.textBaseline = 'bottom';
                     const chordWidth = ctx.measureText(this.chord).width;
-                    ctx.fillText(this.chord, x + (this.getWidth(ctx) - chordWidth)/2, y - 15);
+                    ctx.fillText(this.chord, x + (this.getWidth(ctx) - chordWidth)/2, y - 25);
                 }
 
+                // 绘制音符
                 ctx.font = '20px Arial';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(this.note, x, baseY);
+
+                // 绘制八度点
+                if (this.octave !== 0) {
+                    ctx.beginPath();
+                    if (this.octave === 1) {
+                        // 高八度点在音符上方
+                        ctx.arc(x, baseY - 15, 2, 0, Math.PI * 2);
+                    } else {
+                        // 低八度点在音符下方
+                        ctx.arc(x, baseY + 15, 2, 0, Math.PI * 2);
+                    }
+                    ctx.fill();
+                }
 
                 const symbolX = x + ctx.measureText(this.note).width + 3;
                 
                 switch(this.duration) {
                     case '8th':
-                        this.#drawLine(ctx, symbolX, baseY + 8, 12);
+                        // 8分音符横杠在音符正下方
+                        const eighthNoteWidth = ctx.measureText(this.note).width;
+                        this.#drawLine(ctx, x, baseY + 12, eighthNoteWidth);
                         break;
                     case '16th':
-                        this.#drawLine(ctx, symbolX, baseY + 8, 12);
-                        this.#drawLine(ctx, symbolX, baseY + 12, 12);
+                        // 16分音符两条横杠在音符正下方
+                        const sixteenthNoteWidth = ctx.measureText(this.note).width;
+                        this.#drawLine(ctx, x, baseY + 12, sixteenthNoteWidth);
+                        this.#drawLine(ctx, x, baseY + 16, sixteenthNoteWidth);
                         break;
                     case '2nd':
                         this.#drawLine(ctx, x + 15, baseY + 15, 8, -45);
@@ -166,7 +195,8 @@
             }
 
             #parseBarContent() {
-                const noteRegex = /(\d+)([\/-]*)(\.?)(?:\("([^"]+)"\))?/g;
+                // 更新正则表达式以匹配八度标记（'和,）
+                const noteRegex = /(\d+['‘,]?)([\/-]*)(\.?)(?:\("([^"]+)"\))?/g;
                 let match;
                 let currentBeatNotes = [];
                 let currentDuration = 0;
@@ -240,7 +270,7 @@
 
         class SheetMusicEditor {
             constructor() { 
-                this.version = '0.25'; // 版本号升级
+                this.version = '0.27'; // 版本号升级
                 this.currentRepo = 's177';
                 this.canvasX = 0;
                 this.canvasY = 0;
@@ -581,9 +611,9 @@
                 });
 
                 this.exampleButton.addEventListener('click', () => { //exam1
-                    const exampleCode = `Q:  1 2/3/ 4//5//6//7// 1‘ | 1/2//3// 3/3//2// 1/5，/ 1 | 
+                    const exampleCode = `Q:  1 2/3/ 4//5//6//7// 1' | 1/2//3// 3/3//2// 1/5,/ 1 | 
 
-Q:  1 2/3/ 4//5//6//7// 1‘ | 1/2//3// 3/3//2// 1/5，/ 1 | 
+Q:  1 2/3/ 4//5//6//7// 1' | 1/2//3// 3/3//2// 1/5,/ 1 | 
 `;
                     const processedCode = this.processSpaces(exampleCode);
                     this.sheetMusicInput.value = processedCode;
@@ -811,10 +841,11 @@ C: 开口道再见, @就让一切走@@远
 </body>
 
 </html>
+
     
 <!--
 升级 
-  给节拍画一个绿色包围的矩形
+  1' 应该渲染成高1个八度
 this.version++;
 return all new code
 -->
