@@ -232,13 +232,73 @@
                 ], 
                 "backgroundColor": "100,100,100"
             }
-        ]
+        ],
+    "superObjects": [
+      {
+        "type": "circle",
+        "attribute": {
+            "x1": 50,
+            "y1": 400,
+            "x2": 40,
+            "y2": 40,
+            "size": 5,
+            "color": "200,0,0",
+            "name": "红灯"
+        },
+        "frameRange": "(1,100)",
+        "frameSubset": "(2,1)",
+        "subtype":1,
+        "action": {
+            "trace": "function trace(x) { return 400; }",
+            "step": 0
+        }
+    },
+    {
+      "type": "circle",
+      "attribute": {
+          "x1": 200,
+          "y1": 400,
+          "x2": 40,
+          "y2": 40,
+          "size": 5,
+          "color": "255,255,0",
+          "name": "黄灯"
+      },
+      "frameRange": "(2,100)",
+      "frameSubset": "(2,1)",
+      "subtype":1,
+      "action": {
+          "trace": "function trace(x) { return 400; }",
+          "step": 0
+      }
+    },
+    {
+      "type": "circle",
+      "attribute": {
+          "x1": 350,
+          "y1": 400,
+          "x2": 40,
+          "y2": 40,
+          "size": 5,
+          "color": "0,255,0",
+          "name": "绿灯"
+      },
+      "frameRange": "(3,100)",
+      "frameSubset": "(2,1)",
+      "subtype":1,
+      "action": {
+          "trace": "function trace(x) { return 400; }",
+          "step": 0
+      }
+    }
+    ]
     }
 }
 /*
 以上是一种可生成视频的脚本格式，
 模仿这种格式，生成新的脚本，
-在第一场景显示一段简谱 4/4 拍 1=C 
+让视频可以演示一段简谱的演奏过程 4/4 拍 1=C 速度 每分钟 60拍 
+有游标移动
 第1行有2小节，
 第1小节 是 1个八度的音阶上行（8分音符）
 第2小节 是 1个八度的音阶下行（8分音符）
