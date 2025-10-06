@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
     <title>简谱编辑系统</title>
 </head>
 
@@ -13,7 +13,17 @@
     <script> 
         class C4Note {
             constructor(note, duration, chord = null) {
-                this.note = note;
+                // 解析音符中的八度信息
+                this.octave = 0;
+                if (note.includes("'")) {
+                    this.octave = 1; // 高八度
+                    this.note = note.replace("'", "");
+                } else if (note.includes(",")) {
+                    this.octave = -1; // 低八度
+                    this.note = note.replace(",", "");
+                } else {
+                    this.note = note;
+                }
                 this.duration = duration;
                 this.chord = chord;
             }
@@ -35,16 +45,31 @@
                     ctx.strokeStyle = '#333';
                 }
 
+                // 绘制和弦标记（位置上移以留出八度点空间）
                 if (this.chord) {
                     ctx.font = '12px Arial';
                     ctx.textBaseline = 'bottom';
                     const chordWidth = ctx.measureText(this.chord).width;
-                    ctx.fillText(this.chord, x + (this.getWidth(ctx) - chordWidth)/2, y - 15);
+                    ctx.fillText(this.chord, x + (this.getWidth(ctx) - chordWidth)/2, y - 25);
                 }
 
+                // 绘制音符
                 ctx.font = '20px Arial';
                 ctx.textBaseline = 'middle';
                 ctx.fillText(this.note, x, baseY);
+
+                // 绘制八度点
+                if (this.octave !== 0) {
+                    ctx.beginPath();
+                    if (this.octave === 1) {
+                        // 高八度点在音符上方
+                        ctx.arc(x, baseY - 15, 2, 0, Math.PI * 2);
+                    } else {
+                        // 低八度点在音符下方
+                        ctx.arc(x, baseY + 15, 2, 0, Math.PI * 2);
+                    }
+                    ctx.fill();
+                }
 
                 const symbolX = x + ctx.measureText(this.note).width + 3;
                 
@@ -170,7 +195,8 @@
             }
 
             #parseBarContent() {
-                const noteRegex = /(\d+)([\/-]*)(\.?)(?:\("([^"]+)"\))?/g;
+                // 更新正则表达式以匹配八度标记（'和,）
+                const noteRegex = /(\d+['‘,]?)([\/-]*)(\.?)(?:\("([^"]+)"\))?/g;
                 let match;
                 let currentBeatNotes = [];
                 let currentDuration = 0;
@@ -244,7 +270,7 @@
 
         class SheetMusicEditor {
             constructor() { 
-                this.version = '0.26'; // 版本号升级
+                this.version = '0.27'; // 版本号升级
                 this.currentRepo = 's177';
                 this.canvasX = 0;
                 this.canvasY = 0;
@@ -585,9 +611,9 @@
                 });
 
                 this.exampleButton.addEventListener('click', () => { //exam1
-                    const exampleCode = `Q:  1 2/3/ 4//5//6//7// 1‘ | 1/2//3// 3/3//2// 1/5，/ 1 | 
+                    const exampleCode = `Q:  1 2/3/ 4//5//6//7// 1' | 1/2//3// 3/3//2// 1/5,/ 1 | 
 
-Q:  1 2/3/ 4//5//6//7// 1‘ | 1/2//3// 3/3//2// 1/5，/ 1 | 
+Q:  1 2/3/ 4//5//6//7// 1' | 1/2//3// 3/3//2// 1/5,/ 1 | 
 `;
                     const processedCode = this.processSpaces(exampleCode);
                     this.sheetMusicInput.value = processedCode;
