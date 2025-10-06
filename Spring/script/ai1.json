@@ -1,0 +1,247 @@
+{
+    "request": {
+        "version": "0.0.22", 
+        "width": 1024, 
+        "height": 768, 
+        "music": "scale.mp3", 
+        "rate": "1", 
+        "frames": [
+            {
+                "number": "1", 
+                "time": 8, 
+                "objects": [
+                    {
+                        "text": "八度音阶演示", 
+                        "x": 400,
+                        "y": 50,
+                        "size": 40,
+                        "color": "255,255,255"
+                    },
+                    {
+                        "graphic": "line", 
+                        "attribute": {
+                            "left": 100, 
+                            "top": 300, 
+                            "right": 900, 
+                            "bottom": 300, 
+                            "size": 2, 
+                            "color": "255,255,255"
+                        }
+                    },
+                    {
+                        "graphic": "line", 
+                        "attribute": {
+                            "left": 100, 
+                            "top": 330, 
+                            "right": 900, 
+                            "bottom": 330, 
+                            "size": 2, 
+                            "color": "255,255,255"
+                        }
+                    },
+                    {
+                        "graphic": "line", 
+                        "attribute": {
+                            "left": 100, 
+                            "top": 360, 
+                            "right": 900, 
+                            "bottom": 360, 
+                            "size": 2, 
+                            "color": "255,255,255"
+                        }
+                    },
+                    {
+                        "graphic": "line", 
+                        "attribute": {
+                            "left": 100, 
+                            "top": 390, 
+                            "right": 900, 
+                            "bottom": 390, 
+                            "size": 2, 
+                            "color": "255,255,255"
+                        }
+                    },
+                    {
+                        "graphic": "line", 
+                        "attribute": {
+                            "left": 100, 
+                            "top": 420, 
+                            "right": 900, 
+                            "bottom": 420, 
+                            "size": 2, 
+                            "color": "255,255,255"
+                        }
+                    },
+                    {
+                        "graphic": "musicNote", 
+                        "attribute": {
+                            "left": 150, 
+                            "top": 380, 
+                            "width": 60, 
+                            "height": 80, 
+                            "color": "255,200,0",
+                            "note":"1",
+                            "time":1,
+                            "tone":0
+                        }
+                    },
+                    {
+                        "text": "C", 
+                        "x": 160,
+                        "y": 480,
+                        "size": 24,
+                        "color": "255,255,255"
+                    },
+                    {
+                        "graphic": "musicNote", 
+                        "attribute": {
+                            "left": 250, 
+                            "top": 365, 
+                            "width": 60, 
+                            "height": 80, 
+                            "color": "255,200,0",
+                            "note":"2",
+                            "time":1,
+                            "tone":0
+                        }
+                    },
+                    {
+                        "text": "D", 
+                        "x": 260,
+                        "y": 480,
+                        "size": 24,
+                        "color": "255,255,255"
+                    },
+                    {
+                        "graphic": "musicNote", 
+                        "attribute": {
+                            "left": 350, 
+                            "top": 350, 
+                            "width": 60, 
+                            "height": 80, 
+                            "color": "255,200,0",
+                            "note":"3",
+                            "time":1,
+                            "tone":0
+                        }
+                    },
+                    {
+                        "text": "E", 
+                        "x": 360,
+                        "y": 480,
+                        "size": 24,
+                        "color": "255,255,255"
+                    },
+                    {
+                        "graphic": "musicNote", 
+                        "attribute": {
+                            "left": 450, 
+                            "top": 340, 
+                            "width": 60, 
+                            "height": 80, 
+                            "color": "255,200,0",
+                            "note":"4",
+                            "time":1,
+                            "tone":0
+                        }
+                    },
+                    {
+                        "text": "F", 
+                        "x": 460,
+                        "y": 480,
+                        "size": 24,
+                        "color": "255,255,255"
+                    },
+                    {
+                        "graphic": "musicNote", 
+                        "attribute": {
+                            "left": 550, 
+                            "top": 325, 
+                            "width": 60, 
+                            "height": 80, 
+                            "color": "255,200,0",
+                            "note":"5",
+                            "time":1,
+                            "tone":0
+                        }
+                    },
+                    {
+                        "text": "G", 
+                        "x": 560,
+                        "y": 480,
+                        "size": 24,
+                        "color": "255,255,255"
+                    },
+                    {
+                        "graphic": "musicNote", 
+                        "attribute": {
+                            "left": 650, 
+                            "top": 310, 
+                            "width": 60, 
+                            "height": 80, 
+                            "color": "255,200,0",
+                            "note":"6",
+                            "time":1,
+                            "tone":0
+                        }
+                    },
+                    {
+                        "text": "A", 
+                        "x": 660,
+                        "y": 480,
+                        "size": 24,
+                        "color": "255,255,255"
+                    },
+                    {
+                        "graphic": "musicNote", 
+                        "attribute": {
+                            "left": 750, 
+                            "top": 295, 
+                            "width": 60, 
+                            "height": 80, 
+                            "color": "255,200,0",
+                            "note":"7",
+                            "time":1,
+                            "tone":0
+                        }
+                    },
+                    {
+                        "text": "B", 
+                        "x": 760,
+                        "y": 480,
+                        "size": 24,
+                        "color": "255,255,255"
+                    },
+                    {
+                        "graphic": "musicNote", 
+                        "attribute": {
+                            "left": 850, 
+                            "top": 280, 
+                            "width": 60, 
+                            "height": 80, 
+                            "color": "255,200,0",
+                            "note":"1",
+                            "time":1,
+                            "tone":1
+                        }
+                    },
+                    {
+                        "text": "C", 
+                        "x": 860,
+                        "y": 480,
+                        "size": 24,
+                        "color": "255,255,255"
+                    },
+                    {
+                        "text": "八度音阶", 
+                        "x": 450,
+                        "y": 600,
+                        "size": 32,
+                        "color": "255,200,0"
+                    }
+                ], 
+                "backgroundColor": "30,30,60"
+            }
+        ]
+    }
+}
