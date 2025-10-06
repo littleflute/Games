@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简谱编辑器</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            display: flex;
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .editor-panel {
+            width: 300px;
+            padding: 20px;
+            background: #f9f9f9;
+            border-right: 1px solid #ddd;
+        }
+        
+        .score-display {
+            flex: 1;
+            padding: 20px;
+            min-height: 500px;
+            position: relative;
+        }
+        
+        canvas {
+            background: white;
+            border: 1px solid #eee;
+        }
+        
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        
+        select, button {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        .note-palette {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 5px;
+        }
+        
+        .note-btn {
+            padding: 10px;
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .note-btn:hover {
+            background: #0b7dda;
+        }
+        
+        .duration-selector {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .duration-btn {
+            flex: 1;
+            padding: 8px;
+            background: #9E9E9E;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .duration-btn.active {
+            background: #607D8B;
+        }
+        
+        .measure-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>简谱编辑器</h1>
+    
+    <div class="container">
+        <div class="editor-panel">
+            <div class="control-group">
+                <label for="timeSignature">节拍类型</label>
+                <select id="timeSignature">
+                    <option value="4/4">4/4拍</option>
+                    <option value="3/4">3/4拍</option>
+                    <option value="2/4">2/4拍</option>
+                    <option value="6/8">6/8拍</option>
+                </select>
+            </div>
+            
+            <div class="control-group">
+                <label>音符选择</label>
+                <div class="note-palette">
+                    <button class="note-btn" data-note="C">C</button>
+                    <button class="note-btn" data-note="D">D</button>
+                    <button class="note-btn" data-note="E">E</button>
+                    <button class="note-btn" data-note="F">F</button>
+                    <button class="note-btn" data-note="G">G</button>
+                    <button class="note-btn" data-note="A">A</button>
+                    <button class="note-btn" data-note="B">B</button>
+                    <button class="note-btn" data-note="rest">休止符</button>
+                </div>
+                
+                <label>音符时值</label>
+                <div class="duration-selector">
+                    <button class="duration-btn active" data-duration="quarter">四分</button>
+                    <button class="duration-btn" data-duration="eighth">八分</button>
+                    <button class="duration-btn" data-duration="16th">十六分</button>
+                </div>
+                <div class="duration-selector">
+                    <button class="duration-btn" data-duration="half">二分</button>
+                    <button class="duration-btn" data-duration="whole">全音符</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label>操作</label>
+                <button id="addMeasureBtn">添加小节</button>
+                <button id="clearBtn">清空乐谱</button>
+            </div>
+            
+            <div class="measure-controls">
+                <button id="prevMeasureBtn">上一小节</button>
+                <button id="nextMeasureBtn">下一小节</button>
+            </div>
+        </div>
+        
+        <div class="score-display">
+            <canvas id="scoreCanvas" width="800" height="600"></canvas>
+        </div>
+    </div>
+    
+    <script>
+        // 简谱数据结构
+        const score = {
+            measures: [],
+            currentMeasure: 0
+        };
+        
+        // 当前编辑状态
+        let currentNote = 'C';
+        let currentDuration = 'quarter';
+        let currentOctave = 4;
+        
+        // 初始化Canvas
+        const canvas = document.getElementById('scoreCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // DOM元素
+        const noteButtons = document.querySelectorAll('.note-btn');
+        const durationButtons = document.querySelectorAll('.duration-btn');
+        const timeSignatureSelect = document.getElementById('timeSignature');
+        const addMeasureBtn = document.getElementById('addMeasureBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const prevMeasureBtn = document.getElementById('prevMeasureBtn');
+        const nextMeasureBtn = document.getElementById('nextMeasureBtn');
+        
+        // 音符按钮事件
+        noteButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentNote = btn.dataset.note;
+                noteButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderScore();
+            });
+        });
+        
+        // 时值按钮事件
+        durationButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                currentDuration = btn.dataset.duration;
+                durationButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                renderScore();
+            });
+        });
+        
+        // 添加小节
+        addMeasureBtn.addEventListener('click', () => {
+            const timeSignature = timeSignatureSelect.value;
+            score.measures.push({
+                timeSignature,
+                beats: Array(getBeatCount(timeSignature)).fill({ notes: [] })
+            });
+            score.currentMeasure = score.measures.length - 1;
+            renderScore();
+        });
+        
+        // 清空乐谱
+        clearBtn.addEventListener('click', () => {
+            score.measures = [];
+            score.currentMeasure = 0;
+            renderScore();
+        });
+        
+        // 小节导航
+        prevMeasureBtn.addEventListener('click', () => {
+            if (score.currentMeasure > 0) {
+                score.currentMeasure--;
+                renderScore();
+            }
+        });
+        
+        nextMeasureBtn.addEventListener('click', () => {
+            if (score.currentMeasure < score.measures.length - 1) {
+                score.currentMeasure++;
+                renderScore();
+            }
+        });
+        
+        // Canvas点击事件 - 添加音符
+        canvas.addEventListener('click', (e) => {
+            if (score.measures.length === 0) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // 简化的位置检测（实际实现需要更精确的计算）
+            const beatIndex = Math.floor((x - 100) / 50);
+            const pitchPosition = Math.floor((y - 150) / 10);
+            
+            if (beatIndex >= 0 && beatIndex < getBeatCount(score.measures[score.currentMeasure].timeSignature)) {
+                const note = {
+                    pitch: currentNote === 'rest' ? '' : currentNote + currentOctave,
+                    duration: currentDuration,
+                    isRest: currentNote === 'rest'
+                };
+                
+                if (!score.measures[score.currentMeasure].beats[beatIndex].notes) {
+                    score.measures[score.currentMeasure].beats[beatIndex].notes = [];
+                }
+                
+                score.measures[score.currentMeasure].beats[beatIndex].notes.push(note);
+                renderScore();
+            }
+        });
+        
+        // 根据节拍类型获取拍数
+        function getBeatCount(timeSignature) {
+            switch (timeSignature) {
+                case '4/4': return 4;
+                case '3/4': return 3;
+                case '2/4': return 2;
+                case '6/8': return 2; // 复合拍子，每拍包含3个八分音符
+                default: return 4;
+            }
+        }
+        
+        // 渲染乐谱
+        function renderScore() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (score.measures.length === 0) {
+                ctx.font = '20px Arial';
+                ctx.fillStyle = '#999';
+                ctx.fillText('点击"添加小节"开始编辑乐谱', 250, 300);
+                return;
+            }
+            
+            const currentMeasure = score.measures[score.currentMeasure];
+            const staffTop = 150;
+            const staffLeft = 100;
+            const beatWidth = 50;
+            const lineHeight = 10;
+            
+            // 绘制五线谱
+            for (let i = 0; i < 5; i++) {
+                ctx.beginPath();
+                ctx.moveTo(staffLeft, staffTop + i * lineHeight);
+                ctx.lineTo(staffLeft + getBeatCount(currentMeasure.timeSignature) * beatWidth, staffTop + i * lineHeight);
+                ctx.stroke();
+            }
+            
+            // 绘制节拍号
+            ctx.font = '16px Arial';
+            ctx.fillText(currentMeasure.timeSignature, staffLeft - 30, staffTop - 10);
+            
+            // 绘制小节线
+            ctx.beginPath();
+            ctx.moveTo(staffLeft, staffTop - 15);
+            ctx.lineTo(staffLeft, staffTop + 4 * lineHeight + 15);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(staffLeft + getBeatCount(currentMeasure.timeSignature) * beatWidth, staffTop - 15);
+            ctx.lineTo(staffLeft + getBeatCount(currentMeasure.timeSignature) * beatWidth, staffTop + 4 * lineHeight + 15);
+            ctx.stroke();
+            
+            // 绘制音符
+            currentMeasure.beats.forEach((beat, beatIndex) => {
+                if (!beat.notes || beat.notes.length === 0) return;
+                
+                beat.notes.forEach((note, noteIndex) => {
+                    const x = staffLeft + beatIndex * beatWidth + 10 + noteIndex * 5;
+                    let y = staffTop + 2 * lineHeight; // 默认中央C位置
+                    
+                    // 简化的音高位置计算（实际实现需要更精确的音高映射）
+                    if (note.pitch) {
+                        const pitchValue = note.pitch.charCodeAt(0) - 'C'.charCodeAt(0);
+                        y = staffTop + 2 * lineHeight - pitchValue * lineHeight / 2;
+                    }
+                    
+                    // 绘制音符
+                    if (note.isRest) {
+                        drawRest(ctx, x, y, note.duration);
+                    } else {
+                        drawNote(ctx, x, y, note.duration);
+                    }
+                });
+            });
+            
+            // 显示当前小节信息
+            ctx.font = '14px Arial';
+            ctx.fillStyle = '#666';
+            ctx.fillText(`第 ${score.currentMeasure + 1} 小节 / 共 ${score.measures.length} 小节`, 20, 30);
+        }
+        
+        // 绘制音符
+        function drawNote(ctx, x, y, duration) {
+            const noteRadius = 6;
+            
+            // 绘制符头
+            ctx.beginPath();
+            ctx.arc(x, y, noteRadius, 0, Math.PI * 2);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+            
+            // 绘制符杆和符尾
+            if (duration !== 'whole') {
+                const stemLength = duration === 'half' || duration === 'quarter' ? 25 : 30;
+                const stemX = x + noteRadius;
+                let stemY1 = y;
+                let stemY2 = y - stemLength;
+                
+                // 根据位置调整符杆方向
+                if (y < 150) { // 高音区符杆向下
+                    stemY2 = y + stemLength;
+                }
+                
+                ctx.beginPath();
+                ctx.moveTo(stemX, stemY1);
+                ctx.lineTo(stemX, stemY2);
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 绘制符尾
+                if (duration === 'eighth') {
+                    ctx.beginPath();
+                    ctx.moveTo(stemX, stemY2);
+                    if (y < 150) {
+                        ctx.lineTo(stemX - 8, stemY2 + 10);
+                    } else {
+                        ctx.lineTo(stemX + 8, stemY2 - 10);
+                    }
+                    ctx.stroke();
+                } else if (duration === '16th') {
+                    ctx.beginPath();
+                    ctx.moveTo(stemX, stemY2);
+                    if (y < 150) {
+                        ctx.lineTo(stemX - 8, stemY2 + 10);
+                        ctx.moveTo(stemX, stemY2 + 5);
+                        ctx.lineTo(stemX - 8, stemY2 + 15);
+                    } else {
+                        ctx.lineTo(stemX + 8, stemY2 - 10);
+                        ctx.moveTo(stemX, stemY2 - 5);
+                        ctx.lineTo(stemX + 8, stemY2 - 15);
+                    }
+                    ctx.stroke();
+                }
+            } else {
+                // 全音符（空心圆）
+                ctx.beginPath();
+                ctx.arc(x, y, noteRadius, 0, Math.PI * 2);
+                ctx.strokeStyle = 'black';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.fillStyle = 'white';
+                ctx.fill();
+            }
+        }
+        
+        // 绘制休止符
+        function drawRest(ctx, x, y, duration) {
+            y = 160; // 休止符固定位置
+            
+            switch (duration) {
+                case 'whole':
+                    // 全休止符（悬挂在第四线下）
+                    ctx.fillRect(x - 8, y - 30, 16, 5);
+                    break;
+                case 'half':
+                    // 二分休止符（放在第三线上）
+                    ctx.fillRect(x - 8, y - 15, 16, 5);
+                    break;
+                case 'quarter':
+                    // 四分休止符（类似闪电符号）
+                    ctx.beginPath();
+                    ctx.moveTo(x - 5, y - 15);
+                    ctx.lineTo(x + 10, y - 5);
+                    ctx.lineTo(x - 10, y + 5);
+                    ctx.lineTo(x + 5, y + 15);
+                    ctx.stroke();
+                    break;
+                case 'eighth':
+                    // 八分休止符（类似斜杠加小圆点）
+                    ctx.beginPath();
+                    ctx.arc(x + 5, y + 5, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(x - 5, y - 5);
+                    ctx.lineTo(x + 5, y + 5);
+                    ctx.stroke();
+                    break;
+                case '16th':
+                    // 十六分休止符（两条斜杠加两个小圆点）
+                    ctx.beginPath();
+                    ctx.arc(x + 5, y + 5, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x + 7, y + 7, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.moveTo(x - 5, y - 5);
+                    ctx.lineTo(x + 5, y + 5);
+                    ctx.moveTo(x - 3, y - 3);
+                    ctx.lineTo(x + 7, y + 7);
+                    ctx.stroke();
+                    break;
+            }
+        }
+        
+        // 初始渲染
+        renderScore();
+    </script>
+</body>
+</html>
