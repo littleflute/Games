@@ -13,17 +13,25 @@
     <script> 
         class C4Note {
             constructor(note, duration, chord = null) {
-                // 解析音符中的八度信息
+                // 解析音符中的八度信息 - 支持多个八度标记
                 this.octave = 0;
-                if (note.includes("'")) {
-                    this.octave = 1; // 高八度
-                    this.note = note.replace("'", "");
-                } else if (note.includes(",")) {
-                    this.octave = -1; // 低八度
-                    this.note = note.replace(",", "");
-                } else {
-                    this.note = note;
+                let processedNote = note;
+                
+                // 计算高八度标记数量（' 或 '）
+                const highOctaveMarks = processedNote.match(/['']/g);
+                if (highOctaveMarks) {
+                    this.octave = highOctaveMarks.length;
+                    processedNote = processedNote.replace(/['']/g, "");
                 }
+                
+                // 计算低八度标记数量（,）
+                const lowOctaveMarks = processedNote.match(/,/g);
+                if (lowOctaveMarks) {
+                    this.octave = -lowOctaveMarks.length;
+                    processedNote = processedNote.replace(/,/g, "");
+                }
+                
+                this.note = processedNote;
                 this.duration = duration;
                 this.chord = chord;
             }
@@ -58,18 +66,8 @@
                 ctx.textBaseline = 'middle';
                 ctx.fillText(this.note, x, baseY);
 
-                // 绘制八度点
-                if (this.octave !== 0) {
-                    ctx.beginPath();
-                    if (this.octave === 1) {
-                        // 高八度点在音符上方
-                        ctx.arc(x, baseY - 15, 2, 0, Math.PI * 2);
-                    } else {
-                        // 低八度点在音符下方
-                        ctx.arc(x, baseY + 15, 2, 0, Math.PI * 2);
-                    }
-                    ctx.fill();
-                }
+                // 绘制八度点 - 支持多个八度
+                this.#drawOctavePoints(ctx, this.octave, x, baseY, this.duration);
 
                 const symbolX = x + ctx.measureText(this.note).width + 3;
                 
@@ -112,7 +110,36 @@
                 ctx.stroke();
                 ctx.restore();
             }
-
+            
+            #drawOctavePoints(ctx, octave, xBase, yBase,duration) {
+                ctx.beginPath();
+                let dxPoint = 6;
+                // 高八度点（在音符上方）
+                if (octave > 0) {
+                    for (let i = 0; i < octave; i++) {
+                        ctx.arc(xBase + dxPoint, yBase - 15 - 5 * i, 2, 0, Math.PI * 2);
+                    }
+                }
+                // 低八度点（在音符下方）
+                else if (octave < 0) {
+                    let dyPoint = 15;
+                    switch(duration) {
+                        case '8th':
+                            dyPoint += 2;
+                            break;
+                         case '16th':
+                            dyPoint += 7;
+                            break;
+                    }
+                    const absOctave = Math.abs(octave);
+                    for (let i = 0; i < absOctave; i++) {
+                        ctx.arc(xBase + dxPoint, yBase + dyPoint + 5 * i, 2, 0, Math.PI * 2);
+                    }
+                }
+                
+                ctx.fill();
+            }
+            
             getWidth(ctx) {
                 ctx = ctx || document.createElement('canvas').getContext('2d');
                 
@@ -195,8 +222,8 @@
             }
 
             #parseBarContent() {
-                // 更新正则表达式以匹配八度标记（'和,）
-                const noteRegex = /(\d+['‘,]?)([\/-]*)(\.?)(?:\("([^"]+)"\))?/g;
+                // 更新正则表达式以匹配多个八度标记（'、''和,）
+                const noteRegex = /(\d+['',]*)([\/-]*)(\.?)(?:\("([^"]+)"\))?/g;
                 let match;
                 let currentBeatNotes = [];
                 let currentDuration = 0;
@@ -267,10 +294,9 @@
             }
         }
 
-
         class SheetMusicEditor {
             constructor() { 
-                this.version = '0.27'; // 版本号升级
+                this.version = '0.33'; // 版本号升级到0.33
                 this.currentRepo = 's177';
                 this.canvasX = 0;
                 this.canvasY = 0;
@@ -339,6 +365,14 @@
                 this.settingsButton.classList.add('bg-blue-500', 'hover:bg-blue-600', 'text-white', 'py-2', 'px-4', 'rounded');
                 this.settingsButton.innerHTML = '<i class="fa-solid fa-gear"></i>'+ `设置${this.version}`;
                 this.toolbar.appendChild(this.settingsButton);
+
+                // 添加智谱链接按钮
+                this.zhipuButton = document.createElement('button');
+                this.zhipuButton.id = 'zhipu-button';
+                this.zhipuButton.classList.add('bg-indigo-500', 'hover:bg-indigo-600', 'text-white', 'py-2', 'px-4', 'rounded', 'ml-2');
+                this.zhipuButton.innerHTML = '<i class="fa-solid fa-external-link-alt"></i> 智谱';
+                this.zhipuButton.addEventListener('click', () => window.open('http://zhipu.lezhi99.com/Zhipu-index.html', '_blank'));
+                this.toolbar.appendChild(this.zhipuButton);
 
                 this.toggleI11 = document.createElement('button');
                 this.toggleI11.id = 'toggle-new-toolbar-button';
@@ -845,7 +879,8 @@ C: 开口道再见, @就让一切走@@远
     
 <!--
 升级 
-  1' 应该渲染成高1个八度
+  添加 http://zhipu.lezhi99.com/Zhipu-index.html
+
 this.version++;
 return all new code
 -->
