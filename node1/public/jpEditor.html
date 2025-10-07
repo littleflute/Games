@@ -296,7 +296,7 @@
 
         class SheetMusicEditor {
             constructor() { 
-                this.version = '0.33'; // 版本号升级到0.33
+                this.version = '0.34'; // 版本号升级到0.34
                 this.currentRepo = 's177';
                 this.canvasX = 0;
                 this.canvasY = 0;
@@ -451,6 +451,23 @@
                 this.newSheetButton.classList.add('bg-yellow-500', 'hover:bg-yellow-600', 'text-white', 'py-1', 'px-2', 'rounded', 'ml-2');
                 this.newSheetButton.textContent = 'exam2';
                 this.modalToolbar.appendChild(this.newSheetButton);
+
+                // 新增运行按钮
+                this.runCodeButton = document.createElement('button');
+                this.runCodeButton.id = 'run-code-button';
+                this.runCodeButton.classList.add('bg-blue-500', 'hover:bg-blue-600', 'text-white', 'py-1', 'px-2', 'rounded', 'ml-2');
+                this.runCodeButton.textContent = '运行';
+                this.runCodeButton.addEventListener('click', () => {
+                    const jsCode = this.sheetMusicInput.value;
+                    try {
+                        // 使用Function构造函数执行代码，避免直接访问闭包内的变量
+                        new Function(jsCode)();
+                    } catch (e) {
+                         console.error('执行代码时出错:', e);
+                        alert('执行代码时出错: ' + e.message);
+                    }
+                });
+                this.modalToolbar.appendChild(this.runCodeButton);
 
                 this.tab1Content.appendChild(this.modalToolbar);
 
@@ -875,11 +892,10 @@ C: 开口道再见, @就让一切走@@远
 </body>
 
 </html>
-
     
 <!--
 升级 
-  添加 http://zhipu.lezhi99.com/Zhipu-index.html
+  //coding: run jsCode
 
 this.version++;
 return all new code
