@@ -36,7 +36,7 @@
                 this.chord = chord;
             }
 
-            drawMe(ctx, x, y, selectedNoteData) {
+            drawNote(ctx, x, y, selectedNoteData) {
                 const isSelected = selectedNoteData && 
                     this.note === selectedNoteData.note &&
                     this.duration === selectedNoteData.duration &&
@@ -182,7 +182,7 @@
                         width: note.getWidth(ctx),
                         height: 20
                     });
-                    note.drawMe(ctx, currentX, y, selectedNoteData);
+                    note.drawNote(ctx, currentX, y, selectedNoteData);
                     currentX += note.getWidth(ctx);
                 });
                 return notesInfo;
