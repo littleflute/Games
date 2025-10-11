@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小笛碰词 - 宣传海报生成器 v0.11</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", sans-serif;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            color: #333;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 1190px;
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .header p {
+            font-size: 18px;
+            color: #7f8c8d;
+        }
+        
+        .version {
+            background: #3498db;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-left: 10px;
+        }
+        
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 30px;
+            width: 100%;
+            max-width: 1600px;
+            justify-content: center;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            min-width: 600px;
+            max-width: 1190px;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        canvas {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .controls {
+            flex: 0 0 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        label {
+            font-weight: bold;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+            resize: vertical;
+            transition: border-color 0.3s;
+        }
+        
+        textarea:focus {
+            border-color: #3498db;
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+        }
+        
+        .buttons {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+        
+        button {
+            flex: 1;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+        
+        #updateBtn {
+            background: linear-gradient(to right, #2ecc71, #1abc9c);
+            color: white;
+        }
+        
+        #saveBtn {
+            background: linear-gradient(to right, #3498db, #2980b9);
+            color: white;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        .instructions {
+            margin-top: 15px;
+            font-size: 14px;
+            color: #7f8c8d;
+            line-height: 1.5;
+            text-align: center;
+        }
+        
+        .features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .feature {
+            flex: 1;
+            min-width: 180px;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+            border-left: 4px solid #3498db;
+        }
+        
+        .feature h3 {
+            font-size: 16px;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        
+        .feature p {
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+        
+        @media (max-width: 1200px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .canvas-container {
+                min-width: 100%;
+            }
+            
+            .controls {
+                width: 100%;
+                max-width: 600px;
+            }
+        }
+        
+        .watermark {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            color: rgba(0,0,0,0.1);
+            font-size: 12px;
+        }
+        
+        /* 新增样式 - 二维码编辑区域 */
+        .qr-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .qr-input-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .qr-input-group input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .qr-preview {
+            width: 100%;
+            height: 180px;
+            background: #f8f9fa;
+            border: 1px dashed #ddd;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #7f8c8d;
+            text-align: center;
+            overflow: hidden;
+        }
+        
+        .qr-preview img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .qr-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .qr-buttons button {
+            flex: 1;
+            padding: 8px 15px;
+            font-size: 14px;
+        }
+        
+        #clearQRBtn {
+            background: linear-gradient(to right, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>小笛碰词 - 宣传海报生成器 <span class="version">v0.11</span></h1>
+        <p>输入歌词，上传二维码，生成您的专属宣传海报，适合A4纸打印</p>
+    </div>
+    
+    <div class="container">
+        <div class="canvas-container">
+            <canvas id="posterCanvas"></canvas>
+            <div class="watermark">小笛碰词项目</div>
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label for="lyricsInput">输入歌词：</label>
+                <textarea id="lyricsInput" placeholder="在这里输入您的歌词...&#10;例如：&#10;在这漂泊的街头&#10;我遇见你的眼眸&#10;像星星照亮黑夜&#10;让旋律为你停留"></textarea>
+            </div>
+            
+            <div class="buttons">
+                <button id="updateBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M14 2V8H20" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 13H8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M16 17H8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M10 9H9H8" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    更新海报
+                </button>
+                <button id="saveBtn">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M7 10L12 15L17 10" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M12 15V3" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    保存图片
+                </button>
+            </div>
+            
+            <div class="section-title">二维码编辑</div>
+            
+            <div class="control-group">
+                <label for="qrUrlInput">二维码链接：</label>
+                <div class="qr-input-group">
+                    <input type="text" id="qrUrlInput" placeholder="输入链接生成二维码">
+                    <button id="generateQRBtn">生成</button>
+                </div>
+            </div>
+            
+            <div class="control-group">
+                <label for="qrUpload">上传二维码图片：</label>
+                <input type="file" id="qrUpload" accept="image/*">
+            </div>
+            
+            <div class="qr-preview" id="qrPreview">
+                二维码预览区域
+            </div>
+            
+            <div class="qr-buttons">
+                <button id="clearQRBtn">清除二维码</button>
+                <button id="applyQRBtn">应用二维码</button>
+            </div>
+            
+            <div class="instructions">
+                <p>点击"更新海报"将歌词添加到海报中，然后点击"保存图片"下载您的宣传海报</p>
+                <p>下载的图片尺寸为1190×1684像素，适合A4纸打印</p>
+            </div>
+            
+            <div class="features">
+                <div class="feature">
+                    <h3>街头音乐人</h3>
+                    <p>0号漂泊者小笛</p>
+                </div>
+                <div class="feature">
+                    <h3>现场谱曲</h3>
+                    <p>即兴创作演唱</p>
+                </div>
+                <div class="feature">
+                    <h3>自媒体项目</h3>
+                    <p>记录音乐瞬间</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('posterCanvas');
+            const ctx = canvas.getContext('2d');
+            const lyricsInput = document.getElementById('lyricsInput');
+            const updateBtn = document.getElementById('updateBtn');
+            const saveBtn = document.getElementById('saveBtn');
+            const qrUrlInput = document.getElementById('qrUrlInput');
+            const generateQRBtn = document.getElementById('generateQRBtn');
+            const qrUpload = document.getElementById('qrUpload');
+            const qrPreview = document.getElementById('qrPreview');
+            const clearQRBtn = document.getElementById('clearQRBtn');
+            const applyQRBtn = document.getElementById('applyQRBtn');
+            
+            // 设置canvas尺寸为A4大小 (1190x1684像素)
+            canvas.width = 1190;
+            canvas.height = 1684;
+            
+            // 存储二维码数据
+            let qrCodeImage = null;
+            
+            // 绘制海报
+            function drawPoster(lyrics = "") {
+                // 清除画布
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 背景色 - 渐变
+                const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                gradient.addColorStop(0, '#f9f9f9');
+                gradient.addColorStop(1, '#eef2f7');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 顶部装饰条
+                ctx.fillStyle = '#3498db';
+                ctx.fillRect(0, 0, canvas.width, 180);
+                
+                // 标题区域
+                ctx.fillStyle = '#ffffff';
+                ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+                ctx.shadowBlur = 10;
+                ctx.shadowOffsetX = 0;
+                ctx.shadowOffsetY = 5;
+                ctx.fillRect(60, 60, canvas.width - 120, 120);
+                ctx.shadowColor = 'transparent';
+                
+                // 项目主题
+                ctx.font = 'bold 48px "Microsoft YaHei"';
+                ctx.fillStyle = '#2c3e50';
+                ctx.textAlign = 'center';
+                ctx.fillText('0号漂泊者小笛碰词', canvas.width / 2, 130);
+                
+                // 副标题
+                ctx.font = '24px "Microsoft YaHei"';
+                ctx.fillStyle = '#7f8c8d';
+                ctx.fillText('街头音乐创作项目', canvas.width / 2, 170);
+                
+                // Logo区域 - 设计一个音乐相关的logo
+                const logoX = canvas.width / 2 - 150;
+                const logoY = 240;
+                
+                // 绘制音符logo
+                ctx.fillStyle = '#3498db';
+                ctx.beginPath();
+                ctx.arc(logoX + 75, logoY + 30, 45, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillRect(logoX + 112, logoY, 15, 105);
+                ctx.beginPath();
+                ctx.ellipse(logoX + 142, logoY + 30, 37, 22, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillRect(logoX + 172, logoY + 8, 15, 75);
+                
+                // 宣传语
+                ctx.font = 'bold 42px "Microsoft YaHei"';
+                ctx.fillStyle = '#3498db';
+                ctx.fillText('小笛邀您碰词', canvas.width / 2, logoY + 150);
+                
+                // 歌词区域标题
+                ctx.font = 'bold 36px "Microsoft YaHei"';
+                ctx.fillStyle = '#2c3e50';
+                ctx.textAlign = 'left';
+                ctx.fillText('您的歌词：', 120, 480);
+                
+                // 歌词区域边框
+                ctx.strokeStyle = '#3498db';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(120, 510, canvas.width - 240, 600);
+                
+                // 歌词区域背景
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                ctx.fillRect(120, 510, canvas.width - 240, 600);
+                
+                // 歌词内容
+                ctx.font = '30px "Microsoft YaHei"';
+                ctx.fillStyle = '#2c3e50';
+                ctx.textAlign = 'left';
+                
+                // 处理歌词换行
+                const maxLineWidth = canvas.width - 300;
+                const lineHeight = 45;
+                let yPosition = 560;
+                
+                if (lyrics) {
+                    const lines = wrapText(ctx, lyrics, 150, yPosition, maxLineWidth, lineHeight);
+                } else {
+                    // 默认提示文字
+                    ctx.font = 'italic 30px "Microsoft YaHei"';
+                    ctx.fillStyle = '#95a5a6';
+                    const defaultLines = wrapText(
+                        ctx, 
+                        "在这里写下您的歌词...\n\n小笛将为您现场谱曲演唱\n\n让我们一起创作美妙的音乐！\n\n您的每一句歌词\n都可能成为下一首热门歌曲", 
+                        150, yPosition, maxLineWidth, lineHeight
+                    );
+                }
+                
+                // 底部信息
+                ctx.font = '24px "Microsoft YaHei"';
+                ctx.fillStyle = '#7f8c8d';
+                ctx.textAlign = 'center';
+                ctx.fillText('关注0号漂泊者小笛，一起玩音乐！', canvas.width / 2, canvas.height - 80);
+                
+                // 二维码区域
+                ctx.fillStyle = '#ecf0f1';
+                ctx.fillRect(canvas.width - 220, canvas.height - 200, 180, 180);
+                ctx.strokeStyle = '#bdc3c7';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(canvas.width - 220, canvas.height - 200, 180, 180);
+                
+                // 绘制二维码
+                if (qrCodeImage) {
+                    ctx.drawImage(qrCodeImage, canvas.width - 220, canvas.height - 200, 180, 180);
+                } else {
+                    // 绘制默认二维码示例线条
+                    ctx.font = '20px "Microsoft YaHei"';
+                    ctx.fillStyle = '#7f8c8d';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('扫描二维码', canvas.width - 130, canvas.height - 170);
+                    ctx.fillText('关注我们', canvas.width - 130, canvas.height - 140);
+                    
+                    ctx.fillStyle = '#2c3e50';
+                    for (let i = 0; i < 8; i++) {
+                        for (let j = 0; j < 8; j++) {
+                            if (Math.random() > 0.5) {
+                                ctx.fillRect(
+                                    canvas.width - 210 + i * 20, 
+                                    canvas.height - 180 + j * 20, 
+                                    15, 15
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 文字换行函数
+            function wrapText(context, text, x, y, maxWidth, lineHeight) {
+                const paragraphs = text.split('\n');
+                let lines = [];
+                
+                for (let p = 0; p < paragraphs.length; p++) {
+                    const words = paragraphs[p].split(' ');
+                    let line = '';
+                    
+                    if (paragraphs[p].trim() === '') {
+                        lines.push('');
+                        continue;
+                    }
+                    
+                    for (let i = 0; i < words.length; i++) {
+                        const testLine = line + words[i] + ' ';
+                        const metrics = context.measureText(testLine);
+                        const testWidth = metrics.width;
+                        
+                        if (testWidth > maxWidth && i > 0) {
+                            lines.push(line);
+                            line = words[i] + ' ';
+                        } else {
+                            line = testLine;
+                        }
+                    }
+                    
+                    lines.push(line);
+                }
+                
+                for (let i = 0; i < lines.length; i++) {
+                    context.fillText(lines[i], x, y);
+                    y += lineHeight;
+                }
+                
+                return lines;
+            }
+            
+            // 初始化绘制
+            drawPoster();
+            
+            // 更新按钮事件
+            updateBtn.addEventListener('click', function() {
+                drawPoster(lyricsInput.value);
+            });
+            
+            // 输入框实时更新
+            lyricsInput.addEventListener('input', function() {
+                drawPoster(lyricsInput.value);
+            });
+            
+            // 保存按钮事件
+            saveBtn.addEventListener('click', function() {
+                // 创建临时链接
+                const link = document.createElement('a');
+                link.download = '小笛碰词宣传海报.png';
+                link.href = canvas.toDataURL('image/png');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+            
+            // 生成二维码按钮事件
+            generateQRBtn.addEventListener('click', function() {
+                const url = qrUrlInput.value.trim();
+                if (!url) {
+                    alert('请输入有效的链接');
+                    return;
+                }
+                
+                // 使用QR Code API生成二维码
+                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(url)}`;
+                
+                const img = new Image();
+                img.crossOrigin = "Anonymous";
+                img.onload = function() {
+                    qrPreview.innerHTML = '';
+                    qrPreview.appendChild(img);
+                    qrCodeImage = img;
+                    drawPoster(lyricsInput.value);
+                };
+                img.src = qrUrl;
+            });
+            
+            // 上传二维码图片
+            qrUpload.addEventListener('change', function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                if (!file.type.match('image.*')) {
+                    alert('请选择图片文件');
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const img = new Image();
+                    img.onload = function() {
+                        qrPreview.innerHTML = '';
+                        qrPreview.appendChild(img);
+                        qrCodeImage = img;
+                        drawPoster(lyricsInput.value);
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+            
+            // 清除二维码
+            clearQRBtn.addEventListener('click', function() {
+                qrCodeImage = null;
+                qrPreview.innerHTML = '二维码预览区域';
+                qrUrlInput.value = '';
+                qrUpload.value = '';
+                drawPoster(lyricsInput.value);
+            });
+            
+            // 应用二维码到海报
+            applyQRBtn.addEventListener('click', function() {
+                if (qrCodeImage) {
+                    drawPoster(lyricsInput.value);
+                    alert('二维码已应用到海报');
+                } else {
+                    alert('请先生成或上传二维码');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+<!--
+升级，添加v0.12
+1. 图片上显示版本号
+2. logo用红色色系，出现示意碰撞火花
+
+-->
