@@ -296,7 +296,7 @@
 
         class SheetMusicEditor {
             constructor() { 
-                this.version = '0.34'; // 版本号升级到0.34
+                this.version = '0.35'; // 版本号升级到0.35
                 this.currentRepo = 's177';
                 this.canvasX = 0;
                 this.canvasY = 0;
@@ -518,7 +518,7 @@
                 this.statusBar = document.createElement('div');
                 this.statusBar.id = 'status-bar';
                 this.statusBar.classList.add('bg-gray-200', 'p-2', 'text-center', 'mt-4');
-                this.statusBar.textContent = `当前乐谱行数: 0`;
+                this.statusBar.textContent = `当前文本行数: 0 | 当前乐谱行数: 0`;
                 this.settingsModal.appendChild(this.statusBar);
 
                 this.settingsModal.appendChild(this.tab2Content);
@@ -883,7 +883,8 @@ C: 开口道再见, @就让一切走@@远
             updateStatusBar() {
                 const input = this.sheetMusicInput.value;
                 const lines = this.#countLines(input);
-                this.statusBar.textContent = `当前乐谱行数: ${lines}`;
+                const textLines = input.split('\n').length;
+                this.statusBar.textContent = `当前文本行数: ${textLines} | 当前乐谱行数: ${lines}`;
             } 
         }
 
@@ -892,10 +893,10 @@ C: 开口道再见, @就让一切走@@远
 </body>
 
 </html>
-    
+
 <!--
 升级 
-  //coding: run jsCode
+1 当前乐谱行数:  前面加 当前文本行数：
 
 this.version++;
 return all new code
