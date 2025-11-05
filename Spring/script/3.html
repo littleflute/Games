@@ -1,187 +1,646 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
-<!-- saved from url=(0046)http://www.baron.com.cn/javascript/bm/you8.htm -->
-<HTML><HEAD><TITLE>模拟游戏</TITLE>
- 
-<META http-equiv=Content-Type content="text/html; charset=gb2312">
-<META content="MSHTML 6.00.2900.2873" name=GENERATOR></HEAD>
-<BODY onload=tick()>
-<CENTER>
-  <table width="282" border="0" align="center" cellpadding="0" cellspacing="0"> 
-   
-    <tr>  
-      <td colspan="4" valign="top"> <div align="center"> 
-          <table width="100%" border="0" cellpadding="5" cellspacing="5">
-            <tr> 
-              <td bgcolor="#FFE495"> <div align="center">dance game</div></td>
-            </tr>
-            <tr> 
-              <td bgcolor="#FFFFDD"> <div align="center"><strong>demo</strong></div></td>
-            </tr>
-            <tr> 
-              <td><div align="center">
-                  <TABLE >
-                    <TBODY>
-                      <TR> 
-                        <TD align=middle> 
-                          <SCRIPT language=JavaScript>
-<!-- Begin 
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弹唱火柴人 V0.5</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        
+        #container {
+            text-align: center;
+        }
+        
+        #canvas {
+            background-color: white;
+            border: 2px solid #333;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .version {
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 0.9em;
+        }
+        
+        .features {
+            color: #444;
+            margin-top: 20px;
+            font-size: 0.9em;
+            max-width: 500px;
+            text-align: center;
+            line-height: 1.5;
+        }
+        
+        .feature-title {
+            font-weight: bold;
+            margin-top: 15px;
+            color: #0066cc;
+        }
+        
+        .instructions {
+            color: #666;
+            margin-top: 10px;
+            font-style: italic;
+        }
+        
+        .controls {
+            margin-top: 15px;
+        }
+        
+        button {
+            padding: 8px 15px;
+            margin: 0 5px;
+            background-color: #0066cc;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #0055aa;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <h1>弹唱火柴人</h1>
+        <div class="version">版本号: V0.5</div>
+        <canvas id="canvas" width="600" height="400"></canvas>
+        <div class="instructions">点击画面上任意位置，火柴人会跑向该点</div>
+        <div class="controls">
+            <button id="toggleGuitar">切换吉他</button>
+            <button id="toggleSinging">切换唱歌</button>
+        </div>
+        <div class="features">
+            <div class="feature-title">V0.5 新特性：</div>
+            <p>1. 新增Guitar类：实现吉他绘制与动画效果</p>
+            <p>2. 背吉他功能：火柴人可背吉他并调整姿势</p>
+            <p>3. 唱歌动画：嘴巴动态变化模拟唱歌效果</p>
+            <p>4. 交互控制：通过按钮切换吉他和唱歌状态</p>
+            <p>5. 保留V0.4全部特性：点击移动与四肢独立动画</p>
+        </div>
+    </div>
 
-const a="\n";
-var max=0;
-function tlist() {
-    max=tlist.arguments.length;
-    for (i=0; i<max; i++){
-      this[i]=tlist.arguments[i];
-    }    
-}
-function init(){
-  return new tlist(
-    "   o"+a+
-"  /|\\"+a+
-" */ \\*        "+a,
+    <script>
+        /**
+         * 吉他类 V0.5
+         * 实现吉他绘制与动画效果
+         */
+        class Guitar {
+            constructor(ctx, options = {}) {
+                this.ctx = ctx;
+                
+                // 默认参数配置
+                this.params = {
+                    x: 0,
+                    y: 0,
+                    color: '#8B4513', // 棕色
+                    scale: 1.0,
+                    isPlaying: false,
+                    stringVibration: 0,
+                    ...options
+                };
+            }
+            
+            /**
+             * 更新吉他状态
+             */
+            update() {
+                // 如果正在演奏，更新琴弦振动效果
+                if (this.params.isPlaying) {
+                    this.params.stringVibration = Math.sin(Date.now() / 100) * 2;
+                } else {
+                    this.params.stringVibration *= 0.9; // 振动衰减
+                }
+            }
+            
+            /**
+             * 绘制吉他
+             * @param {number} x 基准x坐标
+             * @param {number} y 基准y坐标
+             * @param {boolean} isBack 是否背在背上
+             */
+            draw(x, y, isBack = false) {
+                const { ctx } = this;
+                const { color, scale, stringVibration } = this.params;
+                
+                // 更新位置
+                this.params.x = x;
+                this.params.y = y;
+                
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.scale(scale, scale);
+                
+                if (isBack) {
+                    // 背在背上的绘制方式
+                    ctx.rotate(Math.PI / 2);
+                    this.drawGuitarBody();
+                } else {
+                    // 正常演奏的绘制方式
+                    this.drawGuitarBody();
+                    this.drawStrings(stringVibration);
+                }
+                
+                ctx.restore();
+            }
+            
+            /**
+             * 绘制吉他主体
+             */
+            drawGuitarBody() {
+                const { ctx } = this;
+                const { color } = this.params;
+                
+                // 琴身
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 40, 60, 0, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#5D2906';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 琴颈
+                ctx.beginPath();
+                ctx.rect(-10, -60, 20, 80);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#5D2906';
+                ctx.stroke();
+                
+                // 琴头
+                ctx.beginPath();
+                ctx.rect(-15, -80, 30, 20);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#5D2906';
+                ctx.stroke();
+            }
+            
+            /**
+             * 绘制琴弦
+             * @param {number} vibration 振动幅度
+             */
+            drawStrings(vibration) {
+                const { ctx } = this;
+                
+                ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)';
+                ctx.lineWidth = 1;
+                
+                // 6根琴弦
+                for (let i = 0; i < 6; i++) {
+                    const offset = -15 + i * 6;
+                    const vibrate = vibration * (1 - i / 6);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(offset, -80);
+                    ctx.bezierCurveTo(
+                        offset + vibrate, -40,
+                        offset - vibrate, 0,
+                        offset, 40
+                    );
+                    ctx.stroke();
+                }
+                
+                // 琴桥
+                ctx.beginPath();
+                ctx.rect(-20, 30, 40, 5);
+                ctx.fillStyle = '#333';
+                ctx.fill();
+            }
+            
+            /**
+             * 切换演奏状态
+             * @param {boolean} state 是否演奏
+             */
+            setPlaying(state) {
+                this.params.isPlaying = state;
+            }
+        }
 
-"   o_"+a+
-"  \<| *"+a+
-"  *\>\\         "+a,
+        /**
+         * 火柴人类 V0.5
+         * 新增背吉他和唱歌功能
+         */
+        class StickMan {
+            constructor(canvas, options = {}) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                
+                // 默认参数配置
+                this.params = {
+                    // 基础参数
+                    headRadius: 20,
+                    bodyLength: 60,
+                    x: canvas.width / 2,
+                    y: 100,
+                    color: '#333',
+                    
+                    // 移动控制参数
+                    targetX: null,
+                    targetY: null,
+                    speed: 3,
+                    isMoving: false,
+                    
+                    // 吉他参数
+                    hasGuitar: false,
+                    isPlayingGuitar: false,
+                    guitar: null,
+                    
+                    // 唱歌参数
+                    isSinging: false,
+                    mouthPhase: 0,
+                    mouthSpeed: 0.2,
+                    
+                    // 手臂参数
+                    armLength: 40,
+                    leftArm: {
+                        amplitude: 0.7,
+                        speed: 0.07,
+                        phase: 0
+                    },
+                    rightArm: {
+                        amplitude: 0.8,
+                        speed: 0.06,
+                        phase: Math.PI
+                    },
+                    
+                    // 腿部参数
+                    legLength: 50,
+                    leftLeg: {
+                        amplitude: 0.4,
+                        speed: 0.05,
+                        phase: Math.PI/2
+                    },
+                    rightLeg: {
+                        amplitude: 0.5,
+                        speed: 0.055,
+                        phase: 3*Math.PI/2
+                    },
+                    
+                    // 合并用户自定义配置
+                    ...options
+                };
+                
+                // 初始化吉他
+                this.params.guitar = new Guitar(this.ctx);
+            }
+            
+            /**
+             * 设置移动目标点
+             * @param {number} x 目标x坐标
+             * @param {number} y 目标y坐标
+             */
+            setTarget(x, y) {
+                this.params.targetX = x;
+                this.params.targetY = y;
+                this.params.isMoving = true;
+                
+                // 移动时调整四肢参数，模拟跑步动作
+                this.params.leftArm.amplitude = 1.0;
+                this.params.rightArm.amplitude = 1.0;
+                this.params.leftLeg.amplitude = 0.7;
+                this.params.rightLeg.amplitude = 0.7;
+                this.params.leftArm.speed = 0.15;
+                this.params.rightArm.speed = 0.15;
+                this.params.leftLeg.speed = 0.12;
+                this.params.rightLeg.speed = 0.12;
+                
+                // 移动时停止演奏
+                if (this.params.isPlayingGuitar) {
+                    this.togglePlaying(false);
+                }
+            }
+            
+            /**
+             * 切换吉他状态
+             * @param {boolean} state 是否背吉他
+             */
+            toggleGuitar(state) {
+                this.params.hasGuitar = state;
+                
+                // 如果取消吉他，也停止演奏
+                if (!state && this.params.isPlayingGuitar) {
+                    this.togglePlaying(false);
+                }
+            }
+            
+            /**
+             * 切换演奏状态
+             * @param {boolean} state 是否演奏
+             */
+            togglePlaying(state) {
+                this.params.isPlayingGuitar = state;
+                this.params.guitar.setPlaying(state);
+                
+                // 演奏时自动开始唱歌
+                this.params.isSinging = state;
+                
+                // 调整手臂参数模拟演奏姿势
+                if (state) {
+                    this.params.leftArm.amplitude = 0.3;
+                    this.params.rightArm.amplitude = 0.4;
+                    this.params.leftArm.speed = 0.05;
+                    this.params.rightArm.speed = 0.04;
+                } else {
+                    this.resetMovementParams();
+                }
+            }
+            
+            /**
+             * 切换唱歌状态
+             * @param {boolean} state 是否唱歌
+             */
+            toggleSinging(state) {
+                this.params.isSinging = state;
+                
+                // 如果停止唱歌但正在演奏，保持唱歌状态
+                if (!state && this.params.isPlayingGuitar) {
+                    this.params.isSinging = true;
+                }
+            }
+            
+            /**
+             * 更新火柴人状态
+             */
+            update() {
+                const { params } = this;
+                
+                // 处理移动逻辑
+                if (params.isMoving && params.targetX !== null && params.targetY !== null) {
+                    // 计算移动方向向量
+                    const dx = params.targetX - params.x;
+                    const dy = params.targetY - params.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // 如果接近目标点，停止移动
+                    if (distance < params.speed) {
+                        params.x = params.targetX;
+                        params.y = params.targetY;
+                        params.isMoving = false;
+                        params.targetX = null;
+                        params.targetY = null;
+                        
+                        // 恢复舞蹈参数
+                        this.resetMovementParams();
+                    } else {
+                        // 计算单位方向向量并移动
+                        const nx = dx / distance;
+                        const ny = dy / distance;
+                        params.x += nx * params.speed;
+                        params.y += ny * params.speed;
+                    }
+                }
+                
+                // 更新四肢相位（无论是否移动都持续摆动）
+                params.leftArm.phase += params.leftArm.speed;
+                params.rightArm.phase += params.rightArm.speed;
+                params.leftLeg.phase += params.leftLeg.speed;
+                params.rightLeg.phase += params.rightLeg.speed;
+                
+                // 更新嘴巴动画（如果正在唱歌）
+                if (params.isSinging) {
+                    params.mouthPhase += params.mouthSpeed;
+                }
+                
+                // 更新吉他状态
+                if (params.hasGuitar) {
+                    params.guitar.update();
+                }
+            }
+            
+            /**
+             * 重置运动参数到默认舞蹈状态
+             */
+            resetMovementParams() {
+                const { params } = this;
+                params.leftArm.amplitude = 0.7;
+                params.rightArm.amplitude = 0.8;
+                params.leftLeg.amplitude = 0.4;
+                params.rightLeg.amplitude = 0.5;
+                params.leftArm.speed = 0.07;
+                params.rightArm.speed = 0.06;
+                params.leftLeg.speed = 0.05;
+                params.rightLeg.speed = 0.055;
+            }
+            
+            /**
+             * 绘制火柴人
+             */
+            draw() {
+                const { ctx, canvas } = this;
+                const { 
+                    headRadius, bodyLength, armLength, legLength,
+                    x, y, color, isMoving, hasGuitar, isPlayingGuitar, isSinging,
+                    leftArm, rightArm,
+                    leftLeg, rightLeg,
+                    mouthPhase
+                } = this.params;
+                
+                // 清除画布
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 绘制目标点标记（如果正在移动）
+                if (isMoving && this.params.targetX !== null) {
+                    ctx.beginPath();
+                    ctx.arc(this.params.targetX, this.params.targetY, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    ctx.fill();
+                }
+                
+                // 如果背着吉他且不在演奏，先绘制背着的吉他
+                if (hasGuitar && !isPlayingGuitar) {
+                    this.params.guitar.draw(
+                        x - headRadius - 10, 
+                        y + headRadius + 20,
+                        true
+                    );
+                }
+                
+                // 绘制头部
+                ctx.beginPath();
+                ctx.arc(x, y, headRadius, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                
+                // 绘制身体
+                ctx.beginPath();
+                ctx.moveTo(x, y + headRadius);
+                ctx.lineTo(x, y + headRadius + bodyLength);
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = color;
+                ctx.stroke();
+                
+                // 计算四肢当前角度
+                let leftArmAngle = Math.sin(leftArm.phase) * leftArm.amplitude;
+                let rightArmAngle = Math.sin(rightArm.phase) * rightArm.amplitude;
+                const leftLegAngle = Math.sin(leftLeg.phase) * leftLeg.amplitude;
+                const rightLegAngle = Math.sin(rightLeg.phase) * rightLeg.amplitude;
+                
+                // 如果正在演奏吉他，调整手臂姿势
+                if (isPlayingGuitar) {
+                    // 左手按弦姿势
+                    leftArmAngle = -Math.PI/4 + Math.sin(leftArm.phase) * 0.1;
+                    
+                    // 右手拨弦姿势
+                    rightArmAngle = Math.PI/4 + Math.sin(rightArm.phase) * 0.2;
+                }
+                
+                // 绘制左臂
+                ctx.beginPath();
+                ctx.moveTo(x, y + headRadius + 20);
+                ctx.lineTo(
+                    x - Math.cos(leftArmAngle) * armLength,
+                    y + headRadius + 20 + Math.sin(leftArmAngle) * armLength
+                );
+                ctx.stroke();
+                
+                // 绘制右臂
+                ctx.beginPath();
+                ctx.moveTo(x, y + headRadius + 20);
+                ctx.lineTo(
+                    x + Math.cos(rightArmAngle) * armLength,
+                    y + headRadius + 20 + Math.sin(rightArmAngle) * armLength
+                );
+                ctx.stroke();
+                
+                // 绘制左腿
+                ctx.beginPath();
+                ctx.moveTo(x, y + headRadius + bodyLength);
+                ctx.lineTo(
+                    x - Math.cos(leftLegAngle) * legLength,
+                    y + headRadius + bodyLength + Math.sin(leftLegAngle) * legLength
+                );
+                ctx.stroke();
+                
+                // 绘制右腿
+                ctx.beginPath();
+                ctx.moveTo(x, y + headRadius + bodyLength);
+                ctx.lineTo(
+                    x + Math.cos(rightLegAngle) * legLength,
+                    y + headRadius + bodyLength + Math.sin(rightLegAngle) * legLength
+                );
+                ctx.stroke();
+                
+                // 绘制表情
+                ctx.beginPath();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                
+                // 眼睛
+                ctx.arc(x - 7, y - 10, 3, 0, Math.PI * 2); // 左眼
+                ctx.arc(x + 7, y - 10, 3, 0, Math.PI * 2); // 右眼
+                
+                // 嘴巴（根据状态变化）
+                if (isMoving) {
+                    // 跑步时的专注表情
+                    ctx.arc(x, y, 10, 0, Math.PI); // 半圆嘴巴
+                } else if (isSinging) {
+                    // 唱歌时的动态嘴巴
+                    const mouthOpenness = 0.5 + Math.abs(Math.sin(mouthPhase)) * 0.5;
+                    const mouthWidth = 15 * mouthOpenness;
+                    const mouthHeight = 8 * mouthOpenness;
+                    
+                    ctx.ellipse(
+                        x, y + 5, 
+                        mouthWidth, mouthHeight,
+                        0, 0, Math.PI
+                    );
+                } else {
+                    // 平时的笑脸
+                    ctx.arc(x, y - 5, 10, 0, Math.PI); // 笑脸
+                }
+                ctx.stroke();
+                
+                // 如果正在演奏吉他，绘制演奏中的吉他
+                if (isPlayingGuitar) {
+                    // 计算吉他位置（跟随右手）
+                    const guitarX = x + Math.cos(rightArmAngle) * armLength * 0.7;
+                    const guitarY = y + headRadius + 20 + Math.sin(rightArmAngle) * armLength * 0.7;
+                    
+                    this.params.guitar.draw(guitarX, guitarY, false);
+                }
+            }
+        }
 
-"  _o/*"+a+
-" * |"+a+
-"  / \\         "+a,
+        /**
+         * 动画控制器
+         */
+        class AnimationController {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.stickMan = new StickMan(canvas);
+                this.animationId = null;
+                
+                // 绑定点击事件
+                this.canvas.addEventListener('click', this.handleClick.bind(this));
+                
+                // 绑定控制按钮
+                document.getElementById('toggleGuitar').addEventListener('click', () => {
+                    this.stickMan.toggleGuitar(!this.stickMan.params.hasGuitar);
+                });
+                
+                document.getElementById('toggleSinging').addEventListener('click', () => {
+                    this.stickMan.toggleSinging(!this.stickMan.params.isSinging);
+                    
+                    // 如果开始唱歌且有吉他，自动开始演奏
+                    if (this.stickMan.params.isSinging && this.stickMan.params.hasGuitar) {
+                        this.stickMan.togglePlaying(true);
+                    }
+                });
+            }
+            
+            /**
+             * 处理画布点击事件
+             * @param {MouseEvent} event 鼠标事件
+             */
+            handleClick(event) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                
+                // 设置火柴人移动目标
+                this.stickMan.setTarget(x, y);
+            }
+            
+            start() {
+                const animate = () => {
+                    this.stickMan.update();
+                    this.stickMan.draw();
+                    this.animationId = requestAnimationFrame(animate);
+                };
+                animate();
+            }
+            
+            stop() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                }
+            }
+        }
 
-" *\o_"+a+
-"  /  *"+a+
-" \<\\           "+a,
-
-"  _o/*"+a+
-" * |"+a+
-"  / \\         "+a,
-
-" *\\c/*"+a+
-"   )"+a+
-"  / \>         "+a,
-
-"     *"+a+
-"  \\__/c"+a+
-"   \> \\*       "+a,
-
-"   __/"+a+
-"    (o_*"+a+
-"     \\*       "+a,
-
-"      \\ /"+a+
-"       |"+a+
-"     */o\\*    "+a,
-
-"       \\_"+a+
-"       ("+a+
-"     */o\\*    "+a,
-
-"        \<_"+a+
-"      __("+a+
-"     * o|*    "+a,
-
-"         /_"+a+
-"      __("+a+
-"     * o|*   "+a,
-
-"         ___"+a+
-"      *\/ \>"+a+
-"       o|*    "+a,
-
-"        *"+a+
-"       o|_/"+a+
-"      */  \\   "+a,
-
-"        *"+a+
-"      _o|_"+a+
-"     *   \>\\   "+a,
-
-"       _o/*"+a+
-"      * |"+a+
-"       / \\    "+a,
-
-"      *\\o/*"+a+
-"        |"+a+
-"       / \\    "+a,
-
-"      c/*"+a+
-"      \<\\"+a+
-"      */\\     "+a,
-
-"      c__"+a+
-"      \<\ *"+a+
-"      */\\     "+a,
-
-"      c__"+a+
-"      /\ *"+a+
-"     * /\>     "+a,
-
-"      c/*"+a+
-"     /(__"+a+
-"    * /       "+a,
-
-"    __o/*"+a+
-"    * (__"+a+
-"      \<       "+a,
-
-"      __o_"+a+
-"     * /  *"+a+
-"      \<\\      "+a,
-
-"     *_o_"+a+
-"       | *"+a+
-"      \< \\     "+a,
-
-"     *_c_*"+a+
-"       |"+a+
-"       \>\\     "+a,
-
-"     *_c_*"+a+
-"       |__"+a+
-"       \>      "+a,
-
-"     *_c_*"+a+
-"     __|__"+a+
-"              "+a,
-
-" "+a+
-"     *_c_*"+a+
-"     __)__    "+a,
-
-" "+a+
-"     *\\c/*"+a+
-"     __)__    "+a
-  );
-}
-tl0 = init();
- 
-
-var x=0;
-function tick() {
-    document.animation.cheerleader.value = " " + a + tl0[x];
-    x++;
-    if (x != max)
-      setTimeout("tick()", 200);
-    else
-      x = 0;
-}
-//  End -->
-</SCRIPT> 
-<FORM name=animation>
-                            <TEXTAREA name=cheerleader rows=5></TEXTAREA>
-                            <BR>
-                            <INPUT name="button" type=button onclick=javascript:tick() value="try again">
-</FORM>
-                        </TD>
-                      </TR>
-                    </TBODY>
-                  </TABLE>
-                </div></td>
-            </tr> 
-          </table>
-        </div></td> 
-    </tr>
-     
-  </table>
-  
-</BODY></HTML>
+        // 初始化动画
+        const canvas = document.getElementById('canvas');
+        const controller = new AnimationController(canvas);
+        controller.start();
+    </script>
+</body>
+</html>
