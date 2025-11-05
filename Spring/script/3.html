@@ -2,994 +2,645 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>跳舞小人动画游戏v0.22</title>
-    
-    <script src="plx/ghClient.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>弹唱火柴人 V0.5</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            touch-action: manipulation;
-        }
-        
         body {
-            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
-            min-height: 100vh;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
-            padding: 20px;
-            overflow: hidden;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
         }
         
-        .container {
-            width: 100%;
-            max-width: 800px;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
-            overflow: hidden;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        header {
-            background: rgba(0, 0, 0, 0.7);
-            padding: 20px;
+        #container {
             text-align: center;
-            border-bottom: 3px solid #ffd700;
+        }
+        
+        #canvas {
+            background-color: white;
+            border: 2px solid #333;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+            cursor: pointer;
         }
         
         h1 {
-            color: #ffd700;
-            font-size: 2.5rem;
-            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
-            letter-spacing: 3px;
+            color: #333;
+            margin-bottom: 10px;
         }
         
-        .subtitle {
-            color: #fff;
-            font-size: 1.2rem;
-            margin-top: 5px;
+        .version {
+            color: #666;
+            margin-bottom: 10px;
+            font-size: 0.9em;
         }
         
-        .game-area {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 30px;
+        .features {
+            color: #444;
+            margin-top: 20px;
+            font-size: 0.9em;
+            max-width: 500px;
+            text-align: center;
+            line-height: 1.5;
         }
         
-        .animation-container {
-            width: 100%;
-            max-width: 300px;
-            height: 250px;
-            background: rgba(0, 0, 0, 0.8);
-            border-radius: 15px;
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
-            position: relative;
-            overflow: hidden;
-            border: 2px solid #444;
-        }
-        
-        .animation-container::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 5px;
-            background: linear-gradient(90deg, #ff8c00, #ffd700, #ff8c00);
-            box-shadow: 0 0 10px #ffd700;
-        }
-        
-        canvas {
-            background: #111;
-            border-radius: 10px;
-            max-width: 100%;
-            width: 280px;
-            height: 200px;
-        }
-        
-        .controls {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
-            margin-bottom: 25px;
-            width: 100%;
-        }
-        
-        .btn {
-            padding: 12px 25px;
-            font-size: 1.1rem;
-            border: none;
-            border-radius: 50px;
-            background: linear-gradient(to right, #ff8c00, #ffd700);
-            color: #000;
+        .feature-title {
             font-weight: bold;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 5px 15px rgba(255, 140, 0, 0.4);
-            min-width: 140px;
-            flex: 1;
-            text-align: center;
-        }
-        
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 7px 20px rgba(255, 140, 0, 0.6);
-        }
-        
-        .btn:active {
-            transform: translateY(1px);
-        }
-        
-        .btn-secondary {
-            background: linear-gradient(to right, #4a00e0, #8e2de2);
-            color: white;
-        }
-        .btn_gh_client {
-            background: linear-gradient(to right, #13b077, #8e2de2);
-            color: white;
-        }
-        
-        .stats {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 15px;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            flex-wrap: wrap;
-        }
-        
-        .stat-box {
-            text-align: center;
-            color: white;
-            min-width: 90px;
-            margin: 5px;
-        }
-        
-        .stat-value {
-            font-size: 1.8rem;
-            font-weight: bold;
-            color: #ffd700;
-            margin-top: 5px;
-        }
-        
-        .difficulty {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-            justify-content: center;
-            width: 100%;
-        }
-        
-        .diff-btn {
-            padding: 10px 15px;
-            background: rgba(255, 255, 255, 0.1);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            color: white;
-            border-radius: 30px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            min-width: 80px;
-            text-align: center;
-        }
-        
-        .diff-btn.active {
-            background: linear-gradient(to right, #00c9ff, #92fe9d);
-            color: #000;
-            font-weight: bold;
-        }
-        
-        footer {
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px;
-            text-align: center;
-            color: #aaa;
-            font-size: 0.9rem;
-            border-top: 1px solid #333;
+            margin-top: 15px;
+            color: #0066cc;
         }
         
         .instructions {
-            background: rgba(0, 0, 0, 0.6);
-            padding: 15px;
-            border-radius: 10px;
-            margin-top: 20px;
-            color: #ddd;
-            font-size: 0.95rem;
-            line-height: 1.6;
-            width: 100%;
+            color: #666;
+            margin-top: 10px;
+            font-style: italic;
         }
         
-        .highlight {
-            color: #ffd700;
-            font-weight: bold;
-        }
-        
-        .music-controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .controls {
             margin-top: 15px;
-            justify-content: center;
-            width: 100%;
-            flex-wrap: wrap;
         }
         
-        .music-label {
+        button {
+            padding: 8px 15px;
+            margin: 0 5px;
+            background-color: #0066cc;
             color: white;
-            font-size: 0.9rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
         }
         
-        .mobile-controls {
-            display: none;
-            width: 100%;
-            justify-content: space-between;
-            margin-top: 15px;
-        }
-        
-        .mobile-btn {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            background: linear-gradient(to right, #ff8c00, #ffd700);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 1.5rem;
-            color: #000;
-            font-weight: bold;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-            user-select: none;
-        }
-        
-        @media (max-width: 768px) {
-            h1 {
-                font-size: 2rem;
-            }
-            
-            .subtitle {
-                font-size: 1rem;
-            }
-            
-            .btn {
-                min-width: 120px;
-                padding: 12px 20px;
-                font-size: 1rem;
-            }
-            
-            .stat-value {
-                font-size: 1.5rem;
-            }
-            
-            .animation-container {
-                height: 220px;
-            }
-            
-            canvas {
-                width: 260px;
-                height: 180px;
-            }
-            
-            .mobile-controls {
-                display: flex;
-            }
-            
-            .instructions {
-                font-size: 0.85rem;
-            }
-        }
-        
-        @media (max-width: 480px) {
-            h1 {
-                font-size: 1.8rem;
-            }
-            
-            .stat-value {
-                font-size: 1.3rem;
-            }
-            
-            .btn {
-                min-width: 100px;
-                padding: 10px 15px;
-                font-size: 0.9rem;
-            }
-            
-            .animation-container {
-                height: 200px;
-            }
-            
-            canvas {
-                width: 240px;
-                height: 160px;
-            }
-            
-            .mobile-btn {
-                width: 60px;
-                height: 60px;
-                font-size: 1.2rem;
-            }
-            
-            .instructions {
-                font-size: 0.8rem;
-            }
-            
-            .diff-btn {
-                padding: 8px 12px;
-                font-size: 0.9rem;
-                min-width: 70px;
-            }
-        }
-        
-        /* 旋转动画效果 */
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        .loading {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50px;
-            height: 50px;
-            border: 5px solid rgba(255, 215, 0, 0.3);
-            border-top: 5px solid #ffd700;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            display: none;
-        }
-        
-        /* 按钮活跃状态 */
-        .btn.active {
-            background: linear-gradient(to right, #ffd700, #ff8c00);
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+        button:hover {
+            background-color: #0055aa;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>跳舞小人动画游戏v0.22</h1>
-            <div class="subtitle">移动设备完美演示版</div>
-        </header>
-        
-        <div class="game-area">
-            <div class="animation-container">
-                <canvas id="danceCanvas" width="280" height="200"></canvas>
-                <div class="loading" id="loadingIndicator"></div>
-            </div>
-            
-            <div class="stats">
-                <div class="stat-box">
-                    <div>帧数</div>
-                    <div id="frameCount" class="stat-value">0</div>
-                </div>
-                <div class="stat-box">
-                    <div>速度</div>
-                    <div id="speedValue" class="stat-value">中速</div>
-                </div>
-                <div class="stat-box">
-                    <div>分数</div>
-                    <div id="scoreValue" class="stat-value">0</div>
-                </div>
-            </div>
-            
-            <div class="controls">
-                <button id="startBtn" class="btn">开始跳舞</button>
-                <button id="stopBtn" class="btn">停止</button>
-                <button id="fasterBtn" class="btn btn-secondary">加速</button>
-                <button id="slowerBtn" class="btn btn-secondary">减速</button>
-                <button id="id_4_toggle_ghClientWnd" class="btn btn_gh_client">ghClientWnd</button>
-            </div>
-            
-            <div class="difficulty">
-                <div class="diff-btn active" data-speed="150">简单</div>
-                <div class="diff-btn" data-speed="100">中等</div>
-                <div class="diff-btn" data-speed="60">困难</div>
-                <div class="diff-btn" data-speed="40">极难</div>
-            </div>
-            
-            <div class="mobile-controls">
-                <div class="mobile-btn" id="mobileFasterBtn">+</div>
-                <div class="mobile-btn" id="mobileSlowerBtn">-</div>
-            </div>
-            
-            <div class="instructions">
-                <p><span class="highlight">游戏说明：</span> 这是一个经典跳舞小人动画的现代实现。点击"开始跳舞"按钮观看动画，使用加速/减速按钮调整动画速度。连续观看动画可获得分数奖励！</p>
-                <p><span class="highlight">移动设备提示：</span> 使用屏幕底部的加减按钮可以快速调整速度！</p>
-            </div>
-            
-            <div class="music-controls">
-                <span class="music-label">背景音乐:</span>
-                <button id="musicBtn" class="btn btn-secondary">开启音乐</button>
-                <span class="music-label">音效:</span>
-                <button id="soundBtn" class="btn btn-secondary">开启音效</button>
-            </div>
+    <div id="container">
+        <h1>弹唱火柴人</h1>
+        <div class="version">版本号: V0.5</div>
+        <canvas id="canvas" width="600" height="400"></canvas>
+        <div class="instructions">点击画面上任意位置，火柴人会跑向该点</div>
+        <div class="controls">
+            <button id="toggleGuitar">切换吉他</button>
+            <button id="toggleSinging">切换唱歌</button>
         </div>
-        
-        <footer>
-            <p>基于经典跳舞小人动画 | 移动设备优化版 | © 2023 跳舞小人游戏</p>
-        </footer>
+        <div class="features">
+            <div class="feature-title">V0.5 新特性：</div>
+            <p>1. 新增Guitar类：实现吉他绘制与动画效果</p>
+            <p>2. 背吉他功能：火柴人可背吉他并调整姿势</p>
+            <p>3. 唱歌动画：嘴巴动态变化模拟唱歌效果</p>
+            <p>4. 交互控制：通过按钮切换吉他和唱歌状态</p>
+            <p>5. 保留V0.4全部特性：点击移动与四肢独立动画</p>
+        </div>
     </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const canvas = document.getElementById('danceCanvas');
-            const ctx = canvas.getContext('2d');
-            const frameCountEl = document.getElementById('frameCount');
-            const speedValueEl = document.getElementById('speedValue');
-            const scoreValueEl = document.getElementById('scoreValue');
-            const startBtn = document.getElementById('startBtn');
-            const stopBtn = document.getElementById('stopBtn');
-            const fasterBtn = document.getElementById('fasterBtn');
-            const slowerBtn = document.getElementById('slowerBtn');
-            const diffBtns = document.querySelectorAll('.diff-btn');
-            const musicBtn = document.getElementById('musicBtn');
-            const soundBtn = document.getElementById('soundBtn');
-            const loadingIndicator = document.getElementById('loadingIndicator');
-            const mobileFasterBtn = document.getElementById('mobileFasterBtn');
-            const mobileSlowerBtn = document.getElementById('mobileSlowerBtn');
-            
-            // 跳舞小人动画帧数据
-            const mans = [
-                "   o\n  /|\\\n */ \\*        ",
-                "   o_\n  \\<| *\n  *>\\         ",
-                "  _o/*\n * |\n  / \\         ",
-                " *\\o_\n  /  *\n \\<\\           ",
-                "  _o/*\n * |\n  / \\         ",
-                " *\\c/*\n   )\n  / >         ",
-                "     *\n  \\__/c\n   > \\*       ",
-                "   __/\n    (o_*\n     \\*       ",
-                "      \\ /\n       |\n     */o\\*    ",
-                "       \\_\n       (\n     */o\\*    ",
-                "        \\<_\n      __(\n     * o|*    ",
-                "         /_\n      __(\n     * o|*   ",
-                "         ___\n      */ \\>\n       o|*    ",
-                "        *\n       o|_/\n      */  \\   ",
-                "        *\n      _o|_\n     *   >\\   ",
-                "       _o/*\n      * |\n       / \\    ",
-                "      *\\o/*\n        |\n       / \\    ",
-                "      c/*\n      \\<\\\n      */\\     ",
-                "      c__\n      \\<\\ *\n      */\\     ",
-                "      c__\n      /\\ *\n     * />     ",
-                "      c/*\n     /(__\n    * /       ",
-                "    __o/*\n    * (__\n      \\<       ",
-                "      __o_\n     * /  *\n      \\<\\      ",
-                "     *_o_\n       | *\n      \\< \\     ",
-                "     *_c_*\n       |\n       >\\     ",
-                "     *_c_*\n       |__\n       >      ",
-                "     *_c_*\n     __|__\n              ",
-                " \n     *_c_*\n     __)__    ",
-                " \n     *\\c/*\n     __)__    "
-            ];
-            
-            // 游戏状态
-            let currentFrame = 0;
-            let animationId = null;
-            let speed = 150; // 毫秒
-            let score = 0;
-            let frameCounter = 0;
-            let isPlaying = false;
-            let musicEnabled = false;
-            let soundEnabled = true;
-            let audioContext;
-            let oscillator;
-            let backgroundMusic;
-            let isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-            
-            // 初始化
-            function init() {
-                // 移动设备优化
-                if (isMobile) {
-                    document.body.classList.add('mobile');
-                }
+        /**
+         * 吉他类 V0.5
+         * 实现吉他绘制与动画效果
+         */
+        class Guitar {
+            constructor(ctx, options = {}) {
+                this.ctx = ctx;
                 
-                // 设置画布尺寸
-                resizeCanvas();
-                window.addEventListener('resize', resizeCanvas);
-                
-                renderFrame(0);
-                frameCountEl.textContent = "0";
-                scoreValueEl.textContent = "0";
-                speedValueEl.textContent = getSpeedLabel(speed);
-                
-                // 预加载资源
-                preloadResources();
-                
-                // 解决移动端音频问题
-                setupAudioContext();
+                // 默认参数配置
+                this.params = {
+                    x: 0,
+                    y: 0,
+                    color: '#8B4513', // 棕色
+                    scale: 1.0,
+                    isPlaying: false,
+                    stringVibration: 0,
+                    ...options
+                };
             }
             
-            // 初始化音频上下文
-            function setupAudioContext() {
-                try {
-                    // 为移动端创建音频上下文
-                    if (isMobile && !audioContext) {
-                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                        
-                        // 创建空音频源以解锁音频
-                        const buffer = audioContext.createBuffer(1, 1, 22050);
-                        const source = audioContext.createBufferSource();
-                        source.buffer = buffer;
-                        source.connect(audioContext.destination);
-                        
-                        // 第一次交互时播放空音频
-                        document.addEventListener('touchstart', function unlockAudio() {
-                            source.start(0);
-                            document.removeEventListener('touchstart', unlockAudio);
-                        }, { once: true });
-                    }
-                } catch (e) {
-                    console.log("音频上下文初始化失败", e);
-                }
-            }
-            
-            // 调整画布尺寸
-            function resizeCanvas() {
-                const container = document.querySelector('.animation-container');
-                const containerWidth = container.clientWidth;
-                
-                if (containerWidth < 300) {
-                    canvas.width = containerWidth - 20;
-                    canvas.height = (canvas.width * 200) / 280;
-                    canvas.style.width = canvas.width + 'px';
-                    canvas.style.height = canvas.height + 'px';
+            /**
+             * 更新吉他状态
+             */
+            update() {
+                // 如果正在演奏，更新琴弦振动效果
+                if (this.params.isPlaying) {
+                    this.params.stringVibration = Math.sin(Date.now() / 100) * 2;
                 } else {
-                    canvas.width = 280;
-                    canvas.height = 200;
-                    canvas.style.width = '280px';
-                    canvas.style.height = '200px';
-                }
-                
-                if (isPlaying) {
-                    renderFrame(currentFrame);
+                    this.params.stringVibration *= 0.9; // 振动衰减
                 }
             }
             
-            // 预加载资源
-            function preloadResources() {
-                loadingIndicator.style.display = 'block';
+            /**
+             * 绘制吉他
+             * @param {number} x 基准x坐标
+             * @param {number} y 基准y坐标
+             * @param {boolean} isBack 是否背在背上
+             */
+            draw(x, y, isBack = false) {
+                const { ctx } = this;
+                const { color, scale, stringVibration } = this.params;
                 
-                // 模拟加载过程
-                setTimeout(() => {
-                    loadingIndicator.style.display = 'none';
-                }, 800);
-            }
-            
-            // 渲染帧
-            function renderFrame(frameIndex) {
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                // 更新位置
+                this.params.x = x;
+                this.params.y = y;
                 
-                // 绘制星空背景
-                drawStars();
+                ctx.save();
+                ctx.translate(x, y);
+                ctx.scale(scale, scale);
                 
-                // 绘制舞台
-                drawStage();
-                
-                // 绘制小人
-                drawCharacter(mans[frameIndex]);
-                
-                // 绘制聚光灯
-                drawSpotlight();
-            }
-            
-            // 绘制星空背景
-            function drawStars() {
-                ctx.fillStyle = '#0a0a2a';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                // 绘制星星
-                ctx.fillStyle = 'white';
-                for (let i = 0; i < 50; i++) {
-                    const x = Math.random() * canvas.width;
-                    const y = Math.random() * canvas.height * 0.6;
-                    const radius = Math.random() * 1.2;
-                    ctx.beginPath();
-                    ctx.arc(x, y, radius, 0, Math.PI * 2);
-                    ctx.fill();
+                if (isBack) {
+                    // 背在背上的绘制方式
+                    ctx.rotate(Math.PI / 2);
+                    this.drawGuitarBody();
+                } else {
+                    // 正常演奏的绘制方式
+                    this.drawGuitarBody();
+                    this.drawStrings(stringVibration);
                 }
+                
+                ctx.restore();
             }
             
-            // 绘制舞台
-            function drawStage() {
-                // 舞台地板
-                ctx.fillStyle = '#222';
-                ctx.fillRect(0, canvas.height - 40, canvas.width, 40);
+            /**
+             * 绘制吉他主体
+             */
+            drawGuitarBody() {
+                const { ctx } = this;
+                const { color } = this.params;
                 
-                // 舞台木纹
-                ctx.strokeStyle = '#333';
+                // 琴身
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 40, 60, 0, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#5D2906';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 琴颈
+                ctx.beginPath();
+                ctx.rect(-10, -60, 20, 80);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#5D2906';
+                ctx.stroke();
+                
+                // 琴头
+                ctx.beginPath();
+                ctx.rect(-15, -80, 30, 20);
+                ctx.fillStyle = color;
+                ctx.fill();
+                ctx.strokeStyle = '#5D2906';
+                ctx.stroke();
+            }
+            
+            /**
+             * 绘制琴弦
+             * @param {number} vibration 振动幅度
+             */
+            drawStrings(vibration) {
+                const { ctx } = this;
+                
+                ctx.strokeStyle = 'rgba(200, 200, 200, 0.8)';
                 ctx.lineWidth = 1;
-                for (let i = 0; i < canvas.width; i += 10) {
+                
+                // 6根琴弦
+                for (let i = 0; i < 6; i++) {
+                    const offset = -15 + i * 6;
+                    const vibrate = vibration * (1 - i / 6);
+                    
                     ctx.beginPath();
-                    ctx.moveTo(i, canvas.height - 40);
-                    ctx.lineTo(i, canvas.height);
+                    ctx.moveTo(offset, -80);
+                    ctx.bezierCurveTo(
+                        offset + vibrate, -40,
+                        offset - vibrate, 0,
+                        offset, 40
+                    );
                     ctx.stroke();
                 }
                 
-                // 舞台前沿
-                ctx.fillStyle = '#ffd700';
-                ctx.fillRect(0, canvas.height - 40, canvas.width, 3);
-            }
-            
-            // 绘制聚光灯
-            function drawSpotlight() {
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height / 2 - 20;
-                
-                // 聚光灯效果
-                const gradient = ctx.createRadialGradient(
-                    centerX, centerY, 10,
-                    centerX, centerY, Math.min(canvas.width, canvas.height) * 0.5
-                );
-                gradient.addColorStop(0, 'rgba(255, 215, 0, 0.6)');
-                gradient.addColorStop(1, 'rgba(255, 215, 0, 0)');
-                
-                ctx.globalCompositeOperation = 'lighter';
-                ctx.fillStyle = gradient;
+                // 琴桥
                 ctx.beginPath();
-                ctx.arc(centerX, centerY, Math.min(canvas.width, canvas.height) * 0.5, 0, Math.PI * 2);
+                ctx.rect(-20, 30, 40, 5);
+                ctx.fillStyle = '#333';
                 ctx.fill();
-                ctx.globalCompositeOperation = 'source-over';
             }
             
-            // 绘制跳舞小人
-            function drawCharacter(frame) {
-                const lines = frame.split('\n');
-                const startY = canvas.height / 2 - 30;
-                const centerX = canvas.width / 2;
-                
-                // 根据画布大小调整字体
-                const fontSize = Math.max(12, canvas.width / 20);
-                ctx.font = `bold ${fontSize}px monospace`;
-                
-                ctx.textAlign = 'center';
-                ctx.fillStyle = '#ffd700';
-                ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
-                ctx.shadowBlur = 10;
-                
-                lines.forEach((line, index) => {
-                    ctx.fillText(line, centerX, startY + index * (fontSize + 4));
-                });
-                
-                ctx.shadowBlur = 0;
+            /**
+             * 切换演奏状态
+             * @param {boolean} state 是否演奏
+             */
+            setPlaying(state) {
+                this.params.isPlaying = state;
             }
-            
-            // 动画循环
-            function animate() {
-                renderFrame(currentFrame);
-                currentFrame = (currentFrame + 1) % mans.length;
-                frameCounter++;
-                frameCountEl.textContent = frameCounter;
+        }
+
+        /**
+         * 火柴人类 V0.5
+         * 新增背吉他和唱歌功能
+         */
+        class StickMan {
+            constructor(canvas, options = {}) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
                 
-                // 每10帧增加1分
-                if (frameCounter % 10 === 0) {
-                    score++;
-                    scoreValueEl.textContent = score;
+                // 默认参数配置
+                this.params = {
+                    // 基础参数
+                    headRadius: 20,
+                    bodyLength: 60,
+                    x: canvas.width / 2,
+                    y: 100,
+                    color: '#333',
                     
-                    // 每100分增加一个难度级别
-                    if (score % 100 === 0 && speed > 40) {
-                        changeSpeed(speed - 10);
-                        showNotification(`恭喜！达到${score}分，速度提升！`);
+                    // 移动控制参数
+                    targetX: null,
+                    targetY: null,
+                    speed: 3,
+                    isMoving: false,
+                    
+                    // 吉他参数
+                    hasGuitar: false,
+                    isPlayingGuitar: false,
+                    guitar: null,
+                    
+                    // 唱歌参数
+                    isSinging: false,
+                    mouthPhase: 0,
+                    mouthSpeed: 0.2,
+                    
+                    // 手臂参数
+                    armLength: 40,
+                    leftArm: {
+                        amplitude: 0.7,
+                        speed: 0.07,
+                        phase: 0
+                    },
+                    rightArm: {
+                        amplitude: 0.8,
+                        speed: 0.06,
+                        phase: Math.PI
+                    },
+                    
+                    // 腿部参数
+                    legLength: 50,
+                    leftLeg: {
+                        amplitude: 0.4,
+                        speed: 0.05,
+                        phase: Math.PI/2
+                    },
+                    rightLeg: {
+                        amplitude: 0.5,
+                        speed: 0.055,
+                        phase: 3*Math.PI/2
+                    },
+                    
+                    // 合并用户自定义配置
+                    ...options
+                };
+                
+                // 初始化吉他
+                this.params.guitar = new Guitar(this.ctx);
+            }
+            
+            /**
+             * 设置移动目标点
+             * @param {number} x 目标x坐标
+             * @param {number} y 目标y坐标
+             */
+            setTarget(x, y) {
+                this.params.targetX = x;
+                this.params.targetY = y;
+                this.params.isMoving = true;
+                
+                // 移动时调整四肢参数，模拟跑步动作
+                this.params.leftArm.amplitude = 1.0;
+                this.params.rightArm.amplitude = 1.0;
+                this.params.leftLeg.amplitude = 0.7;
+                this.params.rightLeg.amplitude = 0.7;
+                this.params.leftArm.speed = 0.15;
+                this.params.rightArm.speed = 0.15;
+                this.params.leftLeg.speed = 0.12;
+                this.params.rightLeg.speed = 0.12;
+                
+                // 移动时停止演奏
+                if (this.params.isPlayingGuitar) {
+                    this.togglePlaying(false);
+                }
+            }
+            
+            /**
+             * 切换吉他状态
+             * @param {boolean} state 是否背吉他
+             */
+            toggleGuitar(state) {
+                this.params.hasGuitar = state;
+                
+                // 如果取消吉他，也停止演奏
+                if (!state && this.params.isPlayingGuitar) {
+                    this.togglePlaying(false);
+                }
+            }
+            
+            /**
+             * 切换演奏状态
+             * @param {boolean} state 是否演奏
+             */
+            togglePlaying(state) {
+                this.params.isPlayingGuitar = state;
+                this.params.guitar.setPlaying(state);
+                
+                // 演奏时自动开始唱歌
+                this.params.isSinging = state;
+                
+                // 调整手臂参数模拟演奏姿势
+                if (state) {
+                    this.params.leftArm.amplitude = 0.3;
+                    this.params.rightArm.amplitude = 0.4;
+                    this.params.leftArm.speed = 0.05;
+                    this.params.rightArm.speed = 0.04;
+                } else {
+                    this.resetMovementParams();
+                }
+            }
+            
+            /**
+             * 切换唱歌状态
+             * @param {boolean} state 是否唱歌
+             */
+            toggleSinging(state) {
+                this.params.isSinging = state;
+                
+                // 如果停止唱歌但正在演奏，保持唱歌状态
+                if (!state && this.params.isPlayingGuitar) {
+                    this.params.isSinging = true;
+                }
+            }
+            
+            /**
+             * 更新火柴人状态
+             */
+            update() {
+                const { params } = this;
+                
+                // 处理移动逻辑
+                if (params.isMoving && params.targetX !== null && params.targetY !== null) {
+                    // 计算移动方向向量
+                    const dx = params.targetX - params.x;
+                    const dy = params.targetY - params.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    // 如果接近目标点，停止移动
+                    if (distance < params.speed) {
+                        params.x = params.targetX;
+                        params.y = params.targetY;
+                        params.isMoving = false;
+                        params.targetX = null;
+                        params.targetY = null;
+                        
+                        // 恢复舞蹈参数
+                        this.resetMovementParams();
+                    } else {
+                        // 计算单位方向向量并移动
+                        const nx = dx / distance;
+                        const ny = dy / distance;
+                        params.x += nx * params.speed;
+                        params.y += ny * params.speed;
                     }
                 }
                 
-                // 播放音效
-                if (soundEnabled && frameCounter % 3 === 0) {
-                    playSound();
+                // 更新四肢相位（无论是否移动都持续摆动）
+                params.leftArm.phase += params.leftArm.speed;
+                params.rightArm.phase += params.rightArm.speed;
+                params.leftLeg.phase += params.leftLeg.speed;
+                params.rightLeg.phase += params.rightLeg.speed;
+                
+                // 更新嘴巴动画（如果正在唱歌）
+                if (params.isSinging) {
+                    params.mouthPhase += params.mouthSpeed;
                 }
                 
-                animationId = setTimeout(animate, speed);
+                // 更新吉他状态
+                if (params.hasGuitar) {
+                    params.guitar.update();
+                }
             }
             
-            // 开始动画
-            function startAnimation() {
-                if (isPlaying) return;
+            /**
+             * 重置运动参数到默认舞蹈状态
+             */
+            resetMovementParams() {
+                const { params } = this;
+                params.leftArm.amplitude = 0.7;
+                params.rightArm.amplitude = 0.8;
+                params.leftLeg.amplitude = 0.4;
+                params.rightLeg.amplitude = 0.5;
+                params.leftArm.speed = 0.07;
+                params.rightArm.speed = 0.06;
+                params.leftLeg.speed = 0.05;
+                params.rightLeg.speed = 0.055;
+            }
+            
+            /**
+             * 绘制火柴人
+             */
+            draw() {
+                const { ctx, canvas } = this;
+                const { 
+                    headRadius, bodyLength, armLength, legLength,
+                    x, y, color, isMoving, hasGuitar, isPlayingGuitar, isSinging,
+                    leftArm, rightArm,
+                    leftLeg, rightLeg,
+                    mouthPhase
+                } = this.params;
                 
-                // 确保音频上下文已初始化
-                setupAudioContext();
+                // 清除画布
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                isPlaying = true;
+                // 绘制目标点标记（如果正在移动）
+                if (isMoving && this.params.targetX !== null) {
+                    ctx.beginPath();
+                    ctx.arc(this.params.targetX, this.params.targetY, 5, 0, Math.PI * 2);
+                    ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+                    ctx.fill();
+                }
+                
+                // 如果背着吉他且不在演奏，先绘制背着的吉他
+                if (hasGuitar && !isPlayingGuitar) {
+                    this.params.guitar.draw(
+                        x - headRadius - 10, 
+                        y + headRadius + 20,
+                        true
+                    );
+                }
+                
+                // 绘制头部
+                ctx.beginPath();
+                ctx.arc(x, y, headRadius, 0, Math.PI * 2);
+                ctx.fillStyle = color;
+                ctx.fill();
+                
+                // 绘制身体
+                ctx.beginPath();
+                ctx.moveTo(x, y + headRadius);
+                ctx.lineTo(x, y + headRadius + bodyLength);
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = color;
+                ctx.stroke();
+                
+                // 计算四肢当前角度
+                let leftArmAngle = Math.sin(leftArm.phase) * leftArm.amplitude;
+                let rightArmAngle = Math.sin(rightArm.phase) * rightArm.amplitude;
+                const leftLegAngle = Math.sin(leftLeg.phase) * leftLeg.amplitude;
+                const rightLegAngle = Math.sin(rightLeg.phase) * rightLeg.amplitude;
+                
+                // 如果正在演奏吉他，调整手臂姿势
+                if (isPlayingGuitar) {
+                    // 左手按弦姿势
+                    leftArmAngle = -Math.PI/4 + Math.sin(leftArm.phase) * 0.1;
+                    
+                    // 右手拨弦姿势
+                    rightArmAngle = Math.PI/4 + Math.sin(rightArm.phase) * 0.2;
+                }
+                
+                // 绘制左臂
+                ctx.beginPath();
+                ctx.moveTo(x, y + headRadius + 20);
+                ctx.lineTo(
+                    x - Math.cos(leftArmAngle) * armLength,
+                    y + headRadius + 20 + Math.sin(leftArmAngle) * armLength
+                );
+                ctx.stroke();
+                
+                // 绘制右臂
+                ctx.beginPath();
+                ctx.moveTo(x, y + headRadius + 20);
+                ctx.lineTo(
+                    x + Math.cos(rightArmAngle) * armLength,
+                    y + headRadius + 20 + Math.sin(rightArmAngle) * armLength
+                );
+                ctx.stroke();
+                
+                // 绘制左腿
+                ctx.beginPath();
+                ctx.moveTo(x, y + headRadius + bodyLength);
+                ctx.lineTo(
+                    x - Math.cos(leftLegAngle) * legLength,
+                    y + headRadius + bodyLength + Math.sin(leftLegAngle) * legLength
+                );
+                ctx.stroke();
+                
+                // 绘制右腿
+                ctx.beginPath();
+                ctx.moveTo(x, y + headRadius + bodyLength);
+                ctx.lineTo(
+                    x + Math.cos(rightLegAngle) * legLength,
+                    y + headRadius + bodyLength + Math.sin(rightLegAngle) * legLength
+                );
+                ctx.stroke();
+                
+                // 绘制表情
+                ctx.beginPath();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                
+                // 眼睛
+                ctx.arc(x - 7, y - 10, 3, 0, Math.PI * 2); // 左眼
+                ctx.arc(x + 7, y - 10, 3, 0, Math.PI * 2); // 右眼
+                
+                // 嘴巴（根据状态变化）
+                if (isMoving) {
+                    // 跑步时的专注表情
+                    ctx.arc(x, y, 10, 0, Math.PI); // 半圆嘴巴
+                } else if (isSinging) {
+                    // 唱歌时的动态嘴巴
+                    const mouthOpenness = 0.5 + Math.abs(Math.sin(mouthPhase)) * 0.5;
+                    const mouthWidth = 15 * mouthOpenness;
+                    const mouthHeight = 8 * mouthOpenness;
+                    
+                    ctx.ellipse(
+                        x, y + 5, 
+                        mouthWidth, mouthHeight,
+                        0, 0, Math.PI
+                    );
+                } else {
+                    // 平时的笑脸
+                    ctx.arc(x, y - 5, 10, 0, Math.PI); // 笑脸
+                }
+                ctx.stroke();
+                
+                // 如果正在演奏吉他，绘制演奏中的吉他
+                if (isPlayingGuitar) {
+                    // 计算吉他位置（跟随右手）
+                    const guitarX = x + Math.cos(rightArmAngle) * armLength * 0.7;
+                    const guitarY = y + headRadius + 20 + Math.sin(rightArmAngle) * armLength * 0.7;
+                    
+                    this.params.guitar.draw(guitarX, guitarY, false);
+                }
+            }
+        }
+
+        /**
+         * 动画控制器
+         */
+        class AnimationController {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.stickMan = new StickMan(canvas);
+                this.animationId = null;
+                
+                // 绑定点击事件
+                this.canvas.addEventListener('click', this.handleClick.bind(this));
+                
+                // 绑定控制按钮
+                document.getElementById('toggleGuitar').addEventListener('click', () => {
+                    this.stickMan.toggleGuitar(!this.stickMan.params.hasGuitar);
+                });
+                
+                document.getElementById('toggleSinging').addEventListener('click', () => {
+                    this.stickMan.toggleSinging(!this.stickMan.params.isSinging);
+                    
+                    // 如果开始唱歌且有吉他，自动开始演奏
+                    if (this.stickMan.params.isSinging && this.stickMan.params.hasGuitar) {
+                        this.stickMan.togglePlaying(true);
+                    }
+                });
+            }
+            
+            /**
+             * 处理画布点击事件
+             * @param {MouseEvent} event 鼠标事件
+             */
+            handleClick(event) {
+                const rect = this.canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                
+                // 设置火柴人移动目标
+                this.stickMan.setTarget(x, y);
+            }
+            
+            start() {
+                const animate = () => {
+                    this.stickMan.update();
+                    this.stickMan.draw();
+                    this.animationId = requestAnimationFrame(animate);
+                };
                 animate();
-                startBtn.textContent = "跳舞中...";
-                startBtn.classList.add('active');
-                
-                // 播放背景音乐
-                if (musicEnabled) {
-                    playBackgroundMusic();
-                }
             }
             
-            // 停止动画
-            function stopAnimation() {
-                if (!isPlaying) return;
-                isPlaying = false;
-                clearTimeout(animationId);
-                startBtn.textContent = "开始跳舞";
-                startBtn.classList.remove('active');
-                
-                // 停止音效
-                if (oscillator) {
-                    oscillator.stop();
-                    oscillator = null;
-                }
-                
-                // 停止背景音乐
-                if (backgroundMusic) {
-                    backgroundMusic.pause();
-                    backgroundMusic.currentTime = 0;
+            stop() {
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
                 }
             }
-            
-            // 调整速度
-            function changeSpeed(newSpeed) {
-                speed = newSpeed;
-                speedValueEl.textContent = getSpeedLabel(speed);
-                
-                if (isPlaying) {
-                    stopAnimation();
-                    startAnimation();
-                }
-            }
-            
-            // 获取速度标签
-            function getSpeedLabel(speedValue) {
-                if (speedValue > 180) return "慢速";
-                if (speedValue > 100) return "中速";
-                if (speedValue > 60) return "快速";
-                if (speedValue > 40) return "极速";
-                return "超速";
-            }
-            
-            // 播放音效
-            function playSound() {
-                try {
-                    if (!audioContext) {
-                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    }
-                    
-                    if (oscillator) {
-                        oscillator.stop();
-                    }
-                    
-                    oscillator = audioContext.createOscillator();
-                    const gainNode = audioContext.createGain();
-                    
-                    oscillator.type = 'sine';
-                    oscillator.frequency.setValueAtTime(220 + Math.random() * 440, audioContext.currentTime);
-                    
-                    gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-                    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + 0.3);
-                    
-                    oscillator.connect(gainNode);
-                    gainNode.connect(audioContext.destination);
-                    
-                    oscillator.start();
-                    oscillator.stop(audioContext.currentTime + 0.3);
-                } catch (e) {
-                    console.log("音频播放失败", e);
-                }
-            }
-            
-            // 播放背景音乐
-            function playBackgroundMusic() {
-                try {
-                    if (!backgroundMusic) {
-                        backgroundMusic = new Audio();
-                        backgroundMusic.loop = true;
-                        backgroundMusic.volume = 0.3;
-                        
-                        // 生成简单的背景音乐
-                        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                        const oscillator = audioContext.createOscillator();
-                        const gainNode = audioContext.createGain();
-                        
-                        oscillator.type = 'sine';
-                        gainNode.gain.value = 0.2;
-                        
-                        oscillator.connect(gainNode);
-                        gainNode.connect(audioContext.destination);
-                        
-                        // 创建简单的旋律
-                        const now = audioContext.currentTime;
-                        oscillator.frequency.setValueAtTime(261.63, now); // C4
-                        oscillator.frequency.setValueAtTime(329.63, now + 0.5); // E4
-                        oscillator.frequency.setValueAtTime(392.00, now + 1.0); // G4
-                        oscillator.frequency.setValueAtTime(329.63, now + 1.5); // E4
-                        
-                        oscillator.start();
-                        oscillator.stop(now + 2);
-                        
-                        // 将生成的音频设置为背景音乐
-                        const source = audioContext.createMediaStreamDestination();
-                        oscillator.connect(source);
-                        backgroundMusic.src = URL.createObjectURL(source.stream);
-                    }
-                    
-                    // 确保在用户交互后播放
-                    backgroundMusic.play().catch(e => console.log("背景音乐播放失败:", e));
-                } catch (e) {
-                    console.log("背景音乐生成失败", e);
-                }
-            }
-            
-            // 显示通知
-            function showNotification(message) {
-                const notification = document.createElement('div');
-                notification.textContent = message;
-                notification.style.position = 'fixed';
-                notification.style.top = '20px';
-                notification.style.left = '50%';
-                notification.style.transform = 'translateX(-50%)';
-                notification.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-                notification.style.color = '#ffd700';
-                notification.style.padding = '10px 20px';
-                notification.style.borderRadius = '30px';
-                notification.style.zIndex = '1000';
-                notification.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.5)';
-                notification.style.animation = 'fadeInOut 3s forwards';
-                
-                document.body.appendChild(notification);
-                
-                // 动画结束后移除通知
-                setTimeout(() => {
-                    notification.remove();
-                }, 3000);
-            }
-            
-            // 添加CSS动画
-            const style = document.createElement('style');
-            style.textContent = `
-                @keyframes fadeInOut {
-                    0% { opacity: 0; transform: translate(-50%, -20px); }
-                    20% { opacity: 1; transform: translate(-50%, 0); }
-                    80% { opacity: 1; transform: translate(-50%, 0); }
-                    100% { opacity: 0; transform: translate(-50%, -20px); }
-                }
-            `;
-            document.head.appendChild(style);
-            
-            // 事件监听
-            startBtn.addEventListener('click', startAnimation);
-            stopBtn.addEventListener('click', stopAnimation);
-            
-            document.getElementById('id_4_toggle_ghClientWnd').addEventListener('click', toggle_gh_Client_Wnd);
-            fasterBtn.addEventListener('click', () => {
-                if (speed > 30) {
-                    changeSpeed(speed - 30);
-                }
-            });
-            
-            slowerBtn.addEventListener('click', () => {
-                if (speed < 300) {
-                    changeSpeed(speed + 30);
-                }
-            });
-            
-            // 移动端按钮事件
-            mobileFasterBtn.addEventListener('click', () => {
-                if (speed > 30) {
-                    changeSpeed(speed - 30);
-                    mobileFasterBtn.style.transform = 'scale(0.9)';
-                    setTimeout(() => {
-                        mobileFasterBtn.style.transform = 'scale(1)';
-                    }, 200);
-                }
-            });
-            
-            mobileSlowerBtn.addEventListener('click', () => {
-                if (speed < 300) {
-                    changeSpeed(speed + 30);
-                    mobileSlowerBtn.style.transform = 'scale(0.9)';
-                    setTimeout(() => {
-                        mobileSlowerBtn.style.transform = 'scale(1)';
-                    }, 200);
-                }
-            });
-            
-            diffBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    diffBtns.forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
-                    changeSpeed(parseInt(btn.dataset.speed));
-                });
-            });
-            
-            musicBtn.addEventListener('click', () => {
-                musicEnabled = !musicEnabled;
-                musicBtn.textContent = musicEnabled ? "关闭音乐" : "开启音乐";
-                
-                if (musicEnabled && isPlaying) {
-                    playBackgroundMusic();
-                } else if (!musicEnabled && backgroundMusic) {
-                    backgroundMusic.pause();
-                }
-            });
-            
-            soundBtn.addEventListener('click', () => {
-                soundEnabled = !soundEnabled;
-                soundBtn.textContent = soundEnabled ? "关闭音效" : "开启音效";
-            });
-            
-            // 触摸事件支持
-            const buttons = document.querySelectorAll('.btn, .diff-btn, .mobile-btn');
-            buttons.forEach(button => {
-                button.addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                    this.classList.add('active');
-                });
-                
-                button.addEventListener('touchend', function() {
-                    this.classList.remove('active');
-                });
-                
-                // 移动端点击事件优化
-                button.addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                    this.classList.add('active');
-                    
-                    // 创建一个临时变量来跟踪触摸是否移动太远
-                    this.touchStartX = e.touches[0].clientX;
-                    this.touchStartY = e.touches[0].clientY;
-                    
-                    // 添加触摸移动和结束事件
-                    const handleTouchMove = (e) => {
-                        const touchX = e.touches[0].clientX;
-                        const touchY = e.touches[0].clientY;
-                        
-                        // 如果触摸移动超过20px，则认为是滑动而不是点击
-                        if (Math.abs(touchX - this.touchStartX) > 20 || Math.abs(touchY - this.touchStartY) > 20) {
-                            this.classList.remove('active');
-                            document.removeEventListener('touchmove', handleTouchMove);
-                            document.removeEventListener('touchend', handleTouchEnd);
-                        }
-                    };
-                    
-                    const handleTouchEnd = (e) => {
-                        this.classList.remove('active');
-                        document.removeEventListener('touchmove', handleTouchMove);
-                        document.removeEventListener('touchend', handleTouchEnd);
-                        
-                        // 如果触摸没有移动太远，则触发点击事件
-                        if (Math.abs(e.changedTouches[0].clientX - this.touchStartX) <= 20 && 
-                            Math.abs(e.changedTouches[0].clientY - this.touchStartY) <= 20) {
-                            // 模拟点击事件
-                            const clickEvent = new MouseEvent('click', {
-                                bubbles: true,
-                                cancelable: true,
-                                view: window
-                            });
-                            this.dispatchEvent(clickEvent);
-                        }
-                    };
-                    
-                    document.addEventListener('touchmove', handleTouchMove);
-                    document.addEventListener('touchend', handleTouchEnd);
-                });
-            });
-            
-            // 初始化游戏
-            init();
-        });
+        }
+
+        // 初始化动画
+        const canvas = document.getElementById('canvas');
+        const controller = new AnimationController(canvas);
+        controller.start();
     </script>
 </body>
 </html>
-    
-<!--
-升级  v0.22
-
- 
--->
