@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canvas砌砖游戏升级版</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+        
+        .version {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        canvas {
+            background-color: #fff;
+            border: 2px solid #333;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 10px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .color-options {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .color-option {
+            width: 30px;
+            height: 30px;
+            border: 2px solid #333;
+            cursor: pointer;
+        }
+        
+        .mode-selector {
+            margin-left: 15px;
+        }
+        
+        .mode-selector label {
+            margin-right: 5px;
+        }
+        
+        .brick-size-selector {
+            margin-left: 15px;
+        }
+        
+        .brick-size-selector label {
+            margin-right: 5px;
+        }
+        
+        .instructions {
+            margin-top: 15px;
+            padding: 10px;
+            background-color: #e9e9e9;
+            border-radius: 5px;
+            max-width: 600px;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Canvas砌砖游戏升级版</h1>
+        <div class="version">版本号: v1.4.0</div>
+        
+        <div class="controls">
+            <button id="clearBtn">清空画布</button>
+            <button id="toggleGridBtn">切换网格</button>
+            <div class="color-options">
+                <div class="color-option" style="background-color: #e74c3c;" data-color="#e74c3c"></div>
+                <div class="color-option" style="background-color: #3498db;" data-color="#3498db"></div>
+                <div class="color-option" style="background-color: #2ecc71;" data-color="#2ecc71"></div>
+                <div class="color-option" style="background-color: #f39c12;" data-color="#f39c12"></div>
+                <div class="color-option" style="background-color: #9b59b6;" data-color="#9b59b6"></div>
+            </div>
+            
+            <div class="mode-selector">
+                <label>模式:</label>
+                <select id="modeSelect">
+                    <option value="add">添加模式</option>
+                    <option value="replace">替换模式</option>
+                </select>
+            </div>
+            
+            <div class="brick-size-selector">
+                <label>砖块大小:</label>
+                <select id="brickSizeSelect">
+                    <option value="full">整块砖 (40x20)</option>
+                    <option value="half">半块砖 (20x20)</option>
+                    <option value="quarter">1/4砖 (10x20)</option>
+                </select>
+            </div>
+        </div>
+        
+        <canvas id="brickCanvas" width="800" height="500"></canvas>
+        
+        <div class="instructions">
+            <h3>使用说明：</h3>
+            <ul>
+                <li><strong>新增动态网格背景功能</strong>：根据砖块大小自动调整网格密度</li>
+                <li><strong>网格功能</strong>：
+                    <ul>
+                        <li>点击"切换网格"按钮显示/隐藏网格背景</li>
+                        <li>网格密度自动匹配当前砖块大小：整砖(40px)、半砖(20px)、1/4砖(10px)</li>
+                        <li>网格线采用半透明设计，不影响砖块可见性</li>
+                        <li>主网格线(粗)显示砖块边界，辅助网格线(细)显示对齐参考</li>
+                    </ul>
+                </li>
+                <li><strong>砖块操作</strong>：
+                    <ul>
+                        <li>可选择"整块砖(40x20)"、"半块砖(20x20)"或"1/4砖(10x20)"</li>
+                        <li>添加模式下鼠标点击或拖动放置砖块</li>
+                        <li>替换模式下点击已有砖块可替换其颜色</li>
+                    </ul>
+                </li>
+                <li><strong>其他操作</strong>：
+                    <ul>
+                        <li>切换颜色：点击上方颜色方块选择不同颜色的砖块</li>
+                        <li>清空画布：点击"清空画布"按钮重置所有砖块</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const canvas = document.getElementById('brickCanvas');
+            const ctx = canvas.getContext('2d');
+            const clearBtn = document.getElementById('clearBtn');
+            const toggleGridBtn = document.getElementById('toggleGridBtn');
+            const colorOptions = document.querySelectorAll('.color-option');
+            const modeSelect = document.getElementById('modeSelect');
+            const brickSizeSelect = document.getElementById('brickSizeSelect');
+            
+            // 砖块设置
+            const fullBrickWidth = 40;
+            const halfBrickWidth = 20;
+            const quarterBrickWidth = 10;
+            const brickHeight = 20;
+            let currentColor = '#e74c3c'; // 默认红色
+            let isDrawing = false;
+            let bricks = [];
+            let currentMode = 'add'; // 'add'或'replace'
+            let currentBrickSize = 'full'; // 'full'、'half'或'quarter'
+            let showGrid = true;
+            
+            // 初始化画布
+            function initCanvas() {
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                bricks = [];
+                drawGrid();
+            }
+            
+            // 绘制网格背景
+            function drawGrid() {
+                // 清除画布
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                if (!showGrid) return;
+                
+                // 根据当前砖块大小确定网格密度
+                let gridSize;
+                switch(currentBrickSize) {
+                    case 'full':
+                        gridSize = fullBrickWidth;
+                        break;
+                    case 'half':
+                        gridSize = halfBrickWidth;
+                        break;
+                    case 'quarter':
+                        gridSize = quarterBrickWidth;
+                        break;
+                    default:
+                        gridSize = fullBrickWidth;
+                }
+                
+                // 绘制主网格线(砖块边界)
+                ctx.strokeStyle = 'rgba(0, 0, 0, 0.15)';
+                ctx.lineWidth = 1;
+                
+                // 垂直网格线
+                for (let x = 0; x <= canvas.width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+                
+                // 水平网格线(固定为砖块高度)
+                for (let y = 0; y <= canvas.height; y += brickHeight) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+                
+                // 绘制辅助细网格线(仅在半砖和1/4砖模式下)
+                if (currentBrickSize !== 'full') {
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.05)';
+                    ctx.lineWidth = 0.5;
+                    
+                    // 垂直辅助线
+                    for (let x = 0; x <= canvas.width; x += quarterBrickWidth) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, 0);
+                        ctx.lineTo(x, canvas.height);
+                        ctx.stroke();
+                    }
+                    
+                    // 水平辅助线(固定为砖块高度的一半)
+                    for (let y = 0; y <= canvas.height; y += brickHeight/2) {
+                        ctx.beginPath();
+                        ctx.moveTo(0, y);
+                        ctx.lineTo(canvas.width, y);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // 绘制所有砖块
+            function drawBricks() {
+                // 先绘制网格背景
+                drawGrid();
+                
+                // 然后绘制砖块
+                bricks.forEach(brick => {
+                    ctx.fillStyle = brick.color;
+                    ctx.fillRect(brick.x, brick.y, brick.width, brick.height);
+                    
+                    // 添加砖块纹理
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(brick.x, brick.y, brick.width, brick.height);
+                    
+                    // 砖块中间的线条
+                    ctx.beginPath();
+                    ctx.moveTo(brick.x + 2, brick.y + brick.height/2);
+                    ctx.lineTo(brick.x + brick.width - 2, brick.y + brick.height/2);
+                    ctx.strokeStyle = 'rgba(0, 0, 0, 0.3)';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                });
+            }
+            
+            // 添加砖块
+            function addBrick(x, y) {
+                // 根据当前选择的砖块大小确定宽度
+                let width;
+                switch(currentBrickSize) {
+                    case 'full':
+                        width = fullBrickWidth;
+                        break;
+                    case 'half':
+                        width = halfBrickWidth;
+                        break;
+                    case 'quarter':
+                        width = quarterBrickWidth;
+                        break;
+                    default:
+                        width = fullBrickWidth;
+                }
+                
+                const height = brickHeight;
+                
+                // 对齐到网格
+                const gridX = Math.floor(x / width) * width;
+                const gridY = Math.floor(y / height) * height;
+                
+                // 检查是否已经有砖块在这个位置
+                const existingBrickIndex = bricks.findIndex(b => 
+                    b.x === gridX && 
+                    b.y === gridY && 
+                    b.width === width
+                );
+                
+                if (existingBrickIndex === -1) {
+                    // 没有砖块，添加新砖块
+                    bricks.push({
+                        x: gridX,
+                        y: gridY,
+                        width: width,
+                        height: height,
+                        color: currentColor
+                    });
+                } else if (currentMode === 'replace') {
+                    // 替换模式下，替换已有砖块颜色
+                    bricks[existingBrickIndex].color = currentColor;
+                }
+                
+                drawBricks();
+            }
+            
+            // 获取鼠标位置对应的砖块（优先小尺寸砖块）
+            function getBrickAtPosition(x, y) {
+                // 从后向前遍历，优先检测小尺寸砖块
+                for (let i = bricks.length - 1; i >= 0; i--) {
+                    const brick = bricks[i];
+                    if (x >= brick.x && x < brick.x + brick.width &&
+                        y >= brick.y && y < brick.y + brick.height) {
+                        return brick;
+                    }
+                }
+                return null;
+            }
+            
+            // 事件监听
+            canvas.addEventListener('mousedown', (e) => {
+                isDrawing = true;
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                if (currentMode === 'replace') {
+                    const brick = getBrickAtPosition(x, y);
+                    if (brick) {
+                        brick.color = currentColor;
+                        drawBricks();
+                    }
+                } else {
+                    addBrick(x, y);
+                }
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                if (isDrawing && currentMode === 'add') {
+                    const rect = canvas.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    addBrick(x, y);
+                }
+            });
+            
+            canvas.addEventListener('mouseup', () => {
+                isDrawing = false;
+            });
+            
+            canvas.addEventListener('mouseleave', () => {
+                isDrawing = false;
+            });
+            
+            // 颜色选择
+            colorOptions.forEach(option => {
+                option.addEventListener('click', () => {
+                    currentColor = option.getAttribute('data-color');
+                    // 更新选中状态
+                    colorOptions.forEach(opt => opt.style.border = '2px solid #333');
+                    option.style.border = '2px solid #fff';
+                });
+            });
+            
+            // 模式选择
+            modeSelect.addEventListener('change', (e) => {
+                currentMode = e.target.value;
+                drawBricks();
+            });
+            
+            // 砖块大小选择
+            brickSizeSelect.addEventListener('change', (e) => {
+                currentBrickSize = e.target.value;
+                drawBricks();
+            });
+            
+            // 清空画布
+            clearBtn.addEventListener('click', initCanvas);
+            
+            // 切换网格显示
+            toggleGridBtn.addEventListener('click', () => {
+                showGrid = !showGrid;
+                drawBricks();
+            });
+            
+            // 初始化
+            initCanvas();
+            colorOptions[0].style.border = '2px solid #fff'; // 默认选中第一个颜色
+        });
+    </script>
+</body>
+</html>
