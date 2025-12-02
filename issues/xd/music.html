@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简谱播放器</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #f5f5f5;
+        }
+        
+        .toolbar {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .toolbar button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 0 5px;
+        }
+        
+        .toolbar button:hover {
+            background-color: #2980b9;
+        }
+        
+        .toolbar button:disabled {
+            background-color: #7f8c8d;
+            cursor: not-allowed;
+        }
+        
+        .canvas-container {
+            flex: 1;
+            overflow: auto;
+            padding: 20px;
+            background-color: white;
+        }
+        
+        .staff {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+        
+        .measure {
+            display: flex;
+            border: 2px solid #333;
+            border-radius: 5px;
+            padding: 5px;
+            background-color: #f9f9f9;
+            position: relative;
+            margin-top: 30px;
+        }
+        
+        .measure.active {
+            background-color: #e3f2fd;
+            border-color: #2196f3;
+        }
+        
+        .measure-number {
+            position: absolute;
+            top: -25px;
+            left: 10px;
+            font-weight: bold;
+            color: #2c3e50;
+            background-color: #fff;
+            padding: 2px 8px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            z-index: 1;
+        }
+        
+        .beat {
+            flex: 1;
+            height: 60px;
+            border-right: 1px dashed #aaa;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        
+        .beat:last-child {
+            border-right: none;
+        }
+        
+        .beat.active {
+            background-color: #bbdefb;
+        }
+        
+        .beat-number {
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            font-size: 10px;
+            color: #666;
+        }
+        
+        .status-bar {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px;
+            text-align: center;
+        }
+        
+        .settings-panel {
+            position: absolute;
+            top: 100px;
+            left: 50px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: none;
+            z-index: 100;
+            min-width: 300px;
+        }
+        
+        .settings-header {
+            background-color: #3498db;
+            color: white;
+            padding: 15px;
+            border-radius: 5px 5px 0 0;
+            cursor: move;
+            user-select: none;
+            position: relative;
+        }
+        
+        .settings-header h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+        
+        .settings-header:hover {
+            background-color: #2980b9;
+        }
+        
+        .settings-content {
+            padding: 15px;
+        }
+        
+        .settings-row {
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .settings-row label {
+            display: inline-block;
+            width: 100px;
+            font-weight: bold;
+        }
+        
+        .settings-row select, .settings-row input {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            flex: 1;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: white;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .close-btn:hover {
+            background-color: rgba(255,255,255,0.2);
+        }
+        
+        #applySettingsBtn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+        }
+        
+        #applySettingsBtn:hover {
+            background-color: #219653;
+        }
+        
+        .note-display {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 12px;
+            color: #666;
+            background-color: rgba(255,255,255,0.8);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div>
+            <button id="playBtn">播放</button>
+            <button id="stopBtn" disabled>停止</button>
+        </div>
+        <button id="settingsBtn">设置</button>
+    </div>
+    
+    <div class="canvas-container">
+        <div class="staff" id="staff">
+            <!-- 小节将通过JavaScript动态生成 -->
+        </div>
+    </div>
+    
+    <div class="status-bar" id="statusBar">
+        准备就绪
+    </div>
+    
+    <div class="settings-panel" id="settingsPanel">
+        <div class="settings-header" id="settingsHeader">
+            <h3>播放设置</h3>
+            <button class="close-btn" id="closeSettingsBtn">×</button>
+        </div>
+        <div class="settings-content">
+            <div class="settings-row">
+                <label for="timeSignature">节拍类型:</label>
+                <select id="timeSignature">
+                    <option value="4/4">4/4 拍</option>
+                    <option value="3/4">3/4 拍</option>
+                    <option value="2/4">2/4 拍</option>
+                    <option value="6/8">6/8 拍</option>
+                </select>
+            </div>
+            
+            <div class="settings-row">
+                <label for="tempo">速度 (BPM):</label>
+                <input type="number" id="tempo" min="40" max="200" value="120">
+            </div>
+            
+            <div class="settings-row">
+                <label for="measureCount">小节数量:</label>
+                <input type="number" id="measureCount" min="1" max="20" value="8">
+            </div>
+            
+            <button id="applySettingsBtn">应用设置</button>
+        </div>
+    </div>
+
+    <script>
+        // 乐谱播放器类
+        class ScorePlayer {
+            constructor() {
+                this.isPlaying = false;
+                this.currentMeasure = 0;
+                this.currentBeat = 0;
+                this.timer = null;
+                this.timeSignature = '4/4';
+                this.tempo = 120;
+                this.measureCount = 8;
+                
+                // DOM元素引用
+                this.domElements = {
+                    playBtn: document.getElementById('playBtn'),
+                    stopBtn: document.getElementById('stopBtn'),
+                    settingsBtn: document.getElementById('settingsBtn'),
+                    closeSettingsBtn: document.getElementById('closeSettingsBtn'),
+                    applySettingsBtn: document.getElementById('applySettingsBtn'),
+                    staff: document.getElementById('staff'),
+                    statusBar: document.getElementById('statusBar'),
+                    settingsPanel: document.getElementById('settingsPanel'),
+                    settingsHeader: document.getElementById('settingsHeader'),
+                    canvasContainer: document.querySelector('.canvas-container'),
+                    timeSignature: document.getElementById('timeSignature'),
+                    tempo: document.getElementById('tempo'),
+                    measureCount: document.getElementById('measureCount')
+                };
+                
+                this.init();
+            }
+            
+            // 初始化播放器
+            init() {
+                this.generateStaff();
+                this.setupEventListeners();
+            }
+            
+            // 生成五线谱
+            generateStaff() {
+                this.domElements.staff.innerHTML = '';
+                
+                const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
+                
+                for (let i = 0; i < this.measureCount; i++) {
+                    const measure = document.createElement('div');
+                    measure.className = 'measure';
+                    measure.dataset.measureIndex = i;
+                    
+                    // 添加小节序号
+                    const measureNumber = document.createElement('div');
+                    measureNumber.className = 'measure-number';
+                    measureNumber.textContent = `小节 ${i + 1}`;
+                    measure.appendChild(measureNumber);
+                    
+                    for (let j = 0; j < beatsPerMeasure; j++) {
+                        const beat = document.createElement('div');
+                        beat.className = 'beat';
+                        beat.dataset.beatIndex = j;
+                        
+                        const beatNumber = document.createElement('span');
+                        beatNumber.className = 'beat-number';
+                        beatNumber.textContent = j + 1;
+                        
+                        beat.appendChild(beatNumber);
+                        
+                        // 添加示例音符显示
+                        const noteDisplay = document.createElement('span');
+                        noteDisplay.className = 'note-display';
+                        
+                        // 示例音符 - 可以根据需要更改
+                        const exampleNotes = ['1', '2', '3', '4', '5', '6', '7'];
+                        const randomNote = exampleNotes[Math.floor(Math.random() * exampleNotes.length)];
+                        noteDisplay.textContent = randomNote;
+                        
+                        beat.appendChild(noteDisplay);
+                        measure.appendChild(beat);
+                    }
+                    
+                    this.domElements.staff.appendChild(measure);
+                }
+            }
+            
+            // 滚动到当前小节
+            scrollToCurrentMeasure() {
+                const currentMeasureElement = document.querySelector(`.measure[data-measure-index="${this.currentMeasure}"]`);
+                if (currentMeasureElement) {
+                    const container = this.domElements.canvasContainer;
+                    const containerHeight = container.clientHeight;
+                    const elementTop = currentMeasureElement.offsetTop;
+                    const elementHeight = currentMeasureElement.offsetHeight;
+                    
+                    const targetScrollTop = elementTop - (containerHeight / 2) + (elementHeight / 2);
+                    
+                    container.scrollTo({
+                        top: targetScrollTop,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+            
+            // 播放动画
+            playAnimation() {
+                const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
+                const beatDuration = 60000 / this.tempo; // 每拍毫秒数
+                
+                // 清除所有高亮
+                document.querySelectorAll('.measure.active, .beat.active').forEach(el => {
+                    el.classList.remove('active');
+                });
+                
+                // 设置当前高亮
+                const measures = document.querySelectorAll('.measure');
+                if (this.currentMeasure < measures.length) {
+                    measures[this.currentMeasure].classList.add('active');
+                    
+                    const beats = measures[this.currentMeasure].querySelectorAll('.beat');
+                    if (this.currentBeat < beats.length) {
+                        beats[this.currentBeat].classList.add('active');
+                    }
+                }
+                
+                // 更新状态栏
+                this.domElements.statusBar.textContent = `当前: 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍`;
+                
+                // 每小节第一拍时滚动到当前小节
+                if (this.currentBeat === 0) {
+                    this.scrollToCurrentMeasure();
+                }
+                
+                // 移动到下一拍
+                this.currentBeat++;
+                if (this.currentBeat >= beatsPerMeasure) {
+                    this.currentBeat = 0;
+                    this.currentMeasure++;
+                    
+                    if (this.currentMeasure >= this.measureCount) {
+                        this.currentMeasure = 0;
+                    }
+                }
+                
+                // 设置下一次更新
+                this.timer = setTimeout(() => this.playAnimation(), beatDuration);
+            }
+            
+            // 开始播放
+            startPlayback() {
+                if (this.isPlaying) return;
+                
+                this.isPlaying = true;
+                this.domElements.playBtn.disabled = true;
+                this.domElements.stopBtn.disabled = false;
+                
+                // 如果是第一次播放，滚动到第一小节
+                if (this.currentMeasure === 0 && this.currentBeat === 0) {
+                    setTimeout(() => this.scrollToCurrentMeasure(), 50);
+                }
+                
+                this.playAnimation();
+            }
+            
+            // 停止播放
+            stopPlayback() {
+                if (!this.isPlaying) return;
+                
+                this.isPlaying = false;
+                this.domElements.playBtn.disabled = false;
+                this.domElements.stopBtn.disabled = true;
+                
+                clearTimeout(this.timer);
+                
+                // 清除高亮
+                document.querySelectorAll('.measure.active, .beat.active').forEach(el => {
+                    el.classList.remove('active');
+                });
+                
+                this.domElements.statusBar.textContent = '已停止';
+                this.currentMeasure = 0;
+                this.currentBeat = 0;
+            }
+            
+            // 重置播放位置
+            resetPlayback() {
+                this.currentMeasure = 0;
+                this.currentBeat = 0;
+            }
+            
+            // 应用设置
+            applySettings() {
+                this.timeSignature = this.domElements.timeSignature.value;
+                this.tempo = parseInt(this.domElements.tempo.value);
+                this.measureCount = parseInt(this.domElements.measureCount.value);
+                
+                this.generateStaff();
+                this.stopPlayback();
+                this.resetPlayback();
+                this.domElements.settingsPanel.style.display = 'none';
+            }
+            
+            // 使设置面板可拖动
+            makeDraggable(element, handle) {
+                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+                
+                handle.onmousedown = (e) => {
+                    e = e || window.event;
+                    e.preventDefault();
+                    
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    
+                    document.onmouseup = () => {
+                        document.onmouseup = null;
+                        document.onmousemove = null;
+                    };
+                    
+                    document.onmousemove = (e) => {
+                        e = e || window.event;
+                        e.preventDefault();
+                        
+                        pos1 = pos3 - e.clientX;
+                        pos2 = pos4 - e.clientY;
+                        pos3 = e.clientX;
+                        pos4 = e.clientY;
+                        
+                        element.style.top = (element.offsetTop - pos2) + "px";
+                        element.style.left = (element.offsetLeft - pos1) + "px";
+                    };
+                };
+            }
+            
+            // 设置事件监听
+            setupEventListeners() {
+                this.domElements.playBtn.addEventListener('click', () => this.startPlayback());
+                this.domElements.stopBtn.addEventListener('click', () => this.stopPlayback());
+                this.domElements.settingsBtn.addEventListener('click', () => {
+                    this.domElements.settingsPanel.style.display = 'block';
+                });
+                this.domElements.closeSettingsBtn.addEventListener('click', () => {
+                    this.domElements.settingsPanel.style.display = 'none';
+                });
+                this.domElements.applySettingsBtn.addEventListener('click', () => this.applySettings());
+                
+                // 使设置面板可拖动
+                this.makeDraggable(this.domElements.settingsPanel, this.domElements.settingsHeader);
+            }
+        }
+
+        // 创建乐谱播放器实例
+        const scorePlayer = new ScorePlayer();
+    </script>
+</body>
+</html>
+
+<!--
+fix:
+重构代码生成一个类管理乐谱。
+-->
