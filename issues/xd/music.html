@@ -272,256 +272,259 @@
     </div>
 
     <script>
-        // DOM元素
-        const playBtn = document.getElementById('playBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const settingsBtn = document.getElementById('settingsBtn');
-        const closeSettingsBtn = document.getElementById('closeSettingsBtn');
-        const applySettingsBtn = document.getElementById('applySettingsBtn');
-        const staff = document.getElementById('staff');
-        const statusBar = document.getElementById('statusBar');
-        const settingsPanel = document.getElementById('settingsPanel');
-        const settingsHeader = document.getElementById('settingsHeader');
-        const canvasContainer = document.querySelector('.canvas-container');
-        
-        // 状态变量
-        let isPlaying = false;
-        let currentMeasure = 0;
-        let currentBeat = 0;
-        let timer = null;
-        let timeSignature = '4/4';
-        let tempo = 120; // BPM
-        let measureCount = 8;
-        
-        // 初始化
-        function init() {
-            generateStaff();
-            setupEventListeners();
-        }
-        
-        // 生成五线谱
-        function generateStaff() {
-            staff.innerHTML = '';
-            
-            const [beatsPerMeasure] = timeSignature.split('/').map(Number);
-            
-            for (let i = 0; i < measureCount; i++) {
-                const measure = document.createElement('div');
-                measure.className = 'measure';
-                measure.dataset.measureIndex = i;
+        // 乐谱播放器类
+        class ScorePlayer {
+            constructor() {
+                this.isPlaying = false;
+                this.currentMeasure = 0;
+                this.currentBeat = 0;
+                this.timer = null;
+                this.timeSignature = '4/4';
+                this.tempo = 120;
+                this.measureCount = 8;
                 
-                // 添加小节序号
-                const measureNumber = document.createElement('div');
-                measureNumber.className = 'measure-number';
-                measureNumber.textContent = `小节 ${i + 1}`;
-                measure.appendChild(measureNumber);
+                // DOM元素引用
+                this.domElements = {
+                    playBtn: document.getElementById('playBtn'),
+                    stopBtn: document.getElementById('stopBtn'),
+                    settingsBtn: document.getElementById('settingsBtn'),
+                    closeSettingsBtn: document.getElementById('closeSettingsBtn'),
+                    applySettingsBtn: document.getElementById('applySettingsBtn'),
+                    staff: document.getElementById('staff'),
+                    statusBar: document.getElementById('statusBar'),
+                    settingsPanel: document.getElementById('settingsPanel'),
+                    settingsHeader: document.getElementById('settingsHeader'),
+                    canvasContainer: document.querySelector('.canvas-container'),
+                    timeSignature: document.getElementById('timeSignature'),
+                    tempo: document.getElementById('tempo'),
+                    measureCount: document.getElementById('measureCount')
+                };
                 
-                for (let j = 0; j < beatsPerMeasure; j++) {
-                    const beat = document.createElement('div');
-                    beat.className = 'beat';
-                    beat.dataset.beatIndex = j;
-                    
-                    const beatNumber = document.createElement('span');
-                    beatNumber.className = 'beat-number';
-                    beatNumber.textContent = j + 1;
-                    
-                    beat.appendChild(beatNumber);
-                    
-                    // 添加示例音符显示
-                    const noteDisplay = document.createElement('span');
-                    noteDisplay.className = 'note-display';
-                    
-                    // 示例音符 - 可以根据需要更改
-                    const exampleNotes = ['1', '2', '3', '4', '5', '6', '7'];
-                    const randomNote = exampleNotes[Math.floor(Math.random() * exampleNotes.length)];
-                    noteDisplay.textContent = randomNote;
-                    
-                    beat.appendChild(noteDisplay);
-                    measure.appendChild(beat);
-                }
-                
-                staff.appendChild(measure);
+                this.init();
             }
-        }
-        
-        // 滚动到当前小节
-        function scrollToCurrentMeasure() {
-            const currentMeasureElement = document.querySelector(`.measure[data-measure-index="${currentMeasure}"]`);
-            if (currentMeasureElement) {
-                // 计算目标位置
-                const container = canvasContainer;
-                const containerHeight = container.clientHeight;
-                const elementTop = currentMeasureElement.offsetTop;
-                const elementHeight = currentMeasureElement.offsetHeight;
+            
+            // 初始化播放器
+            init() {
+                this.generateStaff();
+                this.setupEventListeners();
+            }
+            
+            // 生成五线谱
+            generateStaff() {
+                this.domElements.staff.innerHTML = '';
                 
-                // 设置滚动位置，让当前小节显示在容器中央
-                const targetScrollTop = elementTop - (containerHeight / 2) + (elementHeight / 2);
+                const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
                 
-                // 使用平滑滚动
-                container.scrollTo({
-                    top: targetScrollTop,
-                    behavior: 'smooth'
+                for (let i = 0; i < this.measureCount; i++) {
+                    const measure = document.createElement('div');
+                    measure.className = 'measure';
+                    measure.dataset.measureIndex = i;
+                    
+                    // 添加小节序号
+                    const measureNumber = document.createElement('div');
+                    measureNumber.className = 'measure-number';
+                    measureNumber.textContent = `小节 ${i + 1}`;
+                    measure.appendChild(measureNumber);
+                    
+                    for (let j = 0; j < beatsPerMeasure; j++) {
+                        const beat = document.createElement('div');
+                        beat.className = 'beat';
+                        beat.dataset.beatIndex = j;
+                        
+                        const beatNumber = document.createElement('span');
+                        beatNumber.className = 'beat-number';
+                        beatNumber.textContent = j + 1;
+                        
+                        beat.appendChild(beatNumber);
+                        
+                        // 添加示例音符显示
+                        const noteDisplay = document.createElement('span');
+                        noteDisplay.className = 'note-display';
+                        
+                        // 示例音符 - 可以根据需要更改
+                        const exampleNotes = ['1', '2', '3', '4', '5', '6', '7'];
+                        const randomNote = exampleNotes[Math.floor(Math.random() * exampleNotes.length)];
+                        noteDisplay.textContent = randomNote;
+                        
+                        beat.appendChild(noteDisplay);
+                        measure.appendChild(beat);
+                    }
+                    
+                    this.domElements.staff.appendChild(measure);
+                }
+            }
+            
+            // 滚动到当前小节
+            scrollToCurrentMeasure() {
+                const currentMeasureElement = document.querySelector(`.measure[data-measure-index="${this.currentMeasure}"]`);
+                if (currentMeasureElement) {
+                    const container = this.domElements.canvasContainer;
+                    const containerHeight = container.clientHeight;
+                    const elementTop = currentMeasureElement.offsetTop;
+                    const elementHeight = currentMeasureElement.offsetHeight;
+                    
+                    const targetScrollTop = elementTop - (containerHeight / 2) + (elementHeight / 2);
+                    
+                    container.scrollTo({
+                        top: targetScrollTop,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+            
+            // 播放动画
+            playAnimation() {
+                const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
+                const beatDuration = 60000 / this.tempo; // 每拍毫秒数
+                
+                // 清除所有高亮
+                document.querySelectorAll('.measure.active, .beat.active').forEach(el => {
+                    el.classList.remove('active');
                 });
-            }
-        }
-        
-        // 播放动画
-        function playAnimation() {
-            const [beatsPerMeasure] = timeSignature.split('/').map(Number);
-            const beatDuration = 60000 / tempo; // 每拍毫秒数
-            
-            // 清除所有高亮
-            document.querySelectorAll('.measure.active, .beat.active').forEach(el => {
-                el.classList.remove('active');
-            });
-            
-            // 设置当前高亮
-            const measures = document.querySelectorAll('.measure');
-            if (currentMeasure < measures.length) {
-                measures[currentMeasure].classList.add('active');
                 
-                const beats = measures[currentMeasure].querySelectorAll('.beat');
-                if (currentBeat < beats.length) {
-                    beats[currentBeat].classList.add('active');
+                // 设置当前高亮
+                const measures = document.querySelectorAll('.measure');
+                if (this.currentMeasure < measures.length) {
+                    measures[this.currentMeasure].classList.add('active');
+                    
+                    const beats = measures[this.currentMeasure].querySelectorAll('.beat');
+                    if (this.currentBeat < beats.length) {
+                        beats[this.currentBeat].classList.add('active');
+                    }
                 }
-            }
-            
-            // 更新状态栏
-            statusBar.textContent = `当前: 第 ${currentMeasure + 1} 小节 - 第 ${currentBeat + 1} 拍`;
-            
-            // 每小节第一拍时滚动到当前小节
-            if (currentBeat === 0) {
-                scrollToCurrentMeasure();
-            }
-            
-            // 移动到下一拍
-            currentBeat++;
-            if (currentBeat >= beatsPerMeasure) {
-                currentBeat = 0;
-                currentMeasure++;
                 
-                if (currentMeasure >= measureCount) {
-                    currentMeasure = 0;
+                // 更新状态栏
+                this.domElements.statusBar.textContent = `当前: 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍`;
+                
+                // 每小节第一拍时滚动到当前小节
+                if (this.currentBeat === 0) {
+                    this.scrollToCurrentMeasure();
                 }
+                
+                // 移动到下一拍
+                this.currentBeat++;
+                if (this.currentBeat >= beatsPerMeasure) {
+                    this.currentBeat = 0;
+                    this.currentMeasure++;
+                    
+                    if (this.currentMeasure >= this.measureCount) {
+                        this.currentMeasure = 0;
+                    }
+                }
+                
+                // 设置下一次更新
+                this.timer = setTimeout(() => this.playAnimation(), beatDuration);
             }
             
-            // 设置下一次更新
-            timer = setTimeout(playAnimation, beatDuration);
-        }
-        
-        // 开始播放
-        function startPlayback() {
-            if (isPlaying) return;
-            
-            isPlaying = true;
-            playBtn.disabled = true;
-            stopBtn.disabled = false;
-            
-            // 如果是第一次播放，滚动到第一小节
-            if (currentMeasure === 0 && currentBeat === 0) {
-                setTimeout(scrollToCurrentMeasure, 50);
+            // 开始播放
+            startPlayback() {
+                if (this.isPlaying) return;
+                
+                this.isPlaying = true;
+                this.domElements.playBtn.disabled = true;
+                this.domElements.stopBtn.disabled = false;
+                
+                // 如果是第一次播放，滚动到第一小节
+                if (this.currentMeasure === 0 && this.currentBeat === 0) {
+                    setTimeout(() => this.scrollToCurrentMeasure(), 50);
+                }
+                
+                this.playAnimation();
             }
             
-            playAnimation();
-        }
-        
-        // 停止播放
-        function stopPlayback() {
-            if (!isPlaying) return;
+            // 停止播放
+            stopPlayback() {
+                if (!this.isPlaying) return;
+                
+                this.isPlaying = false;
+                this.domElements.playBtn.disabled = false;
+                this.domElements.stopBtn.disabled = true;
+                
+                clearTimeout(this.timer);
+                
+                // 清除高亮
+                document.querySelectorAll('.measure.active, .beat.active').forEach(el => {
+                    el.classList.remove('active');
+                });
+                
+                this.domElements.statusBar.textContent = '已停止';
+                this.currentMeasure = 0;
+                this.currentBeat = 0;
+            }
             
-            isPlaying = false;
-            playBtn.disabled = false;
-            stopBtn.disabled = true;
+            // 重置播放位置
+            resetPlayback() {
+                this.currentMeasure = 0;
+                this.currentBeat = 0;
+            }
             
-            clearTimeout(timer);
-            
-            // 清除高亮
-            document.querySelectorAll('.measure.active, .beat.active').forEach(el => {
-                el.classList.remove('active');
-            });
-            
-            statusBar.textContent = '已停止';
-            currentMeasure = 0;
-            currentBeat = 0;
-        }
-        
-        // 重置播放位置
-        function resetPlayback() {
-            currentMeasure = 0;
-            currentBeat = 0;
-        }
-        
-        // 应用设置
-        function applySettings() {
-            timeSignature = document.getElementById('timeSignature').value;
-            tempo = parseInt(document.getElementById('tempo').value);
-            measureCount = parseInt(document.getElementById('measureCount').value);
-            
-            generateStaff();
-            stopPlayback();
-            resetPlayback();
-            settingsPanel.style.display = 'none';
-        }
-        
-        // 设置事件监听
-        function setupEventListeners() {
-            playBtn.addEventListener('click', startPlayback);
-            stopBtn.addEventListener('click', stopPlayback);
-            settingsBtn.addEventListener('click', () => {
-                settingsPanel.style.display = 'block';
-            });
-            closeSettingsBtn.addEventListener('click', () => {
-                settingsPanel.style.display = 'none';
-            });
-            applySettingsBtn.addEventListener('click', applySettings);
+            // 应用设置
+            applySettings() {
+                this.timeSignature = this.domElements.timeSignature.value;
+                this.tempo = parseInt(this.domElements.tempo.value);
+                this.measureCount = parseInt(this.domElements.measureCount.value);
+                
+                this.generateStaff();
+                this.stopPlayback();
+                this.resetPlayback();
+                this.domElements.settingsPanel.style.display = 'none';
+            }
             
             // 使设置面板可拖动
-            makeDraggable(settingsPanel, settingsHeader);
+            makeDraggable(element, handle) {
+                let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+                
+                handle.onmousedown = (e) => {
+                    e = e || window.event;
+                    e.preventDefault();
+                    
+                    pos3 = e.clientX;
+                    pos4 = e.clientY;
+                    
+                    document.onmouseup = () => {
+                        document.onmouseup = null;
+                        document.onmousemove = null;
+                    };
+                    
+                    document.onmousemove = (e) => {
+                        e = e || window.event;
+                        e.preventDefault();
+                        
+                        pos1 = pos3 - e.clientX;
+                        pos2 = pos4 - e.clientY;
+                        pos3 = e.clientX;
+                        pos4 = e.clientY;
+                        
+                        element.style.top = (element.offsetTop - pos2) + "px";
+                        element.style.left = (element.offsetLeft - pos1) + "px";
+                    };
+                };
+            }
+            
+            // 设置事件监听
+            setupEventListeners() {
+                this.domElements.playBtn.addEventListener('click', () => this.startPlayback());
+                this.domElements.stopBtn.addEventListener('click', () => this.stopPlayback());
+                this.domElements.settingsBtn.addEventListener('click', () => {
+                    this.domElements.settingsPanel.style.display = 'block';
+                });
+                this.domElements.closeSettingsBtn.addEventListener('click', () => {
+                    this.domElements.settingsPanel.style.display = 'none';
+                });
+                this.domElements.applySettingsBtn.addEventListener('click', () => this.applySettings());
+                
+                // 使设置面板可拖动
+                this.makeDraggable(this.domElements.settingsPanel, this.domElements.settingsHeader);
+            }
         }
-        
-        // 使元素可拖动
-        function makeDraggable(element, handle) {
-            let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-            
-            handle.onmousedown = dragMouseDown;
-            
-            function dragMouseDown(e) {
-                e = e || window.event;
-                e.preventDefault();
-                
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                
-                document.onmouseup = closeDragElement;
-                document.onmousemove = elementDrag;
-            }
-            
-            function elementDrag(e) {
-                e = e || window.event;
-                e.preventDefault();
-                
-                pos1 = pos3 - e.clientX;
-                pos2 = pos4 - e.clientY;
-                pos3 = e.clientX;
-                pos4 = e.clientY;
-                
-                element.style.top = (element.offsetTop - pos2) + "px";
-                element.style.left = (element.offsetLeft - pos1) + "px";
-            }
-            
-            function closeDragElement() {
-                document.onmouseup = null;
-                document.onmousemove = null;
-            }
-        }
-        
-        // 启动应用
-        init();
+
+        // 创建乐谱播放器实例
+        const scorePlayer = new ScorePlayer();
     </script>
 </body>
 </html>
 
 <!--
 fix:
-播放的时候，自动滚动让当前小节总是显示在显眼的位置。
+重构代码生成一个类管理乐谱。
 -->
