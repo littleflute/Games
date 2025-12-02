@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简谱播放器 V0.14</title>
+    <title>简谱播放器 V0.15</title>
     <style>
         body {
             font-family: 'Microsoft YaHei', sans-serif;
@@ -13,6 +13,7 @@
             flex-direction: column;
             height: 100vh;
             background-color: #f5f5f5;
+            touch-action: pan-y; /* 允许垂直滚动 */
         }
         
         .toolbar {
@@ -32,6 +33,7 @@
             border-radius: 4px;
             cursor: pointer;
             margin: 0 5px;
+            min-height: 40px; /* 移动端友好的按钮大小 */
         }
         
         .toolbar button:hover {
@@ -48,6 +50,7 @@
             overflow: auto;
             padding: 20px;
             background-color: white;
+            -webkit-overflow-scrolling: touch; /* 移动端平滑滚动 */
         }
         
         .staff {
@@ -188,18 +191,20 @@
         }
         
         .settings-panel {
-            position: absolute;
+            position: fixed;
             top: 100px;
             left: 50px;
             background-color: white;
             border: 1px solid #ddd;
             border-radius: 5px;
             padding: 0;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             display: none;
             z-index: 100;
-            min-width: 500px;
-            max-width: 700px;
+            min-width: 300px;
+            max-width: 90vw; /* 移动端适配 */
+            max-height: 80vh; /* 移动端适配 */
+            overflow: hidden;
         }
         
         .settings-header {
@@ -210,6 +215,7 @@
             cursor: move;
             user-select: none;
             position: relative;
+            touch-action: none; /* 防止触摸时滚动 */
         }
         
         .settings-header h3 {
@@ -236,6 +242,7 @@
             flex: 1;
             text-align: center;
             color: #7f8c8d;
+            min-height: 50px; /* 移动端友好的标签大小 */
         }
         
         .tab-btn.active {
@@ -247,8 +254,9 @@
         
         .tab-content {
             padding: 20px;
-            max-height: 500px;
+            max-height: 400px; /* 限制高度便于移动端显示 */
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch; /* 移动端平滑滚动 */
         }
         
         .tab-pane {
@@ -263,12 +271,14 @@
             margin-bottom: 15px;
             display: flex;
             align-items: center;
+            flex-wrap: wrap; /* 移动端换行 */
         }
         
         .settings-row label {
             display: inline-block;
             width: 100px;
             font-weight: bold;
+            margin-bottom: 5px;
         }
         
         .settings-row select, .settings-row input {
@@ -276,6 +286,7 @@
             border: 1px solid #ddd;
             border-radius: 3px;
             flex: 1;
+            min-width: 150px; /* 移动端最小宽度 */
         }
         
         .settings-row input[type="checkbox"] {
@@ -314,6 +325,7 @@
             cursor: pointer;
             width: 100%;
             font-size: 16px;
+            min-height: 44px; /* 移动端友好的按钮大小 */
         }
         
         .apply-btn:hover {
@@ -336,6 +348,8 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 15px;
+            flex-wrap: wrap; /* 移动端换行 */
+            gap: 5px;
         }
         
         .paragraph-controls button {
@@ -345,6 +359,9 @@
             padding: 8px 15px;
             border-radius: 4px;
             cursor: pointer;
+            min-height: 40px; /* 移动端友好的按钮大小 */
+            flex: 1;
+            min-width: 100px;
         }
         
         .paragraph-controls button:hover {
@@ -406,6 +423,8 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 15px;
+            flex-wrap: wrap; /* 移动端换行 */
+            gap: 5px;
         }
         
         .measure-controls button {
@@ -415,6 +434,9 @@
             padding: 8px 15px;
             border-radius: 4px;
             cursor: pointer;
+            min-height: 40px; /* 移动端友好的按钮大小 */
+            flex: 1;
+            min-width: 100px;
         }
         
         .measure-controls button:hover {
@@ -505,6 +527,7 @@
             display: flex;
             gap: 10px;
             justify-content: space-between;
+            flex-wrap: wrap; /* 移动端换行 */
         }
         
         .data-controls button {
@@ -514,6 +537,8 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
+            min-height: 44px; /* 移动端友好的按钮大小 */
+            min-width: 120px;
         }
         
         .export-btn {
@@ -566,6 +591,54 @@
             color: #721c24;
             border: 1px solid #f5c6cb;
         }
+        
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .toolbar {
+                padding: 5px;
+            }
+            
+            .toolbar button {
+                padding: 6px 10px;
+                font-size: 14px;
+                margin: 0 2px;
+            }
+            
+            .canvas-container {
+                padding: 10px;
+            }
+            
+            .settings-panel {
+                top: 50px;
+                left: 5%;
+                right: 5%;
+                width: 90%;
+                max-width: none;
+            }
+            
+            .settings-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .settings-row label {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+            
+            .settings-row select, .settings-row input {
+                width: 100%;
+            }
+            
+            .paragraph-controls, .measure-controls, .data-controls {
+                flex-direction: column;
+            }
+            
+            .paragraph-controls button, .measure-controls button, .data-controls button {
+                width: 100%;
+                margin-bottom: 5px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -584,12 +657,12 @@
     </div>
     
     <div class="status-bar" id="statusBar">
-        准备就绪 (V0.14)
+        准备就绪 (V0.15)
     </div>
     
     <div class="settings-panel" id="settingsPanel">
         <div class="settings-header" id="settingsHeader">
-            <h3>乐谱播放器设置 (V0.14 - 段落管理)</h3>
+            <h3>乐谱播放器设置 (V0.15 - 移动端优化)</h3>
             <button class="close-btn" id="closeSettingsBtn">×</button>
         </div>
         
@@ -686,7 +759,7 @@
     </div>
 
     <script>
-        // 乐谱播放器类 - V0.14 (添加段落管理)
+        // 乐谱播放器类 - V0.15 (移动端优化)
         class ScorePlayer {
             constructor() {
                 this.isPlaying = false;
@@ -700,6 +773,11 @@
                 this.selectedParagraphIndex = null;
                 this.selectedMeasureIndex = null;
                 this.paragraphsData = [];
+                this.isDragging = false;
+                this.dragStartX = 0;
+                this.dragStartY = 0;
+                this.panelStartX = 0;
+                this.panelStartY = 0;
                 
                 // 初始化段落ID计数器
                 this.nextParagraphId = 1;
@@ -971,7 +1049,7 @@
             // 更新JSON数据显示
             updateJsonDisplay() {
                 const scoreData = {
-                    version: "0.14",
+                    version: "0.15",
                     timeSignature: this.timeSignature,
                     tempo: this.tempo,
                     loopPlayback: this.loopPlayback,
@@ -991,7 +1069,7 @@
                 const url = URL.createObjectURL(dataBlob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `score_data_v0.14_${new Date().toISOString().split('T')[0]}.json`;
+                link.download = `score_data_v0.15_${new Date().toISOString().split('T')[0]}.json`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -1289,7 +1367,7 @@
                         this.currentBeat = 0;
                     } else {
                         this.stopPlayback();
-                        this.domElements.statusBar.textContent = `播放完成 (V0.14)`;
+                        this.domElements.statusBar.textContent = `播放完成 (V0.15)`;
                         return;
                     }
                 }
@@ -1307,7 +1385,7 @@
                             this.currentParagraph = 0;
                         } else {
                             this.stopPlayback();
-                            this.domElements.statusBar.textContent = `播放完成 (V0.14)`;
+                            this.domElements.statusBar.textContent = `播放完成 (V0.15)`;
                             return;
                         }
                     }
@@ -1331,7 +1409,7 @@
                     }
                 }
                 
-                this.domElements.statusBar.textContent = `当前: ${currentParagraph.name} - 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.14)`;
+                this.domElements.statusBar.textContent = `当前: ${currentParagraph.name} - 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.15)`;
                 
                 if (this.currentBeat === 0 && this.currentMeasure === 0) {
                     this.scrollToCurrentParagraph();
@@ -1375,7 +1453,7 @@
                     el.classList.remove('active');
                 });
                 
-                this.domElements.statusBar.textContent = '已停止 (V0.14)';
+                this.domElements.statusBar.textContent = '已停止 (V0.15)';
                 this.currentParagraph = 0;
                 this.currentMeasure = 0;
                 this.currentBeat = 0;
@@ -1437,10 +1515,11 @@
                 }
             }
             
-            // 使设置面板可拖动
+            // 使设置面板可拖动（支持移动端触摸事件）
             makeDraggable(element, handle) {
                 let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
                 
+                // 鼠标事件处理
                 handle.onmousedown = (e) => {
                     e = e || window.event;
                     e.preventDefault();
@@ -1466,6 +1545,51 @@
                         element.style.left = (element.offsetLeft - pos1) + "px";
                     };
                 };
+                
+                // 触摸事件处理（移动端支持）
+                handle.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    
+                    this.isDragging = true;
+                    this.dragStartX = touch.clientX;
+                    this.dragStartY = touch.clientY;
+                    this.panelStartX = element.offsetLeft;
+                    this.panelStartY = element.offsetTop;
+                    
+                    // 添加拖动状态样式
+                    element.style.transition = 'none';
+                    handle.style.cursor = 'grabbing';
+                }, { passive: false });
+                
+                handle.addEventListener('touchmove', (e) => {
+                    if (!this.isDragging) return;
+                    e.preventDefault();
+                    
+                    const touch = e.touches[0];
+                    const deltaX = touch.clientX - this.dragStartX;
+                    const deltaY = touch.clientY - this.dragStartY;
+                    
+                    // 计算新位置
+                    let newX = this.panelStartX + deltaX;
+                    let newY = this.panelStartY + deltaY;
+                    
+                    // 限制在视口范围内
+                    const maxX = window.innerWidth - element.offsetWidth;
+                    const maxY = window.innerHeight - element.offsetHeight;
+                    
+                    newX = Math.max(0, Math.min(newX, maxX));
+                    newY = Math.max(0, Math.min(newY, maxY));
+                    
+                    element.style.left = newX + "px";
+                    element.style.top = newY + "px";
+                }, { passive: false });
+                
+                handle.addEventListener('touchend', () => {
+                    this.isDragging = false;
+                    element.style.transition = '';
+                    handle.style.cursor = '';
+                });
             }
             
             // 设置事件监听
@@ -1514,6 +1638,15 @@
                 this.domElements.fileInput.addEventListener('change', (e) => this.handleFileImport(e));
                 
                 this.makeDraggable(this.domElements.settingsPanel, this.domElements.settingsHeader);
+                
+                // 点击设置面板外部关闭面板
+                document.addEventListener('click', (e) => {
+                    if (this.domElements.settingsPanel.style.display === 'block' && 
+                        !this.domElements.settingsPanel.contains(e.target) && 
+                        e.target !== this.domElements.settingsBtn) {
+                        this.domElements.settingsPanel.style.display = 'none';
+                    }
+                });
             }
         }
 
@@ -1522,7 +1655,8 @@
     </script>
 </body>
 </html>
+
 <!--
 升级程序
-添加段落的概念，段落由小节构成,段落可以新建。可以复制，可以删除。
+手机上可以移动窗口。
 -->
