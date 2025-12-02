@@ -48,7 +48,7 @@
         .staff {
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            gap: 30px;
         }
         
         .measure {
@@ -57,11 +57,27 @@
             border-radius: 5px;
             padding: 5px;
             background-color: #f9f9f9;
+            position: relative;
+            margin-top: 30px;
         }
         
         .measure.active {
             background-color: #e3f2fd;
             border-color: #2196f3;
+        }
+        
+        .measure-number {
+            position: absolute;
+            top: -25px;
+            left: 10px;
+            font-weight: bold;
+            color: #2c3e50;
+            background-color: #fff;
+            padding: 2px 8px;
+            border-radius: 3px;
+            border: 1px solid #ddd;
+            font-size: 14px;
+            z-index: 1;
         }
         
         .beat {
@@ -188,6 +204,17 @@
         #applySettingsBtn:hover {
             background-color: #219653;
         }
+        
+        .note-display {
+            position: absolute;
+            bottom: 5px;
+            right: 5px;
+            font-size: 12px;
+            color: #666;
+            background-color: rgba(255,255,255,0.8);
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
@@ -277,6 +304,12 @@
                 measure.className = 'measure';
                 measure.dataset.measureIndex = i;
                 
+                // 添加小节序号
+                const measureNumber = document.createElement('div');
+                measureNumber.className = 'measure-number';
+                measureNumber.textContent = `小节 ${i + 1}`;
+                measure.appendChild(measureNumber);
+                
                 for (let j = 0; j < beatsPerMeasure; j++) {
                     const beat = document.createElement('div');
                     beat.className = 'beat';
@@ -287,6 +320,17 @@
                     beatNumber.textContent = j + 1;
                     
                     beat.appendChild(beatNumber);
+                    
+                    // 添加示例音符显示
+                    const noteDisplay = document.createElement('span');
+                    noteDisplay.className = 'note-display';
+                    
+                    // 示例音符 - 可以根据需要更改
+                    const exampleNotes = ['1', '2', '3', '4', '5', '6', '7'];
+                    const randomNote = exampleNotes[Math.floor(Math.random() * exampleNotes.length)];
+                    noteDisplay.textContent = randomNote;
+                    
+                    beat.appendChild(noteDisplay);
                     measure.appendChild(beat);
                 }
                 
@@ -360,6 +404,8 @@
             });
             
             statusBar.textContent = '已停止';
+            currentMeasure = 0;
+            currentBeat = 0;
         }
         
         // 重置播放位置
@@ -375,6 +421,7 @@
             measureCount = parseInt(document.getElementById('measureCount').value);
             
             generateStaff();
+            stopPlayback();
             resetPlayback();
             settingsPanel.style.display = 'none';
         }
@@ -439,5 +486,5 @@
 
 <!--
 fix:
-高亮显示设置窗口的移动区。
+方块上显示小节序号。
 -->
