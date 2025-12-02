@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简谱播放器 V0.16</title>
+    <title>简谱播放器 V0.19</title>
     <style>
         body {
             font-family: 'Microsoft YaHei', sans-serif;
@@ -13,7 +13,7 @@
             flex-direction: column;
             height: 100vh;
             background-color: #f5f5f5;
-            touch-action: pan-y; /* 允许垂直滚动 */
+            touch-action: pan-y;
         }
         
         .toolbar {
@@ -33,7 +33,7 @@
             border-radius: 4px;
             cursor: pointer;
             margin: 0 5px;
-            min-height: 40px; /* 移动端友好的按钮大小 */
+            min-height: 40px;
         }
         
         .toolbar button:hover {
@@ -50,7 +50,7 @@
             overflow: auto;
             padding: 20px;
             background-color: white;
-            -webkit-overflow-scrolling: touch; /* 移动端平滑滚动 */
+            -webkit-overflow-scrolling: touch;
         }
         
         .staff {
@@ -186,6 +186,8 @@
             justify-content: center;
             align-items: center;
             position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
         }
         
         .beat:last-child {
@@ -193,7 +195,20 @@
         }
         
         .beat.active {
-            background-color: #bbdefb;
+            background-color: #64b5f6 !important;
+            border: 2px solid #2196f3;
+            box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+            transform: scale(1.05);
+            z-index: 2;
+        }
+        
+        .beat.editable {
+            background-color: #e8f5e9;
+        }
+        
+        .beat.editing {
+            background-color: #fff9c4;
+            border: 2px solid #ff9800;
         }
         
         .beat-number {
@@ -223,8 +238,8 @@
             display: none;
             z-index: 100;
             min-width: 300px;
-            max-width: 90vw; /* 移动端适配 */
-            max-height: 80vh; /* 移动端适配 */
+            max-width: 90vw;
+            max-height: 80vh;
             overflow: hidden;
         }
         
@@ -236,7 +251,7 @@
             cursor: move;
             user-select: none;
             position: relative;
-            touch-action: none; /* 防止触摸时滚动 */
+            touch-action: none;
         }
         
         .settings-header h3 {
@@ -263,7 +278,7 @@
             flex: 1;
             text-align: center;
             color: #7f8c8d;
-            min-height: 50px; /* 移动端友好的标签大小 */
+            min-height: 50px;
         }
         
         .tab-btn.active {
@@ -275,9 +290,9 @@
         
         .tab-content {
             padding: 20px;
-            max-height: 400px; /* 限制高度便于移动端显示 */
+            max-height: 400px;
             overflow-y: auto;
-            -webkit-overflow-scrolling: touch; /* 移动端平滑滚动 */
+            -webkit-overflow-scrolling: touch;
         }
         
         .tab-pane {
@@ -292,7 +307,7 @@
             margin-bottom: 15px;
             display: flex;
             align-items: center;
-            flex-wrap: wrap; /* 移动端换行 */
+            flex-wrap: wrap;
         }
         
         .settings-row label {
@@ -307,7 +322,7 @@
             border: 1px solid #ddd;
             border-radius: 3px;
             flex: 1;
-            min-width: 150px; /* 移动端最小宽度 */
+            min-width: 150px;
         }
         
         .settings-row input[type="checkbox"] {
@@ -346,7 +361,7 @@
             cursor: pointer;
             width: 100%;
             font-size: 16px;
-            min-height: 44px; /* 移动端友好的按钮大小 */
+            min-height: 44px;
         }
         
         .apply-btn:hover {
@@ -357,19 +372,33 @@
             position: absolute;
             bottom: 5px;
             right: 5px;
-            font-size: 12px;
-            color: #666;
+            font-size: 16px;
+            color: #333;
             background-color: rgba(255,255,255,0.8);
             padding: 2px 5px;
             border-radius: 3px;
+            font-weight: bold;
         }
         
-        /* 乐谱管理样式 */
+        .note-edit-input {
+            position: absolute;
+            width: 60px;
+            height: 30px;
+            text-align: center;
+            font-size: 16px;
+            font-weight: bold;
+            border: 2px solid #3498db;
+            border-radius: 4px;
+            outline: none;
+            background-color: white;
+            z-index: 10;
+        }
+        
         .paragraph-controls {
             display: flex;
             justify-content: space-between;
             margin-bottom: 15px;
-            flex-wrap: wrap; /* 移动端换行 */
+            flex-wrap: wrap;
             gap: 5px;
         }
         
@@ -380,7 +409,7 @@
             padding: 8px 15px;
             border-radius: 4px;
             cursor: pointer;
-            min-height: 40px; /* 移动端友好的按钮大小 */
+            min-height: 40px;
             flex: 1;
             min-width: 100px;
         }
@@ -444,7 +473,7 @@
             display: flex;
             justify-content: space-between;
             margin-bottom: 15px;
-            flex-wrap: wrap; /* 移动端换行 */
+            flex-wrap: wrap;
             gap: 5px;
         }
         
@@ -455,7 +484,7 @@
             padding: 8px 15px;
             border-radius: 4px;
             cursor: pointer;
-            min-height: 40px; /* 移动端友好的按钮大小 */
+            min-height: 40px;
             flex: 1;
             min-width: 100px;
         }
@@ -525,7 +554,6 @@
             width: 100%;
         }
         
-        /* 数据管理样式 */
         .data-management {
             display: flex;
             flex-direction: column;
@@ -548,7 +576,7 @@
             display: flex;
             gap: 10px;
             justify-content: space-between;
-            flex-wrap: wrap; /* 移动端换行 */
+            flex-wrap: wrap;
         }
         
         .data-controls button {
@@ -558,7 +586,7 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
-            min-height: 44px; /* 移动端友好的按钮大小 */
+            min-height: 44px;
             min-width: 120px;
         }
         
@@ -613,6 +641,17 @@
             border: 1px solid #f5c6cb;
         }
         
+        .edit-hint {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            font-size: 10px;
+            color: #3498db;
+            background-color: rgba(255,255,255,0.8);
+            padding: 1px 3px;
+            border-radius: 2px;
+        }
+        
         /* 移动端优化 */
         @media (max-width: 768px) {
             .toolbar {
@@ -662,7 +701,21 @@
             
             .paragraph-name-editable {
                 min-width: 80px;
-                font-size: 16px; /* 移动端增大字体 */
+                font-size: 16px;
+            }
+            
+            .beat {
+                height: 50px;
+            }
+            
+            .note-display {
+                font-size: 14px;
+            }
+            
+            .note-edit-input {
+                width: 50px;
+                height: 25px;
+                font-size: 14px;
             }
         }
     </style>
@@ -683,12 +736,12 @@
     </div>
     
     <div class="status-bar" id="statusBar">
-        准备就绪 (V0.16)
+        准备就绪 (V0.19 - 播放高亮增强)
     </div>
     
     <div class="settings-panel" id="settingsPanel">
         <div class="settings-header" id="settingsHeader">
-            <h3>乐谱播放器设置 (V0.16 - 段落名称编辑)</h3>
+            <h3>乐谱播放器设置 (V0.19 - 播放高亮增强)</h3>
             <button class="close-btn" id="closeSettingsBtn">×</button>
         </div>
         
@@ -785,7 +838,7 @@
     </div>
 
     <script>
-        // 乐谱播放器类 - V0.16 (段落名称编辑功能)
+        // 乐谱播放器类 - V0.19 (播放高亮增强)
         class ScorePlayer {
             constructor() {
                 this.isPlaying = false;
@@ -804,10 +857,14 @@
                 this.dragStartY = 0;
                 this.panelStartX = 0;
                 this.panelStartY = 0;
-                this.editingParagraphIndex = null; // 当前正在编辑的段落索引
+                this.editingParagraphIndex = null;
+                this.editingBeatElement = null;
                 
                 // 初始化段落ID计数器
                 this.nextParagraphId = 1;
+                
+                // 默认音符选项（用于初始化，但编辑时可以输入任何数据）
+                this.noteOptions = ['0', '1', '2', '3', '4', '5', '6', '7'];
                 
                 // DOM元素引用
                 this.domElements = {
@@ -825,20 +882,17 @@
                     tempo: document.getElementById('tempo'),
                     loopPlayback: document.getElementById('loopPlayback'),
                     tabBtns: document.querySelectorAll('.tab-btn'),
-                    // 段落管理相关元素
                     addParagraphBtn: document.getElementById('addParagraphBtn'),
                     copyParagraphBtn: document.getElementById('copyParagraphBtn'),
                     deleteParagraphBtn: document.getElementById('deleteParagraphBtn'),
                     paragraphButtonsContainer: document.getElementById('paragraphButtonsContainer'),
                     paragraphCountDisplay: document.getElementById('paragraphCountDisplay'),
                     totalMeasureCountDisplay: document.getElementById('totalMeasureCountDisplay'),
-                    // 小节管理相关元素
                     addMeasureBtn: document.getElementById('addMeasureBtn'),
                     deleteMeasureBtn: document.getElementById('deleteMeasureBtn'),
                     measureButtonsContainer: document.getElementById('measureButtonsContainer'),
                     measureCountDisplay: document.getElementById('measureCountDisplay'),
                     currentParagraphDisplay: document.getElementById('currentParagraphDisplay'),
-                    // 数据管理相关元素
                     jsonDisplay: document.getElementById('jsonDisplay'),
                     exportBtn: document.getElementById('exportBtn'),
                     importBtn: document.getElementById('importBtn'),
@@ -857,6 +911,7 @@
                 this.setupEventListeners();
                 this.updateParagraphButtons();
                 this.updateJsonDisplay();
+                this.showStatusMessage('V0.19版本已加载：播放时高亮当前拍！', 'success');
             }
             
             // 初始化段落数据
@@ -879,12 +934,11 @@
             
             // 生成随机音符数据
             generateRandomNotes() {
-                const notes = ['1', '2', '3', '4', '5', '6', '7'];
                 const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
                 const measureNotes = [];
                 
                 for (let i = 0; i < beatsPerMeasure; i++) {
-                    const randomNote = notes[Math.floor(Math.random() * notes.length)];
+                    const randomNote = this.noteOptions[Math.floor(Math.random() * this.noteOptions.length)];
                     measureNotes.push(randomNote);
                 }
                 
@@ -897,16 +951,13 @@
                 
                 const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
                 
-                // 遍历所有段落
                 for (let p = 0; p < this.paragraphsData.length; p++) {
                     const paragraph = this.paragraphsData[p];
                     
-                    // 创建段落容器
                     const paragraphElement = document.createElement('div');
                     paragraphElement.className = 'paragraph';
                     paragraphElement.dataset.paragraphIndex = p;
                     
-                    // 添加段落头部
                     const paragraphHeader = document.createElement('div');
                     paragraphHeader.className = 'paragraph-header';
                     
@@ -924,26 +975,24 @@
                     paragraphHeader.appendChild(paragraphActions);
                     paragraphElement.appendChild(paragraphHeader);
                     
-                    // 遍历段落中的小节
                     for (let m = 0; m < paragraph.measures.length; m++) {
                         const measure = document.createElement('div');
                         measure.className = 'measure';
                         measure.dataset.paragraphIndex = p;
                         measure.dataset.measureIndex = m;
                         
-                        // 添加小节序号
                         const measureNumber = document.createElement('div');
                         measureNumber.className = 'measure-number';
                         measureNumber.textContent = `段落 ${p + 1} - 小节 ${m + 1}`;
                         measure.appendChild(measureNumber);
                         
-                        // 获取该小节的音符数据
                         const measureNotes = paragraph.measures[m];
                         
-                        // 添加拍子
                         for (let b = 0; b < beatsPerMeasure; b++) {
                             const beat = document.createElement('div');
-                            beat.className = 'beat';
+                            beat.className = 'beat editable';
+                            beat.dataset.paragraphIndex = p;
+                            beat.dataset.measureIndex = m;
                             beat.dataset.beatIndex = b;
                             
                             const beatNumber = document.createElement('span');
@@ -952,11 +1001,14 @@
                             
                             beat.appendChild(beatNumber);
                             
-                            // 添加音符显示
+                            const editHint = document.createElement('span');
+                            editHint.className = 'edit-hint';
+                            editHint.textContent = '点击编辑';
+                            beat.appendChild(editHint);
+                            
                             const noteDisplay = document.createElement('span');
                             noteDisplay.className = 'note-display';
                             
-                            // 显示对应的音符
                             const note = measureNotes[b] || '0';
                             noteDisplay.textContent = note;
                             
@@ -968,6 +1020,181 @@
                     }
                     
                     this.domElements.staff.appendChild(paragraphElement);
+                }
+                
+                this.setupBeatClickHandlers();
+            }
+            
+            // 设置拍子点击事件处理
+            setupBeatClickHandlers() {
+                const beats = document.querySelectorAll('.beat.editable');
+                beats.forEach(beat => {
+                    beat.addEventListener('click', (e) => {
+                        if (this.isPlaying) {
+                            this.showStatusMessage('播放时不能编辑数据，请先停止播放。', 'error');
+                            return;
+                        }
+                        
+                        e.stopPropagation();
+                        this.startBeatEditing(beat);
+                    });
+                });
+            }
+            
+            // 开始编辑拍子
+            startBeatEditing(beatElement) {
+                if (this.editingBeatElement && this.editingBeatElement !== beatElement) {
+                    this.finishBeatEditing(this.editingBeatElement, false);
+                }
+                
+                const paragraphIndex = parseInt(beatElement.dataset.paragraphIndex);
+                const measureIndex = parseInt(beatElement.dataset.measureIndex);
+                const beatIndex = parseInt(beatElement.dataset.beatIndex);
+                
+                const currentNote = this.paragraphsData[paragraphIndex].measures[measureIndex][beatIndex];
+                
+                const editHint = beatElement.querySelector('.edit-hint');
+                if (editHint) editHint.style.display = 'none';
+                
+                const noteDisplay = beatElement.querySelector('.note-display');
+                if (noteDisplay) noteDisplay.style.display = 'none';
+                
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'note-edit-input';
+                input.value = currentNote;
+                input.maxLength = 10; // 增加最大长度以支持更多字符
+                
+                const rect = beatElement.getBoundingClientRect();
+                input.style.top = (rect.height / 2 - 15) + 'px';
+                input.style.left = (rect.width / 2 - 30) + 'px';
+                
+                beatElement.appendChild(input);
+                beatElement.classList.add('editing');
+                
+                input.focus();
+                input.select();
+                
+                this.editingBeatElement = beatElement;
+                
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        this.finishBeatEditing(beatElement, true);
+                    } else if (e.key === 'Escape') {
+                        this.finishBeatEditing(beatElement, false);
+                    } else if (e.key === 'Tab') {
+                        e.preventDefault();
+                        this.finishBeatEditing(beatElement, true);
+                        this.navigateToNextBeat(beatElement, !e.shiftKey);
+                    }
+                });
+                
+                input.addEventListener('blur', () => {
+                    setTimeout(() => {
+                        if (beatElement.classList.contains('editing')) {
+                            this.finishBeatEditing(beatElement, true);
+                        }
+                    }, 100);
+                });
+            }
+            
+            // 完成编辑拍子
+            finishBeatEditing(beatElement, saveChanges = true) {
+                if (!beatElement || !beatElement.classList.contains('editing')) return;
+                
+                const input = beatElement.querySelector('.note-edit-input');
+                if (!input) return;
+                
+                const paragraphIndex = parseInt(beatElement.dataset.paragraphIndex);
+                const measureIndex = parseInt(beatElement.dataset.measureIndex);
+                const beatIndex = parseInt(beatElement.dataset.beatIndex);
+                
+                let newNote = '';
+                
+                if (saveChanges) {
+                    newNote = input.value.trim();
+                    
+                    // 允许输入任何数据，包括空字符串
+                    if (newNote === '') {
+                        newNote = '0'; // 空字符串默认为0
+                    }
+                    
+                    this.paragraphsData[paragraphIndex].measures[measureIndex][beatIndex] = newNote;
+                    
+                    const noteDisplay = beatElement.querySelector('.note-display');
+                    if (noteDisplay) {
+                        noteDisplay.textContent = newNote;
+                        noteDisplay.style.display = 'block';
+                    }
+                    
+                    this.updateJsonDisplay();
+                    
+                    this.showStatusMessage(`已更新段落 ${paragraphIndex + 1} 的小节 ${measureIndex + 1} 第 ${beatIndex + 1} 拍为: ${newNote}`, 'success');
+                } else {
+                    const currentNote = this.paragraphsData[paragraphIndex].measures[measureIndex][beatIndex];
+                    const noteDisplay = beatElement.querySelector('.note-display');
+                    if (noteDisplay) {
+                        noteDisplay.style.display = 'block';
+                    }
+                }
+                
+                input.remove();
+                
+                const editHint = beatElement.querySelector('.edit-hint');
+                if (editHint) editHint.style.display = 'block';
+                
+                beatElement.classList.remove('editing');
+                
+                if (this.editingBeatElement === beatElement) {
+                    this.editingBeatElement = null;
+                }
+            }
+            
+            // 导航到下一个/上一个拍子
+            navigateToNextBeat(currentBeatElement, forward = true) {
+                const paragraphIndex = parseInt(currentBeatElement.dataset.paragraphIndex);
+                const measureIndex = parseInt(currentBeatElement.dataset.measureIndex);
+                const beatIndex = parseInt(currentBeatElement.dataset.beatIndex);
+                
+                const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
+                const paragraph = this.paragraphsData[paragraphIndex];
+                
+                let nextParagraphIndex = paragraphIndex;
+                let nextMeasureIndex = measureIndex;
+                let nextBeatIndex = beatIndex;
+                
+                if (forward) {
+                    nextBeatIndex++;
+                    if (nextBeatIndex >= beatsPerMeasure) {
+                        nextBeatIndex = 0;
+                        nextMeasureIndex++;
+                        if (nextMeasureIndex >= paragraph.measures.length) {
+                            nextMeasureIndex = 0;
+                            nextParagraphIndex = (nextParagraphIndex + 1) % this.paragraphsData.length;
+                        }
+                    }
+                } else {
+                    nextBeatIndex--;
+                    if (nextBeatIndex < 0) {
+                        nextBeatIndex = beatsPerMeasure - 1;
+                        nextMeasureIndex--;
+                        if (nextMeasureIndex < 0) {
+                            nextMeasureIndex = paragraph.measures.length - 1;
+                            nextParagraphIndex = (nextParagraphIndex - 1 + this.paragraphsData.length) % this.paragraphsData.length;
+                        }
+                    }
+                }
+                
+                const nextBeatElement = document.querySelector(
+                    `.beat[data-paragraph-index="${nextParagraphIndex}"][data-measure-index="${nextMeasureIndex}"][data-beat-index="${nextBeatIndex}"]`
+                );
+                
+                if (nextBeatElement) {
+                    nextBeatElement.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+                    
+                    setTimeout(() => {
+                        this.startBeatEditing(nextBeatElement);
+                    }, 100);
                 }
             }
             
@@ -1013,14 +1240,12 @@
                 
                 this.domElements.paragraphCountDisplay.textContent = this.paragraphsData.length;
                 
-                // 计算总小节数
                 let totalMeasures = 0;
                 for (const paragraph of this.paragraphsData) {
                     totalMeasures += paragraph.measures.length;
                 }
                 this.domElements.totalMeasureCountDisplay.textContent = totalMeasures;
                 
-                // 更新小节管理标签页
                 this.updateMeasureButtons();
             }
             
@@ -1028,7 +1253,6 @@
             updateMeasureButtons() {
                 this.domElements.measureButtonsContainer.innerHTML = '';
                 
-                // 更新当前选中的段落显示
                 if (this.selectedParagraphIndex !== null) {
                     const paragraph = this.paragraphsData[this.selectedParagraphIndex];
                     this.domElements.currentParagraphDisplay.textContent = paragraph.name;
@@ -1076,7 +1300,7 @@
             // 更新JSON数据显示
             updateJsonDisplay() {
                 const scoreData = {
-                    version: "0.16",
+                    version: "0.19",
                     timeSignature: this.timeSignature,
                     tempo: this.tempo,
                     loopPlayback: this.loopPlayback,
@@ -1096,7 +1320,7 @@
                 const url = URL.createObjectURL(dataBlob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `score_data_v0.16_${new Date().toISOString().split('T')[0]}.json`;
+                link.download = `score_data_v0.19_${new Date().toISOString().split('T')[0]}.json`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -1128,7 +1352,6 @@
                 };
                 reader.readAsText(file);
                 
-                // 重置文件输入，允许重复选择同一文件
                 event.target.value = '';
             }
             
@@ -1140,14 +1363,12 @@
                     this.loopPlayback = jsonData.loopPlayback !== undefined ? jsonData.loopPlayback : this.loopPlayback;
                     this.paragraphsData = jsonData.paragraphs;
                     
-                    // 更新下一个段落ID
                     let maxId = 0;
                     for (const paragraph of this.paragraphsData) {
                         if (paragraph.id > maxId) maxId = paragraph.id;
                     }
                     this.nextParagraphId = maxId + 1;
                     
-                    // 更新UI
                     this.domElements.timeSignature.value = this.timeSignature;
                     this.domElements.tempo.value = this.tempo;
                     this.domElements.loopPlayback.checked = this.loopPlayback;
@@ -1172,9 +1393,17 @@
                 statusElement.textContent = message;
                 statusElement.className = `status-message status-${type}`;
                 
+                this.domElements.statusBar.textContent = `${message} (V0.19 - 播放高亮增强)`;
+                
                 setTimeout(() => {
-                    statusElement.textContent = '';
-                    statusElement.className = 'status-message';
+                    if (statusElement.textContent === message) {
+                        statusElement.textContent = '';
+                        statusElement.className = 'status-message';
+                    }
+                    
+                    if (!this.isPlaying) {
+                        this.domElements.statusBar.textContent = '准备就绪 (V0.19 - 播放高亮增强)';
+                    }
                 }, 3000);
             }
             
@@ -1261,7 +1490,6 @@
                     measures: []
                 };
                 
-                // 为新段落添加初始小节
                 const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
                 for (let i = 0; i < 4; i++) {
                     newParagraph.measures.push(this.generateRandomNotes());
@@ -1282,7 +1510,6 @@
                 
                 const originalParagraph = this.paragraphsData[this.selectedParagraphIndex];
                 
-                // 深度复制段落
                 const copiedParagraph = {
                     id: this.nextParagraphId++,
                     name: `${originalParagraph.name} (副本)`,
@@ -1349,7 +1576,6 @@
                 this.updateMeasureButtons();
                 this.updateJsonDisplay();
                 
-                // 如果正在播放，调整播放位置
                 if (this.isPlaying && 
                     this.currentParagraph === this.selectedParagraphIndex && 
                     this.currentMeasure >= paragraph.measures.length) {
@@ -1381,12 +1607,11 @@
                 const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
                 const beatDuration = 60000 / this.tempo;
                 
-                // 清除所有活动状态
+                // 清除之前的高亮
                 document.querySelectorAll('.paragraph.active, .measure.active, .beat.active').forEach(el => {
                     el.classList.remove('active');
                 });
                 
-                // 检查是否还有段落
                 if (this.currentParagraph >= this.paragraphsData.length) {
                     if (this.loopPlayback) {
                         this.currentParagraph = 0;
@@ -1394,14 +1619,13 @@
                         this.currentBeat = 0;
                     } else {
                         this.stopPlayback();
-                        this.domElements.statusBar.textContent = `播放完成 (V0.16)`;
+                        this.domElements.statusBar.textContent = `播放完成 (V0.19 - 播放高亮增强)`;
                         return;
                     }
                 }
                 
                 const currentParagraph = this.paragraphsData[this.currentParagraph];
                 
-                // 检查是否还有小节
                 if (this.currentMeasure >= currentParagraph.measures.length) {
                     this.currentParagraph++;
                     this.currentMeasure = 0;
@@ -1412,7 +1636,7 @@
                             this.currentParagraph = 0;
                         } else {
                             this.stopPlayback();
-                            this.domElements.statusBar.textContent = `播放完成 (V0.16)`;
+                            this.domElements.statusBar.textContent = `播放完成 (V0.19 - 播放高亮增强)`;
                             return;
                         }
                     }
@@ -1429,18 +1653,22 @@
                 if (measureElement) {
                     measureElement.classList.add('active');
                     
-                    // 高亮当前拍子
+                    // 高亮当前拍 - 增强版
                     const beats = measureElement.querySelectorAll('.beat');
                     if (this.currentBeat < beats.length) {
-                        beats[this.currentBeat].classList.add('active');
+                        const currentBeatElement = beats[this.currentBeat];
+                        currentBeatElement.classList.add('active');
+                        
+                        // 确保当前拍可见
+                        currentBeatElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center', 
+                            inline: 'center' 
+                        });
                     }
                 }
                 
-                this.domElements.statusBar.textContent = `当前: ${currentParagraph.name} - 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.16)`;
-                
-                if (this.currentBeat === 0 && this.currentMeasure === 0) {
-                    this.scrollToCurrentParagraph();
-                }
+                this.domElements.statusBar.textContent = `当前: ${currentParagraph.name} - 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.19)`;
                 
                 this.currentBeat++;
                 if (this.currentBeat >= beatsPerMeasure) {
@@ -1454,6 +1682,10 @@
             // 开始播放
             startPlayback() {
                 if (this.isPlaying) return;
+                
+                if (this.editingBeatElement) {
+                    this.finishBeatEditing(this.editingBeatElement, true);
+                }
                 
                 this.isPlaying = true;
                 this.domElements.playBtn.disabled = true;
@@ -1480,7 +1712,7 @@
                     el.classList.remove('active');
                 });
                 
-                this.domElements.statusBar.textContent = '已停止 (V0.16)';
+                this.domElements.statusBar.textContent = '已停止 (V0.19 - 播放高亮增强)';
                 this.currentParagraph = 0;
                 this.currentMeasure = 0;
                 this.currentBeat = 0;
@@ -1488,18 +1720,38 @@
             
             // 应用设置
             applySettings() {
-                this.timeSignature = this.domElements.timeSignature.value;
+                const oldTimeSignature = this.timeSignature;
+                const newTimeSignature = this.domElements.timeSignature.value;
+                
+                this.timeSignature = newTimeSignature;
                 this.tempo = parseInt(this.domElements.tempo.value);
                 this.loopPlayback = this.domElements.loopPlayback.checked;
                 
-                const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
+                const [oldBeatsPerMeasure] = oldTimeSignature.split('/').map(Number);
+                const [newBeatsPerMeasure] = newTimeSignature.split('/').map(Number);
                 
-                // 更新所有段落中的所有小节
-                for (let p = 0; p < this.paragraphsData.length; p++) {
-                    const paragraph = this.paragraphsData[p];
-                    for (let m = 0; m < paragraph.measures.length; m++) {
-                        if (paragraph.measures[m].length !== beatsPerMeasure) {
-                            paragraph.measures[m] = this.generateRandomNotes();
+                if (oldBeatsPerMeasure !== newBeatsPerMeasure) {
+                    for (let p = 0; p < this.paragraphsData.length; p++) {
+                        const paragraph = this.paragraphsData[p];
+                        for (let m = 0; m < paragraph.measures.length; m++) {
+                            const oldNotes = paragraph.measures[m];
+                            const newNotes = [];
+                            
+                            if (newBeatsPerMeasure > oldBeatsPerMeasure) {
+                                for (let i = 0; i < newBeatsPerMeasure; i++) {
+                                    if (i < oldNotes.length) {
+                                        newNotes.push(oldNotes[i]);
+                                    } else {
+                                        newNotes.push(this.noteOptions[Math.floor(Math.random() * this.noteOptions.length)]);
+                                    }
+                                }
+                            } else {
+                                for (let i = 0; i < newBeatsPerMeasure; i++) {
+                                    newNotes.push(oldNotes[i] || '0');
+                                }
+                            }
+                            
+                            paragraph.measures[m] = newNotes;
                         }
                     }
                 }
@@ -1536,7 +1788,6 @@
                     }
                 });
                 
-                // 切换到数据管理标签页时更新JSON显示
                 if (tabName === 'data') {
                     this.updateJsonDisplay();
                 }
@@ -1544,21 +1795,18 @@
             
             // 段落名称编辑功能
             setupParagraphNameEditing() {
-                // 点击段落名称进入编辑模式
                 this.domElements.staff.addEventListener('click', (e) => {
                     if (e.target.classList.contains('paragraph-name-editable') && !e.target.classList.contains('editing')) {
                         this.startEditingParagraphName(e.target);
                     }
                 });
                 
-                // 双击段落名称进入编辑模式
                 this.domElements.staff.addEventListener('dblclick', (e) => {
                     if (e.target.classList.contains('paragraph-name-editable') && !e.target.classList.contains('editing')) {
                         this.startEditingParagraphName(e.target);
                     }
                 });
                 
-                // 处理按键事件
                 this.domElements.staff.addEventListener('keydown', (e) => {
                     if (e.target.classList.contains('paragraph-name-editable') && e.target.classList.contains('editing')) {
                         if (e.key === 'Enter') {
@@ -1571,7 +1819,6 @@
                     }
                 });
                 
-                // 失去焦点时保存
                 this.domElements.staff.addEventListener('blur', (e) => {
                     if (e.target.classList.contains('paragraph-name-editable') && e.target.classList.contains('editing')) {
                         this.finishEditingParagraphName(e.target);
@@ -1582,7 +1829,6 @@
             // 开始编辑段落名称
             startEditingParagraphName(element) {
                 if (this.editingParagraphIndex !== null) {
-                    // 如果已经有段落正在编辑，先保存
                     const currentEditingElement = document.querySelector(`.paragraph-name-editable[data-paragraph-index="${this.editingParagraphIndex}"]`);
                     if (currentEditingElement) {
                         this.finishEditingParagraphName(currentEditingElement);
@@ -1596,7 +1842,6 @@
                 element.setAttribute('contenteditable', 'true');
                 element.focus();
                 
-                // 选中文本
                 const range = document.createRange();
                 range.selectNodeContents(element);
                 const selection = window.getSelection();
@@ -1612,7 +1857,6 @@
                 if (newName && newName !== this.paragraphsData[paragraphIndex].name) {
                     this.paragraphsData[paragraphIndex].name = newName;
                     
-                    // 更新段落按钮中的名称
                     const paragraphBtn = document.querySelector(`.paragraph-btn[data-paragraph-index="${paragraphIndex}"]`);
                     if (paragraphBtn) {
                         paragraphBtn.textContent = newName;
@@ -1622,7 +1866,6 @@
                         paragraphBtn.appendChild(infoSpan);
                     }
                     
-                    // 更新小节管理标签页中的段落名称显示
                     if (this.selectedParagraphIndex === paragraphIndex) {
                         this.domElements.currentParagraphDisplay.textContent = newName;
                     }
@@ -1641,15 +1884,13 @@
                 element.removeAttribute('contenteditable');
                 this.editingParagraphIndex = null;
                 
-                // 清除选中文本
                 window.getSelection().removeAllRanges();
             }
             
-            // 使设置面板可拖动（支持移动端触摸事件）
+            // 使设置面板可拖动
             makeDraggable(element, handle) {
                 let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
                 
-                // 鼠标事件处理
                 handle.onmousedown = (e) => {
                     e = e || window.event;
                     e.preventDefault();
@@ -1676,7 +1917,6 @@
                     };
                 };
                 
-                // 触摸事件处理（移动端支持）
                 handle.addEventListener('touchstart', (e) => {
                     e.preventDefault();
                     const touch = e.touches[0];
@@ -1687,7 +1927,6 @@
                     this.panelStartX = element.offsetLeft;
                     this.panelStartY = element.offsetTop;
                     
-                    // 添加拖动状态样式
                     element.style.transition = 'none';
                     handle.style.cursor = 'grabbing';
                 }, { passive: false });
@@ -1700,11 +1939,9 @@
                     const deltaX = touch.clientX - this.dragStartX;
                     const deltaY = touch.clientY - this.dragStartY;
                     
-                    // 计算新位置
                     let newX = this.panelStartX + deltaX;
                     let newY = this.panelStartY + deltaY;
                     
-                    // 限制在视口范围内
                     const maxX = window.innerWidth - element.offsetWidth;
                     const maxY = window.innerHeight - element.offsetHeight;
                     
@@ -1744,16 +1981,13 @@
                     });
                 });
                 
-                // 段落管理事件监听
                 this.domElements.addParagraphBtn.addEventListener('click', () => this.addParagraph());
                 this.domElements.copyParagraphBtn.addEventListener('click', () => this.copyParagraph());
                 this.domElements.deleteParagraphBtn.addEventListener('click', () => this.deleteSelectedParagraph());
                 
-                // 小节管理事件监听
                 this.domElements.addMeasureBtn.addEventListener('click', () => this.addMeasure());
                 this.domElements.deleteMeasureBtn.addEventListener('click', () => this.deleteSelectedMeasure());
                 
-                // 数据管理事件监听
                 this.domElements.exportBtn.addEventListener('click', () => this.exportToJson());
                 this.domElements.importBtn.addEventListener('click', () => this.importFromJson());
                 this.domElements.applyJsonBtn.addEventListener('click', () => {
@@ -1769,7 +2003,6 @@
                 
                 this.makeDraggable(this.domElements.settingsPanel, this.domElements.settingsHeader);
                 
-                // 点击设置面板外部关闭面板
                 document.addEventListener('click', (e) => {
                     if (this.domElements.settingsPanel.style.display === 'block' && 
                         !this.domElements.settingsPanel.contains(e.target) && 
@@ -1778,8 +2011,13 @@
                     }
                 });
                 
-                // 设置段落名称编辑功能
                 this.setupParagraphNameEditing();
+                
+                document.addEventListener('click', (e) => {
+                    if (this.editingBeatElement && !this.editingBeatElement.contains(e.target)) {
+                        this.finishBeatEditing(this.editingBeatElement, true);
+                    }
+                });
             }
         }
 
@@ -1789,8 +2027,7 @@
 </body>
 </html>
 
-
 <!--
 升级程序
-段落名称可以编辑。
+播放时高亮当前拍。
 -->
