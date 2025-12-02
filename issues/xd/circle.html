@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>五边形内滚圆</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 15px;
+            background-color: #f5f5f5;
+            min-height: 100vh;
+        }
+        
+        h1 {
+            color: #333;
+            margin: 10px 0;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+            text-align: center;
+        }
+        
+        .description {
+            color: #666;
+            margin-bottom: 15px;
+            text-align: center;
+            max-width: 90%;
+            font-size: clamp(0.9rem, 3vw, 1rem);
+            line-height: 1.4;
+        }
+        
+        .canvas-container {
+            width: 100%;
+            max-width: 500px;
+            margin: 0 auto 20px;
+            position: relative;
+        }
+        
+        canvas {
+            width: 100%;
+            height: auto;
+            aspect-ratio: 1/1;
+            border: 2px solid #333;
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            display: block;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 15px;
+            justify-content: center;
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: clamp(0.9rem, 3vw, 1rem);
+            transition: background-color 0.3s;
+            flex: 1 1 auto;
+            min-width: 120px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .color-picker {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+            width: 100%;
+            max-width: 500px;
+        }
+        
+        .color-option {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        label {
+            font-weight: bold;
+            font-size: clamp(0.8rem, 3vw, 0.9rem);
+            white-space: nowrap;
+        }
+        
+        input[type="color"] {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        @media (max-width: 480px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>五边形内滚圆</h1>
+    <p class="description">升级版：添加圆形沿五边形内边滚动动画效果</p>
+    
+    <div class="canvas-container">
+        <canvas id="pentagonCanvas"></canvas>
+    </div>
+    
+    <div class="controls">
+        <button id="drawBtn">绘制图形</button>
+        <button id="clearBtn">清除画布</button>
+        <button id="toggleDiametersBtn">切换直径显示</button>
+        <button id="rollBtn">开始滚动</button>
+    </div>
+    
+    <div class="color-picker">
+        <div class="color-option">
+            <label for="pentagonFill">五边形填充:</label>
+            <input type="color" id="pentagonFill" value="#3498db">
+        </div>
+        <div class="color-option">
+            <label for="pentagonStroke">五边形边框:</label>
+            <input type="color" id="pentagonStroke" value="#2980b9">
+        </div>
+        <div class="color-option">
+            <label for="circleFill">内切圆填充:</label>
+            <input type="color" id="circleFill" value="#e74c3c">
+        </div>
+        <div class="color-option">
+            <label for="circleStroke">内切圆边框:</label>
+            <input type="color" id="circleStroke" value="#c0392b">
+        </div>
+        <div class="color-option">
+            <label for="diameterColor">直径颜色:</label>
+            <input type="color" id="diameterColor" value="#2ecc71">
+        </div>
+        <div class="color-option">
+            <label for="endpointColor">端点颜色:</label>
+            <input type="color" id="endpointColor" value="#f1c40f">
+        </div>
+        <div class="color-option">
+            <label for="rollingCircleColor">滚动圆颜色:</label>
+            <input type="color" id="rollingCircleColor" value="#9b59b6">
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('pentagonCanvas');
+        const ctx = canvas.getContext('2d');
+        const drawBtn = document.getElementById('drawBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const toggleDiametersBtn = document.getElementById('toggleDiametersBtn');
+        const rollBtn = document.getElementById('rollBtn');
+        const pentagonFillInput = document.getElementById('pentagonFill');
+        const pentagonStrokeInput = document.getElementById('pentagonStroke');
+        const circleFillInput = document.getElementById('circleFill');
+        const circleStrokeInput = document.getElementById('circleStroke');
+        const diameterColorInput = document.getElementById('diameterColor');
+        const endpointColorInput = document.getElementById('endpointColor');
+        const rollingCircleColorInput = document.getElementById('rollingCircleColor');
+        
+        let showDiameters = true;
+        let topCircleData = null;
+        let pentagonVertices = [];
+        let animationId = null;
+        let isRolling = false;
+        let rollingCircleRadius = 0;
+        let currentRollingPosition = 0;
+        let rollingCirclePath = [];
+        
+        // 初始化画布尺寸
+        function initCanvasSize() {
+            const container = document.querySelector('.canvas-container');
+            const size = Math.min(container.offsetWidth, window.innerHeight * 0.6);
+            canvas.width = size;
+            canvas.height = size;
+        }
+        
+        // 窗口大小改变时重新调整画布
+        window.addEventListener('resize', () => {
+            initCanvasSize();
+            drawShapes();
+        });
+        
+        // 绘制正五边形函数
+        function drawPentagon(centerX, centerY, radius, fillColor, strokeColor) {
+            ctx.fillStyle = fillColor;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 4;
+            
+            const sides = 5;
+            const angle = (2 * Math.PI) / sides;
+            
+            ctx.beginPath();
+            for (let i = 0; i <= sides; i++) {
+                const x = centerX + radius * Math.cos(i * angle - Math.PI/2);
+                const y = centerY + radius * Math.sin(i * angle - Math.PI/2);
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+                
+                // 保存顶点坐标
+                if (i < sides) {
+                    pentagonVertices[i] = { x, y };
+                }
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+            
+            return { centerX, centerY, radius };
+        }
+        
+        // 绘制顶角内切圆函数
+        function drawTopInscribedCircle(vertexX, vertexY, prevVertexX, prevVertexY, nextVertexX, nextVertexY, fillColor, strokeColor) {
+            // 计算两条边的单位向量
+            const edge1VecX = nextVertexX - vertexX;
+            const edge1VecY = nextVertexY - vertexY;
+            const edge1Length = Math.sqrt(edge1VecX * edge1VecX + edge1VecY * edge1VecY);
+            const edge1UnitX = edge1VecX / edge1Length;
+            const edge1UnitY = edge1VecY / edge1Length;
+            
+            const edge2VecX = prevVertexX - vertexX;
+            const edge2VecY = prevVertexY - vertexY;
+            const edge2Length = Math.sqrt(edge2VecX * edge2VecX + edge2VecY * edge2VecY);
+            const edge2UnitX = edge2VecX / edge2Length;
+            const edge2UnitY = edge2VecY / edge2Length;
+            
+            // 计算角平分线向量
+            const bisectorX = edge1UnitX + edge2UnitX;
+            const bisectorY = edge1UnitY + edge2UnitY;
+            const bisectorLength = Math.sqrt(bisectorX * bisectorX + bisectorY * bisectorY);
+            const bisectorUnitX = bisectorX / bisectorLength;
+            const bisectorUnitY = bisectorY / bisectorLength;
+            
+            // 计算内切圆半径
+            const circleRadius = edge1Length * Math.sin(Math.PI/5) / (2 * Math.cos(Math.PI/10));
+            
+            // 计算内切圆中心位置
+            const distanceFromVertex = circleRadius / Math.sin(3*Math.PI/10);
+            const circleCenterX = vertexX + bisectorUnitX * distanceFromVertex;
+            const circleCenterY = vertexY + bisectorUnitY * distanceFromVertex;
+            
+            // 绘制内切圆
+            ctx.fillStyle = fillColor;
+            ctx.strokeStyle = strokeColor;
+            ctx.lineWidth = 3;
+            
+            ctx.beginPath();
+            ctx.arc(circleCenterX, circleCenterY, circleRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+            
+            // 保存圆的数据用于绘制直径
+            return {
+                centerX: circleCenterX,
+                centerY: circleCenterY,
+                radius: circleRadius
+            };
+        }
+        
+        // 绘制水平和垂直直径
+        function drawDiameters(circleData, color) {
+            if (!showDiameters || !circleData) return;
+            
+            ctx.strokeStyle = color;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 3]);
+            
+            // 水平直径
+            ctx.beginPath();
+            ctx.moveTo(circleData.centerX - circleData.radius, circleData.centerY);
+            ctx.lineTo(circleData.centerX + circleData.radius, circleData.centerY);
+            ctx.stroke();
+            
+            // 垂直直径
+            ctx.beginPath();
+            ctx.moveTo(circleData.centerX, circleData.centerY - circleData.radius);
+            ctx.lineTo(circleData.centerX, circleData.centerY + circleData.radius);
+            ctx.stroke();
+            
+            ctx.setLineDash([]);
+            
+            // 绘制垂直直径的顶端端点
+            drawEndpoint(
+                circleData.centerX, 
+                circleData.centerY - circleData.radius, 
+                endpointColorInput.value
+            );
+        }
+        
+        // 绘制端点函数
+        function drawEndpoint(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, 2 * Math.PI);
+            ctx.fill();
+            
+            // 添加白色边框增强可见性
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+        }
+        
+        // 计算滚动圆的路径
+        function calculateRollingCirclePath() {
+            if (pentagonVertices.length < 5) return [];
+            
+            const path = [];
+            const sides = 5;
+            const rollingRadius = pentagonVertices[0].y - pentagonVertices[1].y;
+            rollingCircleRadius = rollingRadius * 0.15; // 滚动圆半径为边长的15%
+            
+            // 计算五边形每条边的参数方程
+            for (let i = 0; i < sides; i++) {
+                const start = pentagonVertices[i];
+                const end = pentagonVertices[(i + 1) % sides];
+                
+                // 边的向量
+                const edgeVecX = end.x - start.x;
+                const edgeVecY = end.y - start.y;
+                const edgeLength = Math.sqrt(edgeVecX * edgeVecX + edgeVecY * edgeVecY);
+                
+                // 边的单位向量
+                const edgeUnitX = edgeVecX / edgeLength;
+                const edgeUnitY = edgeVecY / edgeLength;
+                
+                // 边的法向量（指向五边形内部）
+                const normalX = -edgeUnitY;
+                const normalY = edgeUnitX;
+                
+                // 计算滚动圆中心在边上的位置
+                for (let t = 0; t <= 1; t += 0.02) {
+                    const centerX = start.x + edgeVecX * t;
+                    const centerY = start.y + edgeVecY * t;
+                    
+                    // 计算滚动圆中心到五边形内部的偏移
+                    const offsetX = normalX * rollingCircleRadius;
+                    const offsetY = normalY * rollingCircleRadius;
+                    
+                    path.push({
+                        x: centerX + offsetX,
+                        y: centerY + offsetY,
+                        edgeIndex: i,
+                        progress: t
+                    });
+                }
+            }
+            
+            return path;
+        }
+        
+        // 绘制滚动圆
+        function drawRollingCircle(position) {
+            if (rollingCirclePath.length === 0) return;
+            
+            const point = rollingCirclePath[position % rollingCirclePath.length];
+            
+            ctx.fillStyle = rollingCircleColorInput.value;
+            ctx.strokeStyle = '#2c3e50';
+            ctx.lineWidth = 2;
+            
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, rollingCircleRadius, 0, 2 * Math.PI);
+            ctx.fill();
+            ctx.stroke();
+            
+            // 绘制滚动圆中心点
+            ctx.fillStyle = '#e74c3c';
+            ctx.beginPath();
+            ctx.arc(point.x, point.y, 3, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        
+        // 动画循环
+        function animateRolling() {
+            if (!isRolling) return;
+            
+            // 清除画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 重新绘制所有静态图形
+            const pentagonFill = pentagonFillInput.value;
+            const pentagonStroke = pentagonStrokeInput.value;
+            const circleFill = circleFillInput.value;
+            const circleStroke = circleStrokeInput.value;
+            const diameterColor = diameterColorInput.value;
+            
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(canvas.width, canvas.height) * 0.4;
+            
+            // 1. 绘制正五边形
+            drawPentagon(centerX, centerY, radius, pentagonFill, pentagonStroke);
+            
+            // 2. 仅在上方顶点绘制内切圆
+            const topVertex = pentagonVertices[0];
+            const prevVertex = pentagonVertices[4];
+            const nextVertex = pentagonVertices[1];
+            
+            topCircleData = drawTopInscribedCircle(
+                topVertex.x, topVertex.y,
+                prevVertex.x, prevVertex.y,
+                nextVertex.x, nextVertex.y,
+                circleFill, circleStroke
+            );
+            
+            // 3. 绘制直径和端点
+            drawDiameters(topCircleData, diameterColor);
+            
+            // 4. 绘制滚动圆
+            drawRollingCircle(currentRollingPosition);
+            
+            // 更新滚动位置
+            currentRollingPosition = (currentRollingPosition + 1) % rollingCirclePath.length;
+            
+            // 继续动画
+            animationId = requestAnimationFrame(animateRolling);
+        }
+        
+        // 开始/停止滚动
+        function toggleRolling() {
+            if (isRolling) {
+                isRolling = false;
+                rollBtn.textContent = '开始滚动';
+                cancelAnimationFrame(animationId);
+            } else {
+                if (rollingCirclePath.length === 0) {
+                    rollingCirclePath = calculateRollingCirclePath();
+                }
+                
+                isRolling = true;
+                rollBtn.textContent = '停止滚动';
+                animateRolling();
+            }
+        }
+        
+        // 绘制所有图形
+        function drawShapes() {
+            // 清除画布
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 获取颜色选择器的值
+            const pentagonFill = pentagonFillInput.value;
+            const pentagonStroke = pentagonStrokeInput.value;
+            const circleFill = circleFillInput.value;
+            const circleStroke = circleStrokeInput.value;
+            const diameterColor = diameterColorInput.value;
+            
+            // 设置中心点和半径
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(canvas.width, canvas.height) * 0.4;
+            
+            // 1. 绘制正五边形
+            const pentagon = drawPentagon(centerX, centerY, radius, pentagonFill, pentagonStroke);
+            
+            // 2. 计算五个顶点的坐标
+            const sides = 5;
+            const angle = (2 * Math.PI) / sides;
+            pentagonVertices = [];
+            
+            for (let i = 0; i < sides; i++) {
+                const x = centerX + radius * Math.cos(i * angle - Math.PI/2);
+                const y = centerY + radius * Math.sin(i * angle - Math.PI/2);
+                pentagonVertices.push({ x, y });
+            }
+            
+            // 3. 仅在上方顶点绘制内切圆
+            const topVertex = pentagonVertices[0];
+            const prevVertex = pentagonVertices[sides-1];
+            const nextVertex = pentagonVertices[1];
+            
+            topCircleData = drawTopInscribedCircle(
+                topVertex.x, topVertex.y,
+                prevVertex.x, prevVertex.y,
+                nextVertex.x, nextVertex.y,
+                circleFill, circleStroke
+            );
+            
+            // 4. 绘制直径和端点
+            drawDiameters(topCircleData, diameterColor);
+            
+            // 5. 计算滚动路径
+            rollingCirclePath = calculateRollingCirclePath();
+        }
+        
+        // 清除画布
+        function clearCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            topCircleData = null;
+            pentagonVertices = [];
+            rollingCirclePath = [];
+            currentRollingPosition = 0;
+            
+            if (isRolling) {
+                isRolling = false;
+                rollBtn.textContent = '开始滚动';
+                cancelAnimationFrame(animationId);
+            }
+        }
+        
+        // 切换直径显示
+        function toggleDiameters() {
+            showDiameters = !showDiameters;
+            drawShapes();
+        }
+        
+        // 初始化
+        function init() {
+            // 初始化画布尺寸
+            initCanvasSize();
+            
+            // 添加事件监听
+            drawBtn.addEventListener('click', drawShapes);
+            clearBtn.addEventListener('click', clearCanvas);
+            toggleDiametersBtn.addEventListener('click', toggleDiameters);
+            rollBtn.addEventListener('click', toggleRolling);
+            
+            // 颜色选择器变化时重绘
+            const colorInputs = document.querySelectorAll('input[type="color"]');
+            colorInputs.forEach(input => {
+                input.addEventListener('change', () => {
+                    if (isRolling) return;
+                    drawShapes();
+                });
+            });
+            
+            // 初始绘制
+            drawShapes();
+        }
+        
+        // 页面加载时初始化
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
