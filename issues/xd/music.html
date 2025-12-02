@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简谱播放器 V0.11</title> <!-- 添加版本号V0.11 -->
+    <title>简谱播放器 V0.12</title> <!-- 更新版本号到V0.12 -->
     <style>
         body {
             font-family: 'Microsoft YaHei', sans-serif;
@@ -71,6 +71,11 @@
             border-color: #2196f3;
         }
         
+        .measure.highlighted {
+            background-color: #fff9c4;
+            border-color: #ff9800;
+        }
+        
         .measure-number {
             position: absolute;
             top: -25px;
@@ -129,7 +134,8 @@
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             display: none;
             z-index: 100;
-            min-width: 300px;
+            min-width: 400px;
+            max-width: 500px;
         }
         
         .settings-header {
@@ -151,8 +157,42 @@
             background-color: #2980b9;
         }
         
-        .settings-content {
-            padding: 15px;
+        .settings-tabs {
+            display: flex;
+            background-color: #ecf0f1;
+            border-bottom: 1px solid #ddd;
+        }
+        
+        .tab-btn {
+            padding: 12px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            flex: 1;
+            text-align: center;
+            color: #7f8c8d;
+        }
+        
+        .tab-btn.active {
+            background-color: white;
+            color: #3498db;
+            font-weight: bold;
+            border-bottom: 2px solid #3498db;
+        }
+        
+        .tab-content {
+            padding: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .tab-pane {
+            display: none;
+        }
+        
+        .tab-pane.active {
+            display: block;
         }
         
         .settings-row {
@@ -227,6 +267,80 @@
             padding: 2px 5px;
             border-radius: 3px;
         }
+        
+        /* 乐谱管理样式 */
+        .measure-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .measure-controls button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .measure-controls button:hover {
+            background-color: #2980b9;
+        }
+        
+        .measure-controls button.delete-btn {
+            background-color: #e74c3c;
+        }
+        
+        .measure-controls button.delete-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        .measure-buttons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        
+        .measure-btn {
+            background-color: #ecf0f1;
+            border: 2px solid #bdc3c7;
+            border-radius: 5px;
+            padding: 8px 12px;
+            cursor: pointer;
+            min-width: 60px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .measure-btn:hover {
+            background-color: #d5dbdb;
+        }
+        
+        .measure-btn.active {
+            background-color: #3498db;
+            color: white;
+            border-color: #2980b9;
+        }
+        
+        .measure-info {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -245,43 +359,63 @@
     </div>
     
     <div class="status-bar" id="statusBar">
-        准备就绪 (V0.11) <!-- 状态栏显示版本号 -->
+        准备就绪 (V0.12) <!-- 更新版本号到V0.12 -->
     </div>
     
     <div class="settings-panel" id="settingsPanel">
         <div class="settings-header" id="settingsHeader">
-            <h3>播放设置</h3>
+            <h3>乐谱播放器设置</h3>
             <button class="close-btn" id="closeSettingsBtn">×</button>
         </div>
-        <div class="settings-content">
-            <div class="settings-row">
-                <label for="timeSignature">节拍类型:</label>
-                <select id="timeSignature">
-                    <option value="4/4">4/4 拍</option>
-                    <option value="3/4">3/4 拍</option>
-                    <option value="2/4">2/4 拍</option>
-                    <option value="6/8">6/8 拍</option>
-                </select>
+        
+        <div class="settings-tabs">
+            <button class="tab-btn active" data-tab="playback">播放设置</button>
+            <button class="tab-btn" data-tab="score">乐谱管理</button>
+        </div>
+        
+        <div class="tab-content">
+            <!-- 播放设置标签页 -->
+            <div class="tab-pane active" id="playback-tab">
+                <div class="settings-row">
+                    <label for="timeSignature">节拍类型:</label>
+                    <select id="timeSignature">
+                        <option value="4/4">4/4 拍</option>
+                        <option value="3/4">3/4 拍</option>
+                        <option value="2/4">2/4 拍</option>
+                        <option value="6/8">6/8 拍</option>
+                    </select>
+                </div>
+                
+                <div class="settings-row">
+                    <label for="tempo">速度 (BPM):</label>
+                    <input type="number" id="tempo" min="40" max="200" value="120">
+                </div>
+                
+                <div class="settings-row">
+                    <label for="loopPlayback">循环播放:</label>
+                    <input type="checkbox" id="loopPlayback" checked>
+                    <span style="margin-left: 8px; font-size: 14px; color: #666;">播放结束后从头开始</span>
+                </div>
+                
+                <button id="applySettingsBtn">应用设置</button>
             </div>
             
-            <div class="settings-row">
-                <label for="tempo">速度 (BPM):</label>
-                <input type="number" id="tempo" min="40" max="200" value="120">
+            <!-- 乐谱管理标签页 -->
+            <div class="tab-pane" id="score-tab">
+                <div class="measure-controls">
+                    <button id="addMeasureBtn">添加小节</button>
+                    <button id="deleteMeasureBtn" class="delete-btn" disabled>删除选中小节</button>
+                </div>
+                
+                <div class="measure-buttons-container" id="measureButtonsContainer">
+                    <!-- 小节按钮将在这里动态生成 -->
+                </div>
+                
+                <div class="measure-info">
+                    <p>提示: 点击小节按钮可以高亮显示对应的小节，当前选中小节可以删除。</p>
+                    <p>当前乐谱包含 <span id="measureCountDisplay">0</span> 个小节。</p>
+                </div>
             </div>
-            
-            <div class="settings-row">
-                <label for="measureCount">小节数量:</label>
-                <input type="number" id="measureCount" min="1" max="20" value="8">
-            </div>
-            
-            <!-- 新增：循环播放开关 -->
-            <div class="settings-row">
-                <label for="loopPlayback">循环播放:</label>
-                <input type="checkbox" id="loopPlayback" checked>
-                <span style="margin-left: 8px; font-size: 14px; color: #666;">播放结束后从头开始</span>
-            </div>
-            
-            <button id="applySettingsBtn">应用设置</button>
         </div>
     </div>
 
@@ -295,8 +429,9 @@
                 this.timer = null;
                 this.timeSignature = '4/4';
                 this.tempo = 120;
-                this.measureCount = 8;
-                this.loopPlayback = true; // 新增：循环播放状态，默认开启
+                this.loopPlayback = true;
+                this.selectedMeasureIndex = null; // 新增：选中的小节索引
+                this.measuresData = []; // 新增：存储每个小节的音符数据
                 
                 // DOM元素引用
                 this.domElements = {
@@ -312,8 +447,13 @@
                     canvasContainer: document.querySelector('.canvas-container'),
                     timeSignature: document.getElementById('timeSignature'),
                     tempo: document.getElementById('tempo'),
-                    measureCount: document.getElementById('measureCount'),
-                    loopPlayback: document.getElementById('loopPlayback') // 新增：循环播放开关元素
+                    loopPlayback: document.getElementById('loopPlayback'),
+                    // 新增：乐谱管理相关元素
+                    tabBtns: document.querySelectorAll('.tab-btn'),
+                    addMeasureBtn: document.getElementById('addMeasureBtn'),
+                    deleteMeasureBtn: document.getElementById('deleteMeasureBtn'),
+                    measureButtonsContainer: document.getElementById('measureButtonsContainer'),
+                    measureCountDisplay: document.getElementById('measureCountDisplay')
                 };
                 
                 this.init();
@@ -321,8 +461,33 @@
             
             // 初始化播放器
             init() {
+                // 初始化乐谱数据，默认8个小节
+                this.initializeMeasuresData(8);
                 this.generateStaff();
                 this.setupEventListeners();
+                this.updateMeasureButtons();
+            }
+            
+            // 初始化乐谱数据
+            initializeMeasuresData(count) {
+                this.measuresData = [];
+                for (let i = 0; i < count; i++) {
+                    this.measuresData.push(this.generateRandomNotes());
+                }
+            }
+            
+            // 生成随机音符数据
+            generateRandomNotes() {
+                const notes = ['1', '2', '3', '4', '5', '6', '7'];
+                const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
+                const measureNotes = [];
+                
+                for (let i = 0; i < beatsPerMeasure; i++) {
+                    const randomNote = notes[Math.floor(Math.random() * notes.length)];
+                    measureNotes.push(randomNote);
+                }
+                
+                return measureNotes;
             }
             
             // 生成五线谱
@@ -331,7 +496,7 @@
                 
                 const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
                 
-                for (let i = 0; i < this.measureCount; i++) {
+                for (let i = 0; i < this.measuresData.length; i++) {
                     const measure = document.createElement('div');
                     measure.className = 'measure';
                     measure.dataset.measureIndex = i;
@@ -341,6 +506,9 @@
                     measureNumber.className = 'measure-number';
                     measureNumber.textContent = `小节 ${i + 1}`;
                     measure.appendChild(measureNumber);
+                    
+                    // 获取该小节的音符数据
+                    const measureNotes = this.measuresData[i];
                     
                     for (let j = 0; j < beatsPerMeasure; j++) {
                         const beat = document.createElement('div');
@@ -353,20 +521,131 @@
                         
                         beat.appendChild(beatNumber);
                         
-                        // 添加示例音符显示
+                        // 添加音符显示
                         const noteDisplay = document.createElement('span');
                         noteDisplay.className = 'note-display';
                         
-                        // 示例音符 - 可以根据需要更改
-                        const exampleNotes = ['1', '2', '3', '4', '5', '6', '7'];
-                        const randomNote = exampleNotes[Math.floor(Math.random() * exampleNotes.length)];
-                        noteDisplay.textContent = randomNote;
+                        // 显示对应的音符
+                        const note = measureNotes[j] || '0';
+                        noteDisplay.textContent = note;
                         
                         beat.appendChild(noteDisplay);
                         measure.appendChild(beat);
                     }
                     
                     this.domElements.staff.appendChild(measure);
+                }
+            }
+            
+            // 更新小节按钮
+            updateMeasureButtons() {
+                this.domElements.measureButtonsContainer.innerHTML = '';
+                
+                if (this.measuresData.length === 0) {
+                    const emptyState = document.createElement('div');
+                    emptyState.className = 'empty-state';
+                    emptyState.textContent = '当前乐谱没有小节，点击"添加小节"按钮开始创建。';
+                    this.domElements.measureButtonsContainer.appendChild(emptyState);
+                    this.domElements.deleteMeasureBtn.disabled = true;
+                } else {
+                    for (let i = 0; i < this.measuresData.length; i++) {
+                        const measureBtn = document.createElement('button');
+                        measureBtn.className = 'measure-btn';
+                        if (i === this.selectedMeasureIndex) {
+                            measureBtn.classList.add('active');
+                        }
+                        measureBtn.textContent = `小节 ${i + 1}`;
+                        measureBtn.dataset.measureIndex = i;
+                        
+                        measureBtn.addEventListener('click', () => {
+                            this.selectMeasure(i);
+                            this.highlightMeasure(i);
+                        });
+                        
+                        this.domElements.measureButtonsContainer.appendChild(measureBtn);
+                    }
+                    
+                    // 更新删除按钮状态
+                    this.domElements.deleteMeasureBtn.disabled = this.selectedMeasureIndex === null;
+                }
+                
+                // 更新小节数量显示
+                this.domElements.measureCountDisplay.textContent = this.measuresData.length;
+            }
+            
+            // 选择小节
+            selectMeasure(index) {
+                this.selectedMeasureIndex = index;
+                this.updateMeasureButtons();
+            }
+            
+            // 高亮显示指定小节
+            highlightMeasure(index) {
+                // 清除之前的高亮
+                document.querySelectorAll('.measure.highlighted').forEach(el => {
+                    el.classList.remove('highlighted');
+                });
+                
+                // 添加新高亮
+                const measure = document.querySelector(`.measure[data-measure-index="${index}"]`);
+                if (measure) {
+                    measure.classList.add('highlighted');
+                    
+                    // 滚动到该小节
+                    this.scrollToMeasure(index);
+                }
+            }
+            
+            // 滚动到指定小节
+            scrollToMeasure(index) {
+                const measureElement = document.querySelector(`.measure[data-measure-index="${index}"]`);
+                if (measureElement) {
+                    const container = this.domElements.canvasContainer;
+                    const containerHeight = container.clientHeight;
+                    const elementTop = measureElement.offsetTop;
+                    const elementHeight = measureElement.offsetHeight;
+                    
+                    const targetScrollTop = elementTop - (containerHeight / 2) + (elementHeight / 2);
+                    
+                    container.scrollTo({
+                        top: targetScrollTop,
+                        behavior: 'smooth'
+                    });
+                }
+            }
+            
+            // 添加小节
+            addMeasure() {
+                const newMeasureNotes = this.generateRandomNotes();
+                this.measuresData.push(newMeasureNotes);
+                this.generateStaff();
+                this.updateMeasureButtons();
+                
+                // 自动选择新添加的小节
+                this.selectMeasure(this.measuresData.length - 1);
+                this.highlightMeasure(this.measuresData.length - 1);
+            }
+            
+            // 删除选中小节
+            deleteSelectedMeasure() {
+                if (this.selectedMeasureIndex === null || this.measuresData.length <= 1) return;
+                
+                // 删除选中的小节
+                this.measuresData.splice(this.selectedMeasureIndex, 1);
+                
+                // 重置选中状态
+                this.selectedMeasureIndex = null;
+                
+                // 重新生成乐谱
+                this.generateStaff();
+                this.updateMeasureButtons();
+                
+                // 如果正在播放，需要重置播放位置
+                if (this.isPlaying) {
+                    if (this.currentMeasure >= this.measuresData.length) {
+                        this.currentMeasure = Math.max(0, this.measuresData.length - 1);
+                        this.currentBeat = 0;
+                    }
                 }
             }
             
@@ -410,7 +689,7 @@
                 }
                 
                 // 更新状态栏
-                this.domElements.statusBar.textContent = `当前: 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.11)`;
+                this.domElements.statusBar.textContent = `当前: 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.12)`;
                 
                 // 每小节第一拍时滚动到当前小节
                 if (this.currentBeat === 0) {
@@ -423,15 +702,15 @@
                     this.currentBeat = 0;
                     this.currentMeasure++;
                     
-                    // 新增：判断是否循环播放
-                    if (this.currentMeasure >= this.measureCount) {
+                    // 判断是否循环播放
+                    if (this.currentMeasure >= this.measuresData.length) {
                         if (this.loopPlayback) {
                             // 循环播放：回到开头
                             this.currentMeasure = 0;
                         } else {
                             // 不循环：停止播放
                             this.stopPlayback();
-                            this.domElements.statusBar.textContent = `播放完成 (V0.11)`;
+                            this.domElements.statusBar.textContent = `播放完成 (V0.12)`;
                             return; // 终止后续执行
                         }
                     }
@@ -472,13 +751,7 @@
                     el.classList.remove('active');
                 });
                 
-                this.domElements.statusBar.textContent = '已停止 (V0.11)';
-                this.currentMeasure = 0;
-                this.currentBeat = 0;
-            }
-            
-            // 重置播放位置
-            resetPlayback() {
+                this.domElements.statusBar.textContent = '已停止 (V0.12)';
                 this.currentMeasure = 0;
                 this.currentBeat = 0;
             }
@@ -487,13 +760,48 @@
             applySettings() {
                 this.timeSignature = this.domElements.timeSignature.value;
                 this.tempo = parseInt(this.domElements.tempo.value);
-                this.measureCount = parseInt(this.domElements.measureCount.value);
-                this.loopPlayback = this.domElements.loopPlayback.checked; // 新增：获取循环播放设置
+                this.loopPlayback = this.domElements.loopPlayback.checked;
+                
+                // 重新生成乐谱数据以适应新的节拍类型
+                const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
+                for (let i = 0; i < this.measuresData.length; i++) {
+                    // 如果当前小节音符数量与新的节拍不匹配，重新生成
+                    if (this.measuresData[i].length !== beatsPerMeasure) {
+                        this.measuresData[i] = this.generateRandomNotes();
+                    }
+                }
                 
                 this.generateStaff();
                 this.stopPlayback();
                 this.resetPlayback();
                 this.domElements.settingsPanel.style.display = 'none';
+            }
+            
+            // 重置播放位置
+            resetPlayback() {
+                this.currentMeasure = 0;
+                this.currentBeat = 0;
+            }
+            
+            // 切换标签页
+            switchTab(tabName) {
+                // 更新标签按钮状态
+                this.domElements.tabBtns.forEach(btn => {
+                    if (btn.dataset.tab === tabName) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
+                
+                // 更新标签内容
+                document.querySelectorAll('.tab-pane').forEach(pane => {
+                    if (pane.id === `${tabName}-tab`) {
+                        pane.classList.add('active');
+                    } else {
+                        pane.classList.remove('active');
+                    }
+                });
             }
             
             // 使设置面板可拖动
@@ -531,15 +839,32 @@
             setupEventListeners() {
                 this.domElements.playBtn.addEventListener('click', () => this.startPlayback());
                 this.domElements.stopBtn.addEventListener('click', () => this.stopPlayback());
+                
+                // 设置按钮
                 this.domElements.settingsBtn.addEventListener('click', () => {
                     this.domElements.settingsPanel.style.display = 'block';
-                    // 同步当前循环状态到开关
+                    // 同步当前设置到表单
                     this.domElements.loopPlayback.checked = this.loopPlayback;
                 });
+                
+                // 关闭设置面板
                 this.domElements.closeSettingsBtn.addEventListener('click', () => {
                     this.domElements.settingsPanel.style.display = 'none';
                 });
+                
+                // 应用设置
                 this.domElements.applySettingsBtn.addEventListener('click', () => this.applySettings());
+                
+                // 标签页切换
+                this.domElements.tabBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        this.switchTab(btn.dataset.tab);
+                    });
+                });
+                
+                // 乐谱管理功能
+                this.domElements.addMeasureBtn.addEventListener('click', () => this.addMeasure());
+                this.domElements.deleteMeasureBtn.addEventListener('click', () => this.deleteSelectedMeasure());
                 
                 // 使设置面板可拖动
                 this.makeDraggable(this.domElements.settingsPanel, this.domElements.settingsHeader);
@@ -551,9 +876,6 @@
     </script>
 </body>
 </html>
-
 <!--
-fix:
-添加版本号V0.11。
-设置窗口里添加一个选项，可以让它在播放结束的时候不要再从头开始。
+升级程序在设置窗口里添加一个tab页。可以管理乐谱数据添加小节，删除小节，每个小节用一个按钮表示，点击按钮的时候会高亮显示当前小节。
 -->
