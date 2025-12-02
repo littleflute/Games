@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简谱播放器 V0.13</title>
+    <title>简谱播放器 V0.14</title>
     <style>
         body {
             font-family: 'Microsoft YaHei', sans-serif;
@@ -54,6 +54,70 @@
             display: flex;
             flex-direction: column;
             gap: 30px;
+        }
+        
+        .paragraph {
+            border: 3px solid #7b1fa2;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 30px;
+            background-color: #f3e5f5;
+            position: relative;
+        }
+        
+        .paragraph-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #ce93d8;
+        }
+        
+        .paragraph-title {
+            font-weight: bold;
+            font-size: 18px;
+            color: #7b1fa2;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .paragraph-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .paragraph-actions button {
+            background-color: #7b1fa2;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .paragraph-actions button:hover {
+            background-color: #6a1b9a;
+        }
+        
+        .paragraph.active {
+            border-color: #2196f3;
+            background-color: #e3f2fd;
+        }
+        
+        .paragraph.highlighted {
+            border-color: #ff9800;
+            background-color: #fff9c4;
+        }
+        
+        .paragraph-id {
+            background-color: #7b1fa2;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 14px;
         }
         
         .measure {
@@ -135,7 +199,7 @@
             display: none;
             z-index: 100;
             min-width: 500px;
-            max-width: 600px;
+            max-width: 700px;
         }
         
         .settings-header {
@@ -183,7 +247,7 @@
         
         .tab-content {
             padding: 20px;
-            max-height: 400px;
+            max-height: 500px;
             overflow-y: auto;
         }
         
@@ -268,6 +332,76 @@
         }
         
         /* 乐谱管理样式 */
+        .paragraph-controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .paragraph-controls button {
+            background-color: #7b1fa2;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .paragraph-controls button:hover {
+            background-color: #6a1b9a;
+        }
+        
+        .paragraph-controls button.delete-btn {
+            background-color: #e74c3c;
+        }
+        
+        .paragraph-controls button.delete-btn:hover {
+            background-color: #c0392b;
+        }
+        
+        .paragraph-buttons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+        
+        .paragraph-btn {
+            background-color: #e1bee7;
+            border: 2px solid #ce93d8;
+            border-radius: 5px;
+            padding: 8px 12px;
+            cursor: pointer;
+            min-width: 80px;
+            text-align: center;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .paragraph-btn:hover {
+            background-color: #d1c4e9;
+        }
+        
+        .paragraph-btn.active {
+            background-color: #7b1fa2;
+            color: white;
+            border-color: #6a1b9a;
+        }
+        
+        .paragraph-btn-info {
+            font-size: 10px;
+            color: #666;
+            margin-top: 3px;
+        }
+        
         .measure-controls {
             display: flex;
             justify-content: space-between;
@@ -328,6 +462,12 @@
             border-color: #2980b9;
         }
         
+        .paragraph-info {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin-top: 5px;
+        }
+        
         .measure-info {
             font-size: 12px;
             color: #7f8c8d;
@@ -339,6 +479,7 @@
             padding: 20px;
             color: #7f8c8d;
             font-style: italic;
+            width: 100%;
         }
         
         /* 数据管理样式 */
@@ -438,23 +579,24 @@
     
     <div class="canvas-container">
         <div class="staff" id="staff">
-            <!-- 小节将通过JavaScript动态生成 -->
+            <!-- 段落和小节将通过JavaScript动态生成 -->
         </div>
     </div>
     
     <div class="status-bar" id="statusBar">
-        准备就绪 (V0.13)
+        准备就绪 (V0.14)
     </div>
     
     <div class="settings-panel" id="settingsPanel">
         <div class="settings-header" id="settingsHeader">
-            <h3>乐谱播放器设置</h3>
+            <h3>乐谱播放器设置 (V0.14 - 段落管理)</h3>
             <button class="close-btn" id="closeSettingsBtn">×</button>
         </div>
         
         <div class="settings-tabs">
             <button class="tab-btn active" data-tab="playback">播放设置</button>
-            <button class="tab-btn" data-tab="score">乐谱管理</button>
+            <button class="tab-btn" data-tab="paragraph">段落管理</button>
+            <button class="tab-btn" data-tab="score">小节管理</button>
             <button class="tab-btn" data-tab="data">数据管理</button>
         </div>
         
@@ -485,11 +627,34 @@
                 <button class="apply-btn" id="applySettingsBtn">应用设置</button>
             </div>
             
-            <!-- 乐谱管理标签页 -->
+            <!-- 段落管理标签页 -->
+            <div class="tab-pane" id="paragraph-tab">
+                <div class="paragraph-controls">
+                    <button id="addParagraphBtn">新建段落</button>
+                    <button id="copyParagraphBtn" disabled>复制段落</button>
+                    <button id="deleteParagraphBtn" class="delete-btn" disabled>删除段落</button>
+                </div>
+                
+                <div class="paragraph-buttons-container" id="paragraphButtonsContainer">
+                    <!-- 段落按钮将在这里动态生成 -->
+                </div>
+                
+                <div class="paragraph-info">
+                    <p>提示: 点击段落按钮可以选中该段落，然后可以对其进行复制、删除操作。</p>
+                    <p>当前乐谱包含 <span id="paragraphCountDisplay">0</span> 个段落，共 <span id="totalMeasureCountDisplay">0</span> 个小节。</p>
+                </div>
+            </div>
+            
+            <!-- 小节管理标签页 -->
             <div class="tab-pane" id="score-tab">
                 <div class="measure-controls">
                     <button id="addMeasureBtn">添加小节</button>
                     <button id="deleteMeasureBtn" class="delete-btn" disabled>删除选中小节</button>
+                </div>
+                
+                <div class="paragraph-info">
+                    <p>当前选中的段落: <span id="currentParagraphDisplay">无</span></p>
+                    <p>提示: 只有在段落管理标签页中选中了一个段落后，才能在此添加或删除该段落内的小节。</p>
                 </div>
                 
                 <div class="measure-buttons-container" id="measureButtonsContainer">
@@ -497,8 +662,7 @@
                 </div>
                 
                 <div class="measure-info">
-                    <p>提示: 点击小节按钮可以高亮显示对应的小节，当前选中小节可以删除。</p>
-                    <p>当前乐谱包含 <span id="measureCountDisplay">0</span> 个小节。</p>
+                    <p>当前段落包含 <span id="measureCountDisplay">0</span> 个小节。</p>
                 </div>
             </div>
             
@@ -522,18 +686,23 @@
     </div>
 
     <script>
-        // 乐谱播放器类
+        // 乐谱播放器类 - V0.14 (添加段落管理)
         class ScorePlayer {
             constructor() {
                 this.isPlaying = false;
+                this.currentParagraph = 0;
                 this.currentMeasure = 0;
                 this.currentBeat = 0;
                 this.timer = null;
                 this.timeSignature = '4/4';
                 this.tempo = 120;
                 this.loopPlayback = true;
+                this.selectedParagraphIndex = null;
                 this.selectedMeasureIndex = null;
-                this.measuresData = [];
+                this.paragraphsData = [];
+                
+                // 初始化段落ID计数器
+                this.nextParagraphId = 1;
                 
                 // DOM元素引用
                 this.domElements = {
@@ -551,11 +720,20 @@
                     tempo: document.getElementById('tempo'),
                     loopPlayback: document.getElementById('loopPlayback'),
                     tabBtns: document.querySelectorAll('.tab-btn'),
+                    // 段落管理相关元素
+                    addParagraphBtn: document.getElementById('addParagraphBtn'),
+                    copyParagraphBtn: document.getElementById('copyParagraphBtn'),
+                    deleteParagraphBtn: document.getElementById('deleteParagraphBtn'),
+                    paragraphButtonsContainer: document.getElementById('paragraphButtonsContainer'),
+                    paragraphCountDisplay: document.getElementById('paragraphCountDisplay'),
+                    totalMeasureCountDisplay: document.getElementById('totalMeasureCountDisplay'),
+                    // 小节管理相关元素
                     addMeasureBtn: document.getElementById('addMeasureBtn'),
                     deleteMeasureBtn: document.getElementById('deleteMeasureBtn'),
                     measureButtonsContainer: document.getElementById('measureButtonsContainer'),
                     measureCountDisplay: document.getElementById('measureCountDisplay'),
-                    // 新增：数据管理相关元素
+                    currentParagraphDisplay: document.getElementById('currentParagraphDisplay'),
+                    // 数据管理相关元素
                     jsonDisplay: document.getElementById('jsonDisplay'),
                     exportBtn: document.getElementById('exportBtn'),
                     importBtn: document.getElementById('importBtn'),
@@ -569,18 +747,28 @@
             
             // 初始化播放器
             init() {
-                this.initializeMeasuresData(8);
+                this.initializeParagraphsData(2, 4);
                 this.generateStaff();
                 this.setupEventListeners();
-                this.updateMeasureButtons();
+                this.updateParagraphButtons();
                 this.updateJsonDisplay();
             }
             
-            // 初始化乐谱数据
-            initializeMeasuresData(count) {
-                this.measuresData = [];
-                for (let i = 0; i < count; i++) {
-                    this.measuresData.push(this.generateRandomNotes());
+            // 初始化段落数据
+            initializeParagraphsData(paragraphCount, measuresPerParagraph) {
+                this.paragraphsData = [];
+                for (let i = 0; i < paragraphCount; i++) {
+                    const paragraph = {
+                        id: this.nextParagraphId++,
+                        name: `段落 ${i + 1}`,
+                        measures: []
+                    };
+                    
+                    for (let j = 0; j < measuresPerParagraph; j++) {
+                        paragraph.measures.push(this.generateRandomNotes());
+                    }
+                    
+                    this.paragraphsData.push(paragraph);
                 }
             }
             
@@ -604,59 +792,160 @@
                 
                 const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
                 
-                for (let i = 0; i < this.measuresData.length; i++) {
-                    const measure = document.createElement('div');
-                    measure.className = 'measure';
-                    measure.dataset.measureIndex = i;
+                // 遍历所有段落
+                for (let p = 0; p < this.paragraphsData.length; p++) {
+                    const paragraph = this.paragraphsData[p];
                     
-                    // 添加小节序号
-                    const measureNumber = document.createElement('div');
-                    measureNumber.className = 'measure-number';
-                    measureNumber.textContent = `小节 ${i + 1}`;
-                    measure.appendChild(measureNumber);
+                    // 创建段落容器
+                    const paragraphElement = document.createElement('div');
+                    paragraphElement.className = 'paragraph';
+                    paragraphElement.dataset.paragraphIndex = p;
                     
-                    // 获取该小节的音符数据
-                    const measureNotes = this.measuresData[i];
+                    // 添加段落头部
+                    const paragraphHeader = document.createElement('div');
+                    paragraphHeader.className = 'paragraph-header';
                     
-                    for (let j = 0; j < beatsPerMeasure; j++) {
-                        const beat = document.createElement('div');
-                        beat.className = 'beat';
-                        beat.dataset.beatIndex = j;
+                    const paragraphTitle = document.createElement('div');
+                    paragraphTitle.className = 'paragraph-title';
+                    paragraphTitle.innerHTML = `
+                        <span class="paragraph-id">段落 ${p + 1}</span>
+                        <span>${paragraph.name}</span>
+                    `;
+                    
+                    const paragraphActions = document.createElement('div');
+                    paragraphActions.className = 'paragraph-actions';
+                    
+                    paragraphHeader.appendChild(paragraphTitle);
+                    paragraphHeader.appendChild(paragraphActions);
+                    paragraphElement.appendChild(paragraphHeader);
+                    
+                    // 遍历段落中的小节
+                    for (let m = 0; m < paragraph.measures.length; m++) {
+                        const measure = document.createElement('div');
+                        measure.className = 'measure';
+                        measure.dataset.paragraphIndex = p;
+                        measure.dataset.measureIndex = m;
                         
-                        const beatNumber = document.createElement('span');
-                        beatNumber.className = 'beat-number';
-                        beatNumber.textContent = j + 1;
+                        // 添加小节序号
+                        const measureNumber = document.createElement('div');
+                        measureNumber.className = 'measure-number';
+                        measureNumber.textContent = `段落 ${p + 1} - 小节 ${m + 1}`;
+                        measure.appendChild(measureNumber);
                         
-                        beat.appendChild(beatNumber);
+                        // 获取该小节的音符数据
+                        const measureNotes = paragraph.measures[m];
                         
-                        // 添加音符显示
-                        const noteDisplay = document.createElement('span');
-                        noteDisplay.className = 'note-display';
+                        // 添加拍子
+                        for (let b = 0; b < beatsPerMeasure; b++) {
+                            const beat = document.createElement('div');
+                            beat.className = 'beat';
+                            beat.dataset.beatIndex = b;
+                            
+                            const beatNumber = document.createElement('span');
+                            beatNumber.className = 'beat-number';
+                            beatNumber.textContent = b + 1;
+                            
+                            beat.appendChild(beatNumber);
+                            
+                            // 添加音符显示
+                            const noteDisplay = document.createElement('span');
+                            noteDisplay.className = 'note-display';
+                            
+                            // 显示对应的音符
+                            const note = measureNotes[b] || '0';
+                            noteDisplay.textContent = note;
+                            
+                            beat.appendChild(noteDisplay);
+                            measure.appendChild(beat);
+                        }
                         
-                        // 显示对应的音符
-                        const note = measureNotes[j] || '0';
-                        noteDisplay.textContent = note;
-                        
-                        beat.appendChild(noteDisplay);
-                        measure.appendChild(beat);
+                        paragraphElement.appendChild(measure);
                     }
                     
-                    this.domElements.staff.appendChild(measure);
+                    this.domElements.staff.appendChild(paragraphElement);
                 }
+            }
+            
+            // 更新段落按钮
+            updateParagraphButtons() {
+                this.domElements.paragraphButtonsContainer.innerHTML = '';
+                
+                if (this.paragraphsData.length === 0) {
+                    const emptyState = document.createElement('div');
+                    emptyState.className = 'empty-state';
+                    emptyState.textContent = '当前乐谱没有段落，点击"新建段落"按钮开始创建。';
+                    this.domElements.paragraphButtonsContainer.appendChild(emptyState);
+                    this.domElements.copyParagraphBtn.disabled = true;
+                    this.domElements.deleteParagraphBtn.disabled = true;
+                } else {
+                    for (let i = 0; i < this.paragraphsData.length; i++) {
+                        const paragraph = this.paragraphsData[i];
+                        const paragraphBtn = document.createElement('button');
+                        paragraphBtn.className = 'paragraph-btn';
+                        if (i === this.selectedParagraphIndex) {
+                            paragraphBtn.classList.add('active');
+                        }
+                        paragraphBtn.textContent = paragraph.name;
+                        
+                        const infoSpan = document.createElement('span');
+                        infoSpan.className = 'paragraph-btn-info';
+                        infoSpan.textContent = `${paragraph.measures.length} 小节`;
+                        
+                        paragraphBtn.appendChild(infoSpan);
+                        paragraphBtn.dataset.paragraphIndex = i;
+                        
+                        paragraphBtn.addEventListener('click', () => {
+                            this.selectParagraph(i);
+                            this.highlightParagraph(i);
+                        });
+                        
+                        this.domElements.paragraphButtonsContainer.appendChild(paragraphBtn);
+                    }
+                    
+                    this.domElements.copyParagraphBtn.disabled = this.selectedParagraphIndex === null;
+                    this.domElements.deleteParagraphBtn.disabled = this.selectedParagraphIndex === null;
+                }
+                
+                this.domElements.paragraphCountDisplay.textContent = this.paragraphsData.length;
+                
+                // 计算总小节数
+                let totalMeasures = 0;
+                for (const paragraph of this.paragraphsData) {
+                    totalMeasures += paragraph.measures.length;
+                }
+                this.domElements.totalMeasureCountDisplay.textContent = totalMeasures;
+                
+                // 更新小节管理标签页
+                this.updateMeasureButtons();
             }
             
             // 更新小节按钮
             updateMeasureButtons() {
                 this.domElements.measureButtonsContainer.innerHTML = '';
                 
-                if (this.measuresData.length === 0) {
+                // 更新当前选中的段落显示
+                if (this.selectedParagraphIndex !== null) {
+                    const paragraph = this.paragraphsData[this.selectedParagraphIndex];
+                    this.domElements.currentParagraphDisplay.textContent = paragraph.name;
+                } else {
+                    this.domElements.currentParagraphDisplay.textContent = '无';
+                    this.domElements.addMeasureBtn.disabled = true;
+                    this.domElements.deleteMeasureBtn.disabled = true;
+                    return;
+                }
+                
+                this.domElements.addMeasureBtn.disabled = false;
+                
+                const paragraph = this.paragraphsData[this.selectedParagraphIndex];
+                
+                if (paragraph.measures.length === 0) {
                     const emptyState = document.createElement('div');
                     emptyState.className = 'empty-state';
-                    emptyState.textContent = '当前乐谱没有小节，点击"添加小节"按钮开始创建。';
+                    emptyState.textContent = '当前段落没有小节，点击"添加小节"按钮开始创建。';
                     this.domElements.measureButtonsContainer.appendChild(emptyState);
                     this.domElements.deleteMeasureBtn.disabled = true;
                 } else {
-                    for (let i = 0; i < this.measuresData.length; i++) {
+                    for (let i = 0; i < paragraph.measures.length; i++) {
                         const measureBtn = document.createElement('button');
                         measureBtn.className = 'measure-btn';
                         if (i === this.selectedMeasureIndex) {
@@ -667,7 +956,7 @@
                         
                         measureBtn.addEventListener('click', () => {
                             this.selectMeasure(i);
-                            this.highlightMeasure(i);
+                            this.highlightMeasure(this.selectedParagraphIndex, i);
                         });
                         
                         this.domElements.measureButtonsContainer.appendChild(measureBtn);
@@ -676,17 +965,17 @@
                     this.domElements.deleteMeasureBtn.disabled = this.selectedMeasureIndex === null;
                 }
                 
-                this.domElements.measureCountDisplay.textContent = this.measuresData.length;
+                this.domElements.measureCountDisplay.textContent = paragraph.measures.length;
             }
             
             // 更新JSON数据显示
             updateJsonDisplay() {
                 const scoreData = {
-                    version: "0.13",
+                    version: "0.14",
                     timeSignature: this.timeSignature,
                     tempo: this.tempo,
                     loopPlayback: this.loopPlayback,
-                    measures: this.measuresData,
+                    paragraphs: this.paragraphsData,
                     lastUpdated: new Date().toISOString()
                 };
                 
@@ -702,7 +991,7 @@
                 const url = URL.createObjectURL(dataBlob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `score_data_${new Date().toISOString().split('T')[0]}.json`;
+                link.download = `score_data_v0.14_${new Date().toISOString().split('T')[0]}.json`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -740,11 +1029,18 @@
             
             // 应用JSON数据
             applyJsonData(jsonData) {
-                if (jsonData.version && jsonData.measures) {
+                if (jsonData.version && jsonData.paragraphs) {
                     this.timeSignature = jsonData.timeSignature || this.timeSignature;
                     this.tempo = jsonData.tempo || this.tempo;
                     this.loopPlayback = jsonData.loopPlayback !== undefined ? jsonData.loopPlayback : this.loopPlayback;
-                    this.measuresData = jsonData.measures;
+                    this.paragraphsData = jsonData.paragraphs;
+                    
+                    // 更新下一个段落ID
+                    let maxId = 0;
+                    for (const paragraph of this.paragraphsData) {
+                        if (paragraph.id > maxId) maxId = paragraph.id;
+                    }
+                    this.nextParagraphId = maxId + 1;
                     
                     // 更新UI
                     this.domElements.timeSignature.value = this.timeSignature;
@@ -752,7 +1048,9 @@
                     this.domElements.loopPlayback.checked = this.loopPlayback;
                     
                     this.generateStaff();
-                    this.updateMeasureButtons();
+                    this.selectedParagraphIndex = null;
+                    this.selectedMeasureIndex = null;
+                    this.updateParagraphButtons();
                     this.updateJsonDisplay();
                     this.stopPlayback();
                     this.resetPlayback();
@@ -775,28 +1073,66 @@
                 }, 3000);
             }
             
+            // 选择段落
+            selectParagraph(index) {
+                this.selectedParagraphIndex = index;
+                this.selectedMeasureIndex = null;
+                this.updateParagraphButtons();
+            }
+            
             // 选择小节
             selectMeasure(index) {
                 this.selectedMeasureIndex = index;
                 this.updateMeasureButtons();
             }
             
+            // 高亮显示指定段落
+            highlightParagraph(index) {
+                document.querySelectorAll('.paragraph.highlighted').forEach(el => {
+                    el.classList.remove('highlighted');
+                });
+                
+                const paragraph = document.querySelector(`.paragraph[data-paragraph-index="${index}"]`);
+                if (paragraph) {
+                    paragraph.classList.add('highlighted');
+                    this.scrollToParagraph(index);
+                }
+            }
+            
             // 高亮显示指定小节
-            highlightMeasure(index) {
+            highlightMeasure(paragraphIndex, measureIndex) {
                 document.querySelectorAll('.measure.highlighted').forEach(el => {
                     el.classList.remove('highlighted');
                 });
                 
-                const measure = document.querySelector(`.measure[data-measure-index="${index}"]`);
+                const measure = document.querySelector(`.measure[data-paragraph-index="${paragraphIndex}"][data-measure-index="${measureIndex}"]`);
                 if (measure) {
                     measure.classList.add('highlighted');
-                    this.scrollToMeasure(index);
+                    this.scrollToMeasure(paragraphIndex, measureIndex);
+                }
+            }
+            
+            // 滚动到指定段落
+            scrollToParagraph(index) {
+                const paragraphElement = document.querySelector(`.paragraph[data-paragraph-index="${index}"]`);
+                if (paragraphElement) {
+                    const container = this.domElements.canvasContainer;
+                    const containerHeight = container.clientHeight;
+                    const elementTop = paragraphElement.offsetTop;
+                    const elementHeight = paragraphElement.offsetHeight;
+                    
+                    const targetScrollTop = elementTop - (containerHeight / 2) + (elementHeight / 2);
+                    
+                    container.scrollTo({
+                        top: targetScrollTop,
+                        behavior: 'smooth'
+                    });
                 }
             }
             
             // 滚动到指定小节
-            scrollToMeasure(index) {
-                const measureElement = document.querySelector(`.measure[data-measure-index="${index}"]`);
+            scrollToMeasure(paragraphIndex, measureIndex) {
+                const measureElement = document.querySelector(`.measure[data-paragraph-index="${paragraphIndex}"][data-measure-index="${measureIndex}"]`);
                 if (measureElement) {
                     const container = this.domElements.canvasContainer;
                     const containerHeight = container.clientHeight;
@@ -812,43 +1148,119 @@
                 }
             }
             
-            // 添加小节
-            addMeasure() {
-                const newMeasureNotes = this.generateRandomNotes();
-                this.measuresData.push(newMeasureNotes);
+            // 添加段落
+            addParagraph() {
+                const newParagraph = {
+                    id: this.nextParagraphId++,
+                    name: `段落 ${this.paragraphsData.length + 1}`,
+                    measures: []
+                };
+                
+                // 为新段落添加初始小节
+                const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
+                for (let i = 0; i < 4; i++) {
+                    newParagraph.measures.push(this.generateRandomNotes());
+                }
+                
+                this.paragraphsData.push(newParagraph);
                 this.generateStaff();
-                this.updateMeasureButtons();
+                this.updateParagraphButtons();
                 this.updateJsonDisplay();
                 
-                this.selectMeasure(this.measuresData.length - 1);
-                this.highlightMeasure(this.measuresData.length - 1);
+                this.selectParagraph(this.paragraphsData.length - 1);
+                this.highlightParagraph(this.paragraphsData.length - 1);
             }
             
-            // 删除选中小节
-            deleteSelectedMeasure() {
-                if (this.selectedMeasureIndex === null || this.measuresData.length <= 1) return;
+            // 复制段落
+            copyParagraph() {
+                if (this.selectedParagraphIndex === null) return;
                 
-                this.measuresData.splice(this.selectedMeasureIndex, 1);
+                const originalParagraph = this.paragraphsData[this.selectedParagraphIndex];
+                
+                // 深度复制段落
+                const copiedParagraph = {
+                    id: this.nextParagraphId++,
+                    name: `${originalParagraph.name} (副本)`,
+                    measures: JSON.parse(JSON.stringify(originalParagraph.measures))
+                };
+                
+                this.paragraphsData.splice(this.selectedParagraphIndex + 1, 0, copiedParagraph);
+                this.generateStaff();
+                this.updateParagraphButtons();
+                this.updateJsonDisplay();
+                
+                this.selectParagraph(this.selectedParagraphIndex + 1);
+                this.highlightParagraph(this.selectedParagraphIndex);
+            }
+            
+            // 删除选中段落
+            deleteSelectedParagraph() {
+                if (this.selectedParagraphIndex === null || this.paragraphsData.length <= 1) return;
+                
+                this.paragraphsData.splice(this.selectedParagraphIndex, 1);
+                this.selectedParagraphIndex = null;
                 this.selectedMeasureIndex = null;
                 
                 this.generateStaff();
-                this.updateMeasureButtons();
+                this.updateParagraphButtons();
                 this.updateJsonDisplay();
                 
-                if (this.isPlaying && this.currentMeasure >= this.measuresData.length) {
-                    this.currentMeasure = Math.max(0, this.measuresData.length - 1);
+                if (this.isPlaying && this.currentParagraph >= this.paragraphsData.length) {
+                    this.currentParagraph = Math.max(0, this.paragraphsData.length - 1);
+                    this.currentMeasure = 0;
                     this.currentBeat = 0;
                 }
             }
             
-            // 滚动到当前小节
-            scrollToCurrentMeasure() {
-                const currentMeasureElement = document.querySelector(`.measure[data-measure-index="${this.currentMeasure}"]`);
-                if (currentMeasureElement) {
+            // 添加小节
+            addMeasure() {
+                if (this.selectedParagraphIndex === null) return;
+                
+                const paragraph = this.paragraphsData[this.selectedParagraphIndex];
+                const newMeasureNotes = this.generateRandomNotes();
+                paragraph.measures.push(newMeasureNotes);
+                
+                this.generateStaff();
+                this.updateParagraphButtons();
+                this.updateMeasureButtons();
+                this.updateJsonDisplay();
+                
+                this.selectMeasure(paragraph.measures.length - 1);
+                this.highlightMeasure(this.selectedParagraphIndex, paragraph.measures.length - 1);
+            }
+            
+            // 删除选中小节
+            deleteSelectedMeasure() {
+                if (this.selectedParagraphIndex === null || this.selectedMeasureIndex === null) return;
+                
+                const paragraph = this.paragraphsData[this.selectedParagraphIndex];
+                if (paragraph.measures.length <= 1) return;
+                
+                paragraph.measures.splice(this.selectedMeasureIndex, 1);
+                this.selectedMeasureIndex = null;
+                
+                this.generateStaff();
+                this.updateParagraphButtons();
+                this.updateMeasureButtons();
+                this.updateJsonDisplay();
+                
+                // 如果正在播放，调整播放位置
+                if (this.isPlaying && 
+                    this.currentParagraph === this.selectedParagraphIndex && 
+                    this.currentMeasure >= paragraph.measures.length) {
+                    this.currentMeasure = Math.max(0, paragraph.measures.length - 1);
+                    this.currentBeat = 0;
+                }
+            }
+            
+            // 滚动到当前段落
+            scrollToCurrentParagraph() {
+                const currentParagraphElement = document.querySelector(`.paragraph[data-paragraph-index="${this.currentParagraph}"]`);
+                if (currentParagraphElement) {
                     const container = this.domElements.canvasContainer;
                     const containerHeight = container.clientHeight;
-                    const elementTop = currentMeasureElement.offsetTop;
-                    const elementHeight = currentMeasureElement.offsetHeight;
+                    const elementTop = currentParagraphElement.offsetTop;
+                    const elementHeight = currentParagraphElement.offsetHeight;
                     
                     const targetScrollTop = elementTop - (containerHeight / 2) + (elementHeight / 2);
                     
@@ -864,40 +1276,71 @@
                 const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
                 const beatDuration = 60000 / this.tempo;
                 
-                document.querySelectorAll('.measure.active, .beat.active').forEach(el => {
+                // 清除所有活动状态
+                document.querySelectorAll('.paragraph.active, .measure.active, .beat.active').forEach(el => {
                     el.classList.remove('active');
                 });
                 
-                const measures = document.querySelectorAll('.measure');
-                if (this.currentMeasure < measures.length) {
-                    measures[this.currentMeasure].classList.add('active');
+                // 检查是否还有段落
+                if (this.currentParagraph >= this.paragraphsData.length) {
+                    if (this.loopPlayback) {
+                        this.currentParagraph = 0;
+                        this.currentMeasure = 0;
+                        this.currentBeat = 0;
+                    } else {
+                        this.stopPlayback();
+                        this.domElements.statusBar.textContent = `播放完成 (V0.14)`;
+                        return;
+                    }
+                }
+                
+                const currentParagraph = this.paragraphsData[this.currentParagraph];
+                
+                // 检查是否还有小节
+                if (this.currentMeasure >= currentParagraph.measures.length) {
+                    this.currentParagraph++;
+                    this.currentMeasure = 0;
+                    this.currentBeat = 0;
                     
-                    const beats = measures[this.currentMeasure].querySelectorAll('.beat');
+                    if (this.currentParagraph >= this.paragraphsData.length) {
+                        if (this.loopPlayback) {
+                            this.currentParagraph = 0;
+                        } else {
+                            this.stopPlayback();
+                            this.domElements.statusBar.textContent = `播放完成 (V0.14)`;
+                            return;
+                        }
+                    }
+                }
+                
+                // 高亮当前段落
+                const paragraphElement = document.querySelector(`.paragraph[data-paragraph-index="${this.currentParagraph}"]`);
+                if (paragraphElement) {
+                    paragraphElement.classList.add('active');
+                }
+                
+                // 高亮当前小节
+                const measureElement = document.querySelector(`.measure[data-paragraph-index="${this.currentParagraph}"][data-measure-index="${this.currentMeasure}"]`);
+                if (measureElement) {
+                    measureElement.classList.add('active');
+                    
+                    // 高亮当前拍子
+                    const beats = measureElement.querySelectorAll('.beat');
                     if (this.currentBeat < beats.length) {
                         beats[this.currentBeat].classList.add('active');
                     }
                 }
                 
-                this.domElements.statusBar.textContent = `当前: 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.13)`;
+                this.domElements.statusBar.textContent = `当前: ${currentParagraph.name} - 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.14)`;
                 
-                if (this.currentBeat === 0) {
-                    this.scrollToCurrentMeasure();
+                if (this.currentBeat === 0 && this.currentMeasure === 0) {
+                    this.scrollToCurrentParagraph();
                 }
                 
                 this.currentBeat++;
                 if (this.currentBeat >= beatsPerMeasure) {
                     this.currentBeat = 0;
                     this.currentMeasure++;
-                    
-                    if (this.currentMeasure >= this.measuresData.length) {
-                        if (this.loopPlayback) {
-                            this.currentMeasure = 0;
-                        } else {
-                            this.stopPlayback();
-                            this.domElements.statusBar.textContent = `播放完成 (V0.13)`;
-                            return;
-                        }
-                    }
                 }
                 
                 this.timer = setTimeout(() => this.playAnimation(), beatDuration);
@@ -911,8 +1354,8 @@
                 this.domElements.playBtn.disabled = true;
                 this.domElements.stopBtn.disabled = false;
                 
-                if (this.currentMeasure === 0 && this.currentBeat === 0) {
-                    setTimeout(() => this.scrollToCurrentMeasure(), 50);
+                if (this.currentParagraph === 0 && this.currentMeasure === 0 && this.currentBeat === 0) {
+                    setTimeout(() => this.scrollToCurrentParagraph(), 50);
                 }
                 
                 this.playAnimation();
@@ -928,11 +1371,12 @@
                 
                 clearTimeout(this.timer);
                 
-                document.querySelectorAll('.measure.active, .beat.active').forEach(el => {
+                document.querySelectorAll('.paragraph.active, .measure.active, .beat.active').forEach(el => {
                     el.classList.remove('active');
                 });
                 
-                this.domElements.statusBar.textContent = '已停止 (V0.13)';
+                this.domElements.statusBar.textContent = '已停止 (V0.14)';
+                this.currentParagraph = 0;
                 this.currentMeasure = 0;
                 this.currentBeat = 0;
             }
@@ -944,9 +1388,14 @@
                 this.loopPlayback = this.domElements.loopPlayback.checked;
                 
                 const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
-                for (let i = 0; i < this.measuresData.length; i++) {
-                    if (this.measuresData[i].length !== beatsPerMeasure) {
-                        this.measuresData[i] = this.generateRandomNotes();
+                
+                // 更新所有段落中的所有小节
+                for (let p = 0; p < this.paragraphsData.length; p++) {
+                    const paragraph = this.paragraphsData[p];
+                    for (let m = 0; m < paragraph.measures.length; m++) {
+                        if (paragraph.measures[m].length !== beatsPerMeasure) {
+                            paragraph.measures[m] = this.generateRandomNotes();
+                        }
                     }
                 }
                 
@@ -959,6 +1408,7 @@
             
             // 重置播放位置
             resetPlayback() {
+                this.currentParagraph = 0;
                 this.currentMeasure = 0;
                 this.currentBeat = 0;
             }
@@ -1040,6 +1490,12 @@
                     });
                 });
                 
+                // 段落管理事件监听
+                this.domElements.addParagraphBtn.addEventListener('click', () => this.addParagraph());
+                this.domElements.copyParagraphBtn.addEventListener('click', () => this.copyParagraph());
+                this.domElements.deleteParagraphBtn.addEventListener('click', () => this.deleteSelectedParagraph());
+                
+                // 小节管理事件监听
                 this.domElements.addMeasureBtn.addEventListener('click', () => this.addMeasure());
                 this.domElements.deleteMeasureBtn.addEventListener('click', () => this.deleteSelectedMeasure());
                 
@@ -1066,8 +1522,7 @@
     </script>
 </body>
 </html>
-
 <!--
 升级程序
-在设置窗口里添加一个新的标签页管理数据。可以看到json格式的数据。可以导出另存文件，还可以导入。
+添加段落的概念，段落由小节构成,段落可以新建。可以复制，可以删除。
 -->
