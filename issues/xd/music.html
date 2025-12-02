@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简谱播放器 V0.18</title>
+    <title>简谱播放器 V0.19</title>
     <style>
         body {
             font-family: 'Microsoft YaHei', sans-serif;
@@ -187,6 +187,7 @@
             align-items: center;
             position: relative;
             cursor: pointer;
+            transition: all 0.2s ease;
         }
         
         .beat:last-child {
@@ -194,7 +195,11 @@
         }
         
         .beat.active {
-            background-color: #bbdefb;
+            background-color: #64b5f6 !important;
+            border: 2px solid #2196f3;
+            box-shadow: 0 0 10px rgba(33, 150, 243, 0.5);
+            transform: scale(1.05);
+            z-index: 2;
         }
         
         .beat.editable {
@@ -731,12 +736,12 @@
     </div>
     
     <div class="status-bar" id="statusBar">
-        准备就绪 (V0.18 - 任意数据编辑)
+        准备就绪 (V0.19 - 播放高亮增强)
     </div>
     
     <div class="settings-panel" id="settingsPanel">
         <div class="settings-header" id="settingsHeader">
-            <h3>乐谱播放器设置 (V0.18 - 任意数据编辑)</h3>
+            <h3>乐谱播放器设置 (V0.19 - 播放高亮增强)</h3>
             <button class="close-btn" id="closeSettingsBtn">×</button>
         </div>
         
@@ -833,7 +838,7 @@
     </div>
 
     <script>
-        // 乐谱播放器类 - V0.18 (任意数据编辑功能)
+        // 乐谱播放器类 - V0.19 (播放高亮增强)
         class ScorePlayer {
             constructor() {
                 this.isPlaying = false;
@@ -906,7 +911,7 @@
                 this.setupEventListeners();
                 this.updateParagraphButtons();
                 this.updateJsonDisplay();
-                this.showStatusMessage('V0.18版本已加载：现在可以输入任意数据！', 'success');
+                this.showStatusMessage('V0.19版本已加载：播放时高亮当前拍！', 'success');
             }
             
             // 初始化段落数据
@@ -1295,7 +1300,7 @@
             // 更新JSON数据显示
             updateJsonDisplay() {
                 const scoreData = {
-                    version: "0.18",
+                    version: "0.19",
                     timeSignature: this.timeSignature,
                     tempo: this.tempo,
                     loopPlayback: this.loopPlayback,
@@ -1315,7 +1320,7 @@
                 const url = URL.createObjectURL(dataBlob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `score_data_v0.18_${new Date().toISOString().split('T')[0]}.json`;
+                link.download = `score_data_v0.19_${new Date().toISOString().split('T')[0]}.json`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -1388,7 +1393,7 @@
                 statusElement.textContent = message;
                 statusElement.className = `status-message status-${type}`;
                 
-                this.domElements.statusBar.textContent = `${message} (V0.18 - 任意数据编辑)`;
+                this.domElements.statusBar.textContent = `${message} (V0.19 - 播放高亮增强)`;
                 
                 setTimeout(() => {
                     if (statusElement.textContent === message) {
@@ -1397,7 +1402,7 @@
                     }
                     
                     if (!this.isPlaying) {
-                        this.domElements.statusBar.textContent = '准备就绪 (V0.18 - 任意数据编辑)';
+                        this.domElements.statusBar.textContent = '准备就绪 (V0.19 - 播放高亮增强)';
                     }
                 }, 3000);
             }
@@ -1602,6 +1607,7 @@
                 const [beatsPerMeasure] = this.timeSignature.split('/').map(Number);
                 const beatDuration = 60000 / this.tempo;
                 
+                // 清除之前的高亮
                 document.querySelectorAll('.paragraph.active, .measure.active, .beat.active').forEach(el => {
                     el.classList.remove('active');
                 });
@@ -1613,7 +1619,7 @@
                         this.currentBeat = 0;
                     } else {
                         this.stopPlayback();
-                        this.domElements.statusBar.textContent = `播放完成 (V0.18 - 任意数据编辑)`;
+                        this.domElements.statusBar.textContent = `播放完成 (V0.19 - 播放高亮增强)`;
                         return;
                     }
                 }
@@ -1630,32 +1636,39 @@
                             this.currentParagraph = 0;
                         } else {
                             this.stopPlayback();
-                            this.domElements.statusBar.textContent = `播放完成 (V0.18 - 任意数据编辑)`;
+                            this.domElements.statusBar.textContent = `播放完成 (V0.19 - 播放高亮增强)`;
                             return;
                         }
                     }
                 }
                 
+                // 高亮当前段落
                 const paragraphElement = document.querySelector(`.paragraph[data-paragraph-index="${this.currentParagraph}"]`);
                 if (paragraphElement) {
                     paragraphElement.classList.add('active');
                 }
                 
+                // 高亮当前小节
                 const measureElement = document.querySelector(`.measure[data-paragraph-index="${this.currentParagraph}"][data-measure-index="${this.currentMeasure}"]`);
                 if (measureElement) {
                     measureElement.classList.add('active');
                     
+                    // 高亮当前拍 - 增强版
                     const beats = measureElement.querySelectorAll('.beat');
                     if (this.currentBeat < beats.length) {
-                        beats[this.currentBeat].classList.add('active');
+                        const currentBeatElement = beats[this.currentBeat];
+                        currentBeatElement.classList.add('active');
+                        
+                        // 确保当前拍可见
+                        currentBeatElement.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'center', 
+                            inline: 'center' 
+                        });
                     }
                 }
                 
-                this.domElements.statusBar.textContent = `当前: ${currentParagraph.name} - 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.18)`;
-                
-                if (this.currentBeat === 0 && this.currentMeasure === 0) {
-                    this.scrollToCurrentParagraph();
-                }
+                this.domElements.statusBar.textContent = `当前: ${currentParagraph.name} - 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.19)`;
                 
                 this.currentBeat++;
                 if (this.currentBeat >= beatsPerMeasure) {
@@ -1699,7 +1712,7 @@
                     el.classList.remove('active');
                 });
                 
-                this.domElements.statusBar.textContent = '已停止 (V0.18 - 任意数据编辑)';
+                this.domElements.statusBar.textContent = '已停止 (V0.19 - 播放高亮增强)';
                 this.currentParagraph = 0;
                 this.currentMeasure = 0;
                 this.currentBeat = 0;
