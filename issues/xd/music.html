@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>简谱播放器 V0.15</title>
+    <title>简谱播放器 V0.16</title>
     <style>
         body {
             font-family: 'Microsoft YaHei', sans-serif;
@@ -84,6 +84,27 @@
             display: flex;
             align-items: center;
             gap: 10px;
+        }
+        
+        .paragraph-name-editable {
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+            border: 1px solid transparent;
+            transition: all 0.3s ease;
+            min-width: 100px;
+        }
+        
+        .paragraph-name-editable:hover {
+            background-color: rgba(255, 255, 255, 0.5);
+            border-color: #ce93d8;
+        }
+        
+        .paragraph-name-editable.editing {
+            background-color: white;
+            border-color: #3498db;
+            cursor: text;
+            outline: none;
         }
         
         .paragraph-actions {
@@ -638,6 +659,11 @@
                 width: 100%;
                 margin-bottom: 5px;
             }
+            
+            .paragraph-name-editable {
+                min-width: 80px;
+                font-size: 16px; /* 移动端增大字体 */
+            }
         }
     </style>
 </head>
@@ -657,12 +683,12 @@
     </div>
     
     <div class="status-bar" id="statusBar">
-        准备就绪 (V0.15)
+        准备就绪 (V0.16)
     </div>
     
     <div class="settings-panel" id="settingsPanel">
         <div class="settings-header" id="settingsHeader">
-            <h3>乐谱播放器设置 (V0.15 - 移动端优化)</h3>
+            <h3>乐谱播放器设置 (V0.16 - 段落名称编辑)</h3>
             <button class="close-btn" id="closeSettingsBtn">×</button>
         </div>
         
@@ -759,7 +785,7 @@
     </div>
 
     <script>
-        // 乐谱播放器类 - V0.15 (移动端优化)
+        // 乐谱播放器类 - V0.16 (段落名称编辑功能)
         class ScorePlayer {
             constructor() {
                 this.isPlaying = false;
@@ -778,6 +804,7 @@
                 this.dragStartY = 0;
                 this.panelStartX = 0;
                 this.panelStartY = 0;
+                this.editingParagraphIndex = null; // 当前正在编辑的段落索引
                 
                 // 初始化段落ID计数器
                 this.nextParagraphId = 1;
@@ -887,7 +914,7 @@
                     paragraphTitle.className = 'paragraph-title';
                     paragraphTitle.innerHTML = `
                         <span class="paragraph-id">段落 ${p + 1}</span>
-                        <span>${paragraph.name}</span>
+                        <span class="paragraph-name-editable" data-paragraph-index="${p}">${paragraph.name}</span>
                     `;
                     
                     const paragraphActions = document.createElement('div');
@@ -1049,7 +1076,7 @@
             // 更新JSON数据显示
             updateJsonDisplay() {
                 const scoreData = {
-                    version: "0.15",
+                    version: "0.16",
                     timeSignature: this.timeSignature,
                     tempo: this.tempo,
                     loopPlayback: this.loopPlayback,
@@ -1069,7 +1096,7 @@
                 const url = URL.createObjectURL(dataBlob);
                 const link = document.createElement('a');
                 link.href = url;
-                link.download = `score_data_v0.15_${new Date().toISOString().split('T')[0]}.json`;
+                link.download = `score_data_v0.16_${new Date().toISOString().split('T')[0]}.json`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -1367,7 +1394,7 @@
                         this.currentBeat = 0;
                     } else {
                         this.stopPlayback();
-                        this.domElements.statusBar.textContent = `播放完成 (V0.15)`;
+                        this.domElements.statusBar.textContent = `播放完成 (V0.16)`;
                         return;
                     }
                 }
@@ -1385,7 +1412,7 @@
                             this.currentParagraph = 0;
                         } else {
                             this.stopPlayback();
-                            this.domElements.statusBar.textContent = `播放完成 (V0.15)`;
+                            this.domElements.statusBar.textContent = `播放完成 (V0.16)`;
                             return;
                         }
                     }
@@ -1409,7 +1436,7 @@
                     }
                 }
                 
-                this.domElements.statusBar.textContent = `当前: ${currentParagraph.name} - 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.15)`;
+                this.domElements.statusBar.textContent = `当前: ${currentParagraph.name} - 第 ${this.currentMeasure + 1} 小节 - 第 ${this.currentBeat + 1} 拍 (V0.16)`;
                 
                 if (this.currentBeat === 0 && this.currentMeasure === 0) {
                     this.scrollToCurrentParagraph();
@@ -1453,7 +1480,7 @@
                     el.classList.remove('active');
                 });
                 
-                this.domElements.statusBar.textContent = '已停止 (V0.15)';
+                this.domElements.statusBar.textContent = '已停止 (V0.16)';
                 this.currentParagraph = 0;
                 this.currentMeasure = 0;
                 this.currentBeat = 0;
@@ -1513,6 +1540,109 @@
                 if (tabName === 'data') {
                     this.updateJsonDisplay();
                 }
+            }
+            
+            // 段落名称编辑功能
+            setupParagraphNameEditing() {
+                // 点击段落名称进入编辑模式
+                this.domElements.staff.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('paragraph-name-editable') && !e.target.classList.contains('editing')) {
+                        this.startEditingParagraphName(e.target);
+                    }
+                });
+                
+                // 双击段落名称进入编辑模式
+                this.domElements.staff.addEventListener('dblclick', (e) => {
+                    if (e.target.classList.contains('paragraph-name-editable') && !e.target.classList.contains('editing')) {
+                        this.startEditingParagraphName(e.target);
+                    }
+                });
+                
+                // 处理按键事件
+                this.domElements.staff.addEventListener('keydown', (e) => {
+                    if (e.target.classList.contains('paragraph-name-editable') && e.target.classList.contains('editing')) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            this.finishEditingParagraphName(e.target);
+                        } else if (e.key === 'Escape') {
+                            e.preventDefault();
+                            this.cancelEditingParagraphName(e.target);
+                        }
+                    }
+                });
+                
+                // 失去焦点时保存
+                this.domElements.staff.addEventListener('blur', (e) => {
+                    if (e.target.classList.contains('paragraph-name-editable') && e.target.classList.contains('editing')) {
+                        this.finishEditingParagraphName(e.target);
+                    }
+                }, true);
+            }
+            
+            // 开始编辑段落名称
+            startEditingParagraphName(element) {
+                if (this.editingParagraphIndex !== null) {
+                    // 如果已经有段落正在编辑，先保存
+                    const currentEditingElement = document.querySelector(`.paragraph-name-editable[data-paragraph-index="${this.editingParagraphIndex}"]`);
+                    if (currentEditingElement) {
+                        this.finishEditingParagraphName(currentEditingElement);
+                    }
+                }
+                
+                const paragraphIndex = parseInt(element.dataset.paragraphIndex);
+                this.editingParagraphIndex = paragraphIndex;
+                
+                element.classList.add('editing');
+                element.setAttribute('contenteditable', 'true');
+                element.focus();
+                
+                // 选中文本
+                const range = document.createRange();
+                range.selectNodeContents(element);
+                const selection = window.getSelection();
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+            
+            // 完成编辑段落名称
+            finishEditingParagraphName(element) {
+                const paragraphIndex = parseInt(element.dataset.paragraphIndex);
+                const newName = element.textContent.trim();
+                
+                if (newName && newName !== this.paragraphsData[paragraphIndex].name) {
+                    this.paragraphsData[paragraphIndex].name = newName;
+                    
+                    // 更新段落按钮中的名称
+                    const paragraphBtn = document.querySelector(`.paragraph-btn[data-paragraph-index="${paragraphIndex}"]`);
+                    if (paragraphBtn) {
+                        paragraphBtn.textContent = newName;
+                        const infoSpan = document.createElement('span');
+                        infoSpan.className = 'paragraph-btn-info';
+                        infoSpan.textContent = `${this.paragraphsData[paragraphIndex].measures.length} 小节`;
+                        paragraphBtn.appendChild(infoSpan);
+                    }
+                    
+                    // 更新小节管理标签页中的段落名称显示
+                    if (this.selectedParagraphIndex === paragraphIndex) {
+                        this.domElements.currentParagraphDisplay.textContent = newName;
+                    }
+                    
+                    this.updateJsonDisplay();
+                }
+                
+                this.cancelEditingParagraphName(element);
+            }
+            
+            // 取消编辑段落名称
+            cancelEditingParagraphName(element) {
+                const paragraphIndex = parseInt(element.dataset.paragraphIndex);
+                element.textContent = this.paragraphsData[paragraphIndex].name;
+                element.classList.remove('editing');
+                element.removeAttribute('contenteditable');
+                this.editingParagraphIndex = null;
+                
+                // 清除选中文本
+                window.getSelection().removeAllRanges();
             }
             
             // 使设置面板可拖动（支持移动端触摸事件）
@@ -1647,6 +1777,9 @@
                         this.domElements.settingsPanel.style.display = 'none';
                     }
                 });
+                
+                // 设置段落名称编辑功能
+                this.setupParagraphNameEditing();
             }
         }
 
@@ -1656,7 +1789,8 @@
 </body>
 </html>
 
+
 <!--
 升级程序
-手机上可以移动窗口。
+段落名称可以编辑。
 -->
