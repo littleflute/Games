@@ -1,1 +1,257 @@
-a
+<!-- 在数据管理标签页中，添加这个功能 -->
+<script>
+// 在ScorePlayer类中添加方法
+async loadCommentsFromIssue() {
+    try {
+        this.showStatusMessage('正在加载GitHub评论...', 'success');
+        const comments = await this.#apiRequest('GET', 'issues/1/comments');
+        
+        const container = document.getElementById('load_all_comments_in_issue_1_as_button');
+        container.innerHTML = '<h4 style="margin-top: 15px; margin-bottom: 10px; color: #2c3e50;">GitHub Issue #1 评论:</h4>';
+        
+        if (!comments || comments.length === 0) {
+            container.innerHTML += '<p style="color: #7f8c8d; font-style: italic;">没有找到评论</p>';
+            return;
+        }
+        
+        // 创建评论按钮容器
+        const commentsContainer = document.createElement('div');
+        commentsContainer.style.display = 'flex';
+        commentsContainer.style.flexWrap = 'wrap';
+        commentsContainer.style.gap = '10px';
+        commentsContainer.style.marginTop = '10px';
+        commentsContainer.style.maxHeight = '200px';
+        commentsContainer.style.overflowY = 'auto';
+        commentsContainer.style.padding = '10px';
+        commentsContainer.style.backgroundColor = '#f9f9f9';
+        commentsContainer.style.borderRadius = '5px';
+        commentsContainer.style.border = '1px solid #ddd';
+        
+        // 为每个评论创建按钮
+        comments.forEach((comment, index) => {
+            const commentBtn = document.createElement('button');
+            commentBtn.className = 'comment-btn';
+            commentBtn.style.cssText = `
+                background-color: #e1f5fe;
+                border: 2px solid #4fc3f7;
+                border-radius: 5px;
+                padding: 8px 12px;
+                cursor: pointer;
+                min-width: 80px;
+                text-align: center;
+                font-weight: bold;
+                font-size: 12px;
+                color: #0277bd;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+            `;
+            
+            // 截取评论前部分作为按钮文本
+            const commentText = comment.body || '无内容';
+            const buttonText = commentText.length > 20 
+                ? commentText.substring(0, 20) + '...' 
+                : commentText;
+            
+            // 创建主文本
+            const mainText = document.createElement('span');
+            mainText.textContent = `评论 ${index + 1}`;
+            
+            // 创建副文本
+            const subText = document.createElement('span');
+            subText.textContent = buttonText;
+            subText.style.fontSize = '10px';
+            subText.style.color = '#666';
+            subText.style.marginTop = '3px';
+            
+            // 创建信息文本
+            const infoText = document.createElement('span');
+            infoText.textContent = `@${comment.user?.login || '匿名'}`;
+            infoText.style.fontSize = '9px';
+            infoText.style.color = '#999';
+            infoText.style.marginTop = '2px';
+            
+            commentBtn.appendChild(mainText);
+            commentBtn.appendChild(subText);
+            commentBtn.appendChild(infoText);
+            
+            // 添加点击事件
+            commentBtn.addEventListener('click', () => {
+                this.handleCommentClick(comment);
+            });
+            
+            // 添加悬停效果
+            commentBtn.addEventListener('mouseenter', () => {
+                commentBtn.style.backgroundColor = '#b3e5fc';
+            });
+            
+            commentBtn.addEventListener('mouseleave', () => {
+                commentBtn.style.backgroundColor = '#e1f5fe';
+            });
+            
+            commentsContainer.appendChild(commentBtn);
+        });
+        
+        container.appendChild(commentsContainer);
+        
+        this.showStatusMessage(`已加载 ${comments.length} 条评论`, 'success');
+        
+    } catch (error) {
+        console.error('加载评论失败:', error);
+        this.showStatusMessage('加载GitHub评论失败，请检查网络或token', 'error');
+        
+        const container = document.getElementById('load_all_comments_in_issue_1_as_button');
+        container.innerHTML = `
+            <h4 style="margin-top: 15px; margin-bottom: 10px; color: #2c3e50;">GitHub Issue #1 评论:</h4>
+            <p style="color: #e74c3c; font-style: italic;">加载失败: ${error.message}</p>
+            <button id="retryLoadCommentsBtn" style="
+                background-color: #3498db;
+                color: white;
+                border: none;
+                padding: 8px 15px;
+                border-radius: 4px;
+                cursor: pointer;
+                margin-top: 10px;
+            ">重试加载</button>
+        `;
+        
+        document.getElementById('retryLoadCommentsBtn')?.addEventListener('click', () => {
+            this.loadCommentsFromIssue();
+        });
+    }
+}
+
+// 处理评论点击
+handleCommentClick(comment) {
+    try {
+        const commentText = comment.body || '';
+        const commentInfo = `评论者: ${comment.user?.login || '匿名'}\n时间: ${new Date(comment.created_at).toLocaleString()}\n\n内容:\n${commentText}`;
+        
+        // 尝试解析评论内容是否为JSON数据
+        try {
+            const possibleJsonData = JSON.parse(commentText);
+            if (possibleJsonData && (possibleJsonData.paragraphs || possibleJsonData.timeSignature)) {
+                // 显示确认对话框
+                if (confirm('评论内容似乎是乐谱数据，是否应用为当前乐谱？')) {
+                    this.applyJsonData(possibleJsonData);
+                    this.showStatusMessage('已应用评论中的乐谱数据', 'success');
+                }
+                return;
+            }
+        } catch (e) {
+            // 不是JSON格式，继续显示纯文本
+        }
+        
+        // 显示评论详细信息
+        const messageDiv = document.getElementById('statusMessage');
+        messageDiv.innerHTML = `
+            <div style="
+                background-color: #f8f9fa;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 15px;
+                margin-top: 10px;
+                font-size: 14px;
+                color: #333;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                max-height: 200px;
+                overflow-y: auto;
+            ">
+                <strong>评论详情:</strong><br>
+                ${commentInfo.replace(/\n/g, '<br>')}
+            </div>
+            <button onclick="this.parentElement.innerHTML=''" style="
+                background-color: #95a5a6;
+                color: white;
+                border: none;
+                padding: 5px 10px;
+                border-radius: 3px;
+                cursor: pointer;
+                margin-top: 10px;
+                font-size: 12px;
+            ">关闭详情</button>
+        `;
+        
+        this.showStatusMessage(`已显示评论详情 (来自 @${comment.user?.login || '匿名'})`, 'success');
+        
+    } catch (error) {
+        console.error('处理评论点击失败:', error);
+        this.showStatusMessage('处理评论失败', 'error');
+    }
+}
+
+// 在switchTab方法中，当切换到data标签页时加载评论
+switchTab(tabName) {
+    this.domElements.tabBtns.forEach(btn => {
+        if (btn.dataset.tab === tabName) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    document.querySelectorAll('.tab-pane').forEach(pane => {
+        if (pane.id === `${tabName}-tab`) {
+            pane.classList.add('active');
+        } else {
+            pane.classList.remove('active');
+        }
+    });
+    
+    if (tabName === 'data') {
+        this.updateJsonDisplay();
+        // 延迟加载评论，避免影响UI响应
+        setTimeout(() => {
+            this.loadCommentsFromIssue();
+        }, 100);
+    }
+}
+
+// 在init方法中初始化评论容器
+init() {
+    this.initializeParagraphsData(2, 4);
+    this.generateStaff();
+    this.setupEventListeners();
+    this.updateParagraphButtons();
+    this.updateJsonDisplay();
+    this.showStatusMessage('V0.19版本已加载：播放时高亮当前拍！', 'success');
+    
+    // 初始化评论容器
+    this.initCommentsContainer();
+}
+
+// 初始化评论容器
+initCommentsContainer() {
+    const container = document.getElementById('load_all_comments_in_issue_1_as_button');
+    if (container) {
+        container.innerHTML = `
+            <h4 style="margin-top: 15px; margin-bottom: 10px; color: #2c3e50;">GitHub Issue #1 评论:</h4>
+            <div style="
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                padding: 20px;
+                background-color: #f9f9f9;
+                border-radius: 5px;
+                border: 1px dashed #ddd;
+                color: #7f8c8d;
+                font-style: italic;
+            ">
+                <span>切换到"数据管理"标签页自动加载评论</span>
+            </div>
+        `;
+    }
+}
+</script>
+
+<style>
+/* 添加评论按钮的响应式样式 */
+@media (max-width: 768px) {
+    .comment-btn {
+        min-width: 70px !important;
+        padding: 6px 10px !important;
+        font-size: 11px !important;
+    }
+}
+</style>
