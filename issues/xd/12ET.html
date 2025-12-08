@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>12平均律可视化 v1.7</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+        
+        .version {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: #4CAF50;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 12px;
+        }
+        
+        .container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            aspect-ratio: 1/1;
+            margin: 30px auto;
+        }
+        
+        #circleCanvas {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            z-index: 1;
+        }
+        
+        #outerRing {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-color: transparent;
+            z-index: 0;
+        }
+        
+        #dial {
+            position: absolute;
+            width: 15%;
+            height: 15%;
+            min-width: 60px;
+            min-height: 60px;
+            background-color: #ff5252;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            user-select: none;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
+            z-index: 2;
+        }
+        
+        .ring-label {
+            position: absolute;
+            font-size: 20px;
+            font-weight: bold;
+            transform-origin: 0 0;
+            pointer-events: none;
+            background-color: white;
+            border-radius: 50%;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            border: 3px solid white;
+        }
+        
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 15px;
+            width: 100%;
+            max-width: 500px;
+            justify-content: center;
+        }
+        
+        button {
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            flex: 1;
+            max-width: 150px;
+        }
+        
+        .info {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: white;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+            box-sizing: border-box;
+        }
+        
+        .info h2 {
+            margin-top: 0;
+        }
+        
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            button {
+                width: 100%;
+            }
+            .ring-label {
+                font-size: 16px;
+                width: 30px;
+                height: 30px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="version">v1.7</div>
+    <h1>12平均律可视化</h1>
+    <div class="container">
+        <canvas id="circleCanvas"></canvas>
+        <div id="outerRing"></div>
+        <div id="dial">C</div>
+    </div>
+    <div class="controls">
+        <button id="prevBtn">上一个调式</button>
+        <button id="nextBtn">下一个调式</button>
+    </div>
+    <div class="info">
+        <h2 id="currentKey">当前调式: C大调</h2>
+        <p id="keyInfo">C大调音阶: C(1), D(2), E(3), F(4), G(5), A(6), B(7)</p>
+        <p id="scaleNumbers">音阶数字: 1(哆), 2(来), 3(咪), 4(发), 5(梭), 6(拉), 7(西)</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('circleCanvas');
+        const ctx = canvas.getContext('2d');
+        const dial = document.getElementById('dial');
+        const outerRing = document.getElementById('outerRing');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const currentKeyDisplay = document.getElementById('currentKey');
+        const keyInfoDisplay = document.getElementById('keyInfo');
+        const scaleNumbersDisplay = document.getElementById('scaleNumbers');
+        
+        // 12平均律音名
+        const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const majorScalePattern = [0, 2, 4, 5, 7, 9, 11];
+        
+        // 音阶数字标签（哆来米发梭拉西）
+        const scaleNumbers = ['1', '2', '3', '4', '5', '6', '7'];
+        const scaleNumbersCN = ['哆', '来', '咪', '发', '梭', '拉', '西'];
+        // 红色系颜色
+        const redColors = ['#c62828', '#d32f2f', '#f44336', '#e53935', '#d81b60'];
+        
+        let currentKeyIndex = 0;
+        let rotationAngle = 0;
+        let ringRotation = 0;
+        let ringLabels = [];
+        
+        // 更新外环标签位置和旋转
+        function updateRingLabels() {
+            const centerX = outerRing.offsetWidth / 2;
+            const centerY = outerRing.offsetHeight / 2;
+            const radius = outerRing.offsetWidth * 0.45;
+            const currentScale = getCurrentScale();
+            
+            ringLabels.forEach((label, index) => {
+                const noteIndex = currentScale[index];
+                // 计算标签位置，考虑外环旋转，使视觉位置固定对应音符
+                const angle = (noteIndex * 30 - 90 - ringRotation) * Math.PI / 180;
+                const x = centerX + Math.cos(angle) * radius;
+                const y = centerY + Math.sin(angle) * radius;
+                
+                label.style.left = `${x}px`;
+                label.style.top = `${y}px`;
+                // 标签旋转以保持朝上
+                label.style.transform = `translate(-50%, -50%) rotate(${-ringRotation}deg)`;
+                // 设置标签背景颜色
+                label.style.borderColor = redColors[index % redColors.length];
+            });
+        }
+        
+        // 初始化外环标签
+        function initRingLabels() {
+            outerRing.innerHTML = '';
+            ringLabels = [];
+            
+            const currentScale = getCurrentScale();
+            
+            // 为当前大调音阶的7个音创建标签
+            for (let i = 0; i < 7; i++) {
+                const label = document.createElement('div');
+                label.className = 'ring-label';
+                label.textContent = scaleNumbers[i];
+                label.style.color = redColors[i % redColors.length];
+                label.style.fontWeight = 'bold';
+                label.style.fontSize = '20px';
+                // 为每个数字标签添加中文音名提示
+                label.title = `${scaleNumbers[i]} (${scaleNumbersCN[i]})`;
+                outerRing.appendChild(label);
+                ringLabels.push(label);
+            }
+            
+            updateRingLabels(); // 设置初始位置
+        }
+        
+        // 旋转外环
+        function rotateRing(angle) {
+            ringRotation = angle;
+            outerRing.style.transform = `rotate(${angle}deg)`;
+            updateRingLabels(); // 更新标签位置
+        }
+        
+        // 设置canvas尺寸
+        function resizeCanvas() {
+            const container = document.querySelector('.container');
+            const size = Math.min(container.offsetWidth, window.innerHeight * 0.6);
+            canvas.width = size;
+            canvas.height = size;
+            drawCircle();
+        }
+        
+        // 绘制12平均律圆圈
+        function drawCircle() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const innerRadius = canvas.width * 0.35; // 内圆半径（音符点位置）
+            const outerRadius = canvas.width * 0.45; // 外圆半径（数字标签位置）
+            const circleRadius = canvas.width * 0.4; // 圆环半径
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 绘制外环轮廓
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, circleRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            
+            // 绘制12条半径线（灰色虚线）
+            for (let i = 0; i < 12; i++) {
+                const angle = i * (Math.PI * 2 / 12) - Math.PI / 2;
+                const endX = centerX + Math.cos(angle) * circleRadius;
+                const endY = centerY + Math.sin(angle) * circleRadius;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = '#e0e0e0';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([5, 5]); // 虚线
+                ctx.stroke();
+            }
+            
+            // 绘制当前大调音阶的7条半径线（实线，不同颜色）
+            const currentScale = getCurrentScale();
+            for (let i = 0; i < 7; i++) {
+                const noteIndex = currentScale[i];
+                const angle = noteIndex * (Math.PI * 2 / 12) - Math.PI / 2;
+                const endX = centerX + Math.cos(angle) * circleRadius;
+                const endY = centerY + Math.sin(angle) * circleRadius;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(endX, endY);
+                ctx.strokeStyle = redColors[i % redColors.length];
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]); // 实线
+                ctx.stroke();
+                
+                // 在外环上绘制彩色圆点
+                const outerX = centerX + Math.cos(angle) * outerRadius;
+                const outerY = centerY + Math.sin(angle) * outerRadius;
+                
+                ctx.beginPath();
+                ctx.arc(outerX, outerY, 8, 0, Math.PI * 2);
+                ctx.fillStyle = redColors[i % redColors.length];
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // 在外环圆点旁边绘制数字
+                ctx.font = `${Math.max(14, canvas.width * 0.03)}px Arial`;
+                ctx.fillStyle = '#fff';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(scaleNumbers[i], outerX, outerY);
+            }
+            
+            // 绘制12个音符点
+            for (let i = 0; i < 12; i++) {
+                const angle = i * (Math.PI * 2 / 12) - Math.PI / 2;
+                const x = centerX + Math.cos(angle) * innerRadius;
+                const y = centerY + Math.sin(angle) * innerRadius;
+                
+                const isInScale = currentScale.includes(i);
+                const isRootNote = (i === currentKeyIndex);
+                
+                // 绘制连接内圆点到外圆点的线（仅当前大调音阶）
+                if (isInScale) {
+                    const scaleIndex = currentScale.indexOf(i);
+                    const outerX = centerX + Math.cos(angle) * outerRadius;
+                    const outerY = centerY + Math.sin(angle) * outerRadius;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(outerX, outerY);
+                    ctx.strokeStyle = redColors[scaleIndex % redColors.length];
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([]);
+                    ctx.stroke();
+                }
+                
+                // 绘制内圆点
+                ctx.beginPath();
+                ctx.arc(x, y, 10, 0, Math.PI * 2);
+                ctx.fillStyle = isInScale ? '#4CAF50' : '#9E9E9E';
+                ctx.fill();
+                
+                // 如果当前点是主音，添加一个黄色外圈
+                if (isRootNote) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, 12, 0, Math.PI * 2);
+                    ctx.strokeStyle = '#FFD700';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                }
+                
+                // 绘制音符字母
+                ctx.font = `${Math.max(12, canvas.width * 0.03)}px Arial`;
+                ctx.fillStyle = isRootNote ? '#FFD700' : '#333';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                if (isRootNote) {
+                    ctx.font = `bold ${Math.max(12, canvas.width * 0.035)}px Arial`;
+                }
+                ctx.fillText(notes[i], x, y);
+            }
+            
+            updateDialPosition();
+        }
+        
+        function getCurrentScale() {
+            return majorScalePattern.map(step => (step + currentKeyIndex) % 12);
+        }
+        
+        function updateDialPosition() {
+            rotationAngle = (currentKeyIndex * (360 / 12)) % 360;
+            dial.style.transform = `translate(-50%, -50%) rotate(${rotationAngle}deg)`;
+            dial.textContent = notes[currentKeyIndex];
+            
+            // 更新外环标签
+            initRingLabels();
+            
+            // 同步旋转外环
+            const ringAngle = (currentKeyIndex * 30) % 360;
+            rotateRing(-ringAngle);
+            
+            updateInfo();
+            drawCircle();
+        }
+        
+        function updateInfo() {
+            const currentNote = notes[currentKeyIndex];
+            currentKeyDisplay.textContent = `当前调式: ${currentNote}大调`;
+            
+            const scaleNotes = getCurrentScale().map(i => notes[i]);
+            const scaleWithNumbers = scaleNotes.map((note, index) => {
+                // 主音用黄色标记
+                if (index === 0) {
+                    return `<span style="color: #FFD700; font-weight: bold;">${note}(${scaleNumbers[index]})</span>`;
+                }
+                return `${note}(${scaleNumbers[index]})`;
+            });
+            keyInfoDisplay.innerHTML = `${currentNote}大调音阶: ${scaleWithNumbers.join(', ')}`;
+            
+            // 更新音阶数字说明
+            const scaleWithChinese = scaleNumbers.map((num, index) => {
+                return `${num}(${scaleNumbersCN[index]})`;
+            });
+            scaleNumbersDisplay.innerHTML = `音阶数字: ${scaleWithChinese.join(', ')}`;
+        }
+        
+        function prevKey() {
+            currentKeyIndex = (currentKeyIndex - 1 + 12) % 12;
+            drawCircle();
+            updateInfo();
+        }
+        
+        function nextKey() {
+            currentKeyIndex = (currentKeyIndex + 1) % 12;
+            drawCircle();
+            updateInfo();
+        }
+        
+        // 初始化
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            updateDialPosition();
+        });
+        
+        window.addEventListener('resize', () => {
+            resizeCanvas();
+            updateRingLabels();
+        });
+        
+        prevBtn.addEventListener('click', prevKey);
+        nextBtn.addEventListener('click', nextKey);
+        
+        // 转盘拖拽旋转
+        let isDragging = false;
+        let startAngle = 0;
+        let startRotation = 0;
+        
+        dial.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            const rect = dial.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+            startRotation = rotationAngle;
+            e.preventDefault();
+        });
+        
+        window.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                const rect = dial.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+                rotationAngle = startRotation + (currentAngle - startAngle);
+                
+                const angleStep = 360 / 12;
+                let closestIndex = Math.round(rotationAngle / angleStep) % 12;
+                closestIndex = (closestIndex + 12) % 12;
+                
+                if (currentKeyIndex !== closestIndex) {
+                    currentKeyIndex = closestIndex;
+                    updateInfo();
+                }
+                
+                dial.style.transform = `translate(-50%, -50%) rotate(${rotationAngle}deg)`;
+                rotateRing(-currentKeyIndex * 30);
+            }
+        });
+        
+        window.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                rotationAngle = currentKeyIndex * (360 / 12);
+                dial.style.transform = `translate(-50%, -50%) rotate(${rotationAngle}deg)`;
+                drawCircle();
+            }
+        });
+        
+        // 外环拖拽旋转
+        let isRingDragging = false;
+        let ringStartAngle = 0;
+        let ringStartRotation = 0;
+        
+        outerRing.addEventListener('mousedown', (e) => {
+            isRingDragging = true;
+            const rect = outerRing.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            ringStartAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+            ringStartRotation = ringRotation;
+            e.preventDefault();
+        });
+        
+        window.addEventListener('mousemove', (e) => {
+            if (isRingDragging) {
+                const rect = outerRing.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const currentAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+                const newRotation = ringStartRotation + (currentAngle - ringStartAngle);
+                
+                // 每30度对齐一个调性
+                const snappedRotation = Math.round(newRotation / 30) * 30;
+                rotateRing(snappedRotation);
+                
+                // 更新当前调式
+                const newKeyIndex = (12 - Math.round(snappedRotation / 30)) % 12;
+                if (currentKeyIndex !== newKeyIndex) {
+                    currentKeyIndex = newKeyIndex;
+                    updateDialPosition();
+                }
+            }
+        });
+        
+        window.addEventListener('mouseup', () => {
+            if (isRingDragging) {
+                isRingDragging = false;
+                const snappedRotation = Math.round(ringRotation / 30) * 30;
+                rotateRing(snappedRotation);
+            }
+        });
+        
+        // 添加触摸事件支持
+        dial.addEventListener('touchstart', (e) => {
+            isDragging = true;
+            const rect = dial.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const touch = e.touches[0];
+            startAngle = Math.atan2(touch.clientY - centerY, touch.clientX - centerX) * 180 / Math.PI;
+            startRotation = rotationAngle;
+            e.preventDefault();
+        });
+        
+        outerRing.addEventListener('touchstart', (e) => {
+            isRingDragging = true;
+            const rect = outerRing.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const touch = e.touches[0];
+            ringStartAngle = Math.atan2(touch.clientY - centerY, touch.clientX - centerX) * 180 / Math.PI;
+            ringStartRotation = ringRotation;
+            e.preventDefault();
+        });
+        
+        window.addEventListener('touchmove', (e) => {
+            if (isDragging) {
+                const rect = dial.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const touch = e.touches[0];
+                const currentAngle = Math.atan2(touch.clientY - centerY, touch.clientX - centerX) * 180 / Math.PI;
+                rotationAngle = startRotation + (currentAngle - startAngle);
+                
+                const angleStep = 360 / 12;
+                let closestIndex = Math.round(rotationAngle / angleStep) % 12;
+                closestIndex = (closestIndex + 12) % 12;
+                
+                if (currentKeyIndex !== closestIndex) {
+                    currentKeyIndex = closestIndex;
+                    updateInfo();
+                }
+                
+                dial.style.transform = `translate(-50%, -50%) rotate(${rotationAngle}deg)`;
+                rotateRing(-currentKeyIndex * 30);
+                e.preventDefault();
+            }
+            
+            if (isRingDragging) {
+                const rect = outerRing.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                const touch = e.touches[0];
+                const currentAngle = Math.atan2(touch.clientY - centerY, touch.clientX - centerX) * 180 / Math.PI;
+                const newRotation = ringStartRotation + (currentAngle - ringStartAngle);
+                
+                const snappedRotation = Math.round(newRotation / 30) * 30;
+                rotateRing(snappedRotation);
+                
+                const newKeyIndex = (12 - Math.round(snappedRotation / 30)) % 12;
+                if (currentKeyIndex !== newKeyIndex) {
+                    currentKeyIndex = newKeyIndex;
+                    updateDialPosition();
+                }
+                e.preventDefault();
+            }
+        });
+        
+        window.addEventListener('touchend', () => {
+            if (isDragging) {
+                isDragging = false;
+                rotationAngle = currentKeyIndex * (360 / 12);
+                dial.style.transform = `translate(-50%, -50%) rotate(${rotationAngle}deg)`;
+                drawCircle();
+            }
+            
+            if (isRingDragging) {
+                isRingDragging = false;
+                const snappedRotation = Math.round(ringRotation / 30) * 30;
+                rotateRing(snappedRotation);
+            }
+        });
+    </script>
+</body>
+</html>
+
+
+<!--
+升级程序
+从圆心往外画半径连接字母和数字。外环画轮廓。
+-->
