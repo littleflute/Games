@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>12平均律可视化 v1.2</title>
+    <title>12平均律可视化 v1.3</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
@@ -81,9 +81,8 @@
         
         .ring-label {
             position: absolute;
-            font-size: 14px;
+            font-size: 16px;
             font-weight: bold;
-            color: #333;
             transform-origin: 0 0;
             pointer-events: none;
         }
@@ -132,13 +131,13 @@
                 width: 100%;
             }
             .ring-label {
-                font-size: 12px;
+                font-size: 14px;
             }
         }
     </style>
 </head>
 <body>
-    <div class="version">v1.2</div>
+    <div class="version">v1.3</div>
     <h1>12平均律可视化</h1>
     <div class="container">
         <canvas id="circleCanvas"></canvas>
@@ -164,15 +163,14 @@
         const currentKeyDisplay = document.getElementById('currentKey');
         const keyInfoDisplay = document.getElementById('keyInfo');
         
-        // 调性名称（按五度圈顺序）
-        const tonalities = [
-            'C', 'G', 'D', 'A', 'E', 'B', 
-            'F#', 'C#', 'G#', 'D#', 'A#', 'F'
-        ];
-        
         // 12平均律音名
         const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
         const majorScalePattern = [0, 2, 4, 5, 7, 9, 11];
+        
+        // 音阶数字标签（哆来米发梭拉西）
+        const scaleNumbers = ['1', '2', '3', '4', '5', '6', '7'];
+        // 红色系颜色
+        const redColors = ['#c62828', '#d32f2f', '#f44336', '#e53935', '#d81b60'];
         
         let currentKeyIndex = 0;
         let rotationAngle = 0;
@@ -188,21 +186,28 @@
             const centerY = outerRing.offsetHeight / 2;
             const radius = outerRing.offsetWidth * 0.45;
             
-            tonalities.forEach((tonality, index) => {
-                const angle = (index * (360 / 12) - 90) * (Math.PI / 180);
+            const currentScale = getCurrentScale();
+            
+            // 为当前大调音阶的7个音创建标签
+            for (let i = 0; i < 7; i++) {
+                const noteIndex = currentScale[i];
+                const angle = (noteIndex * (360 / 12) - 90) * (Math.PI / 180);
                 const x = centerX + Math.cos(angle) * radius;
                 const y = centerY + Math.sin(angle) * radius;
                 
                 const label = document.createElement('div');
                 label.className = 'ring-label';
-                label.textContent = tonality;
+                label.textContent = scaleNumbers[i];
+                label.style.color = redColors[i % redColors.length];
+                label.style.fontWeight = 'bold';
+                label.style.fontSize = '18px';
                 label.style.left = `${x}px`;
                 label.style.top = `${y}px`;
-                label.style.transform = `translate(-50%, -50%) rotate(${index * 30}deg)`;
+                label.style.transform = `translate(-50%, -50%) rotate(${noteIndex * 30}deg)`;
                 
                 outerRing.appendChild(label);
                 ringLabels.push(label);
-            });
+            }
         }
         
         // 旋转外环
@@ -212,7 +217,9 @@
             
             // 更新标签方向
             ringLabels.forEach((label, index) => {
-                const labelAngle = (index * 30 - angle) % 360;
+                const currentScale = getCurrentScale();
+                const noteIndex = currentScale[index];
+                const labelAngle = (noteIndex * 30 - angle) % 360;
                 const rotation = labelAngle > 180 ? labelAngle - 180 : labelAngle;
                 label.style.transform = `translate(-50%, -50%) rotate(${rotation}deg)`;
             });
@@ -276,9 +283,12 @@
             dial.style.transform = `translate(-50%, -50%) rotate(${rotationAngle}deg)`;
             dial.textContent = notes[currentKeyIndex];
             
-            // 同步旋转外环（五度圈方向）
+            // 同步旋转外环
             const ringAngle = (currentKeyIndex * 30) % 360;
             rotateRing(-ringAngle);
+            
+            // 更新外环标签
+            initRingLabels();
         }
         
         function updateInfo() {
@@ -286,7 +296,8 @@
             currentKeyDisplay.textContent = `当前调式: ${currentNote}大调`;
             
             const scaleNotes = getCurrentScale().map(i => notes[i]);
-            keyInfoDisplay.textContent = `${currentNote}大调音阶: ${scaleNotes.join(', ')}`;
+            const scaleWithNumbers = scaleNotes.map((note, index) => `${note}(${scaleNumbers[index]})`);
+            keyInfoDisplay.textContent = `${currentNote}大调音阶: ${scaleWithNumbers.join(', ')}`;
         }
         
         function prevKey() {
@@ -304,13 +315,11 @@
         // 初始化
         window.addEventListener('load', () => {
             resizeCanvas();
-            initRingLabels();
             updateInfo();
         });
         
         window.addEventListener('resize', () => {
             resizeCanvas();
-            initRingLabels();
         });
         
         prevBtn.addEventListener('click', prevKey);
@@ -493,3 +502,8 @@
     </script>
 </body>
 </html>
+
+<!--
+升级程序
+让外环只显示1234567，表示多了米发梭拉西。用红色系的一个颜色。
+-->
