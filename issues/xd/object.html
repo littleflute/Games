@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画布绘图与爆炸效果</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+        }
+        
+        /* 顶部工具条样式 */
+        .toolbar {
+            background-color: #2c3e50;
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .toolbar button {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            background-color: #3498db;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .toolbar button:hover {
+            background-color: #2980b9;
+        }
+        
+        .toolbar button.active {
+            background-color: #27ae60;
+        }
+        
+        /* 中间画布容器 */
+        .canvas-container {
+            flex: 1;
+            position: relative;
+            background-color: #ecf0f1;
+            overflow: hidden;
+        }
+        
+        #drawCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        
+        /* 底部状态栏样式 */
+        .status-bar {
+            background-color: #34495e;
+            color: white;
+            padding: 8px 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部工具条 -->
+    <div class="toolbar">
+        <button id="drawBrickBtn">绘制砖块</button>
+        <button id="bombBtn">炸弹爆炸</button>
+    </div>
+    
+    <!-- 中间画布区域 -->
+    <div class="canvas-container">
+        <canvas id="drawCanvas"></canvas>
+    </div>
+    
+    <!-- 底部状态栏 -->
+    <div class="status-bar" id="statusBar">
+        状态：就绪 | 操作提示：点击按钮选择功能，然后在画布上点击/拖动
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const canvas = document.getElementById('drawCanvas');
+        const ctx = canvas.getContext('2d');
+        const drawBrickBtn = document.getElementById('drawBrickBtn');
+        const bombBtn = document.getElementById('bombBtn');
+        const statusBar = document.getElementById('statusBar');
+        
+        // 全局状态变量
+        let currentMode = null; // 当前模式：'brick' 或 'bomb'
+        let bricks = []; // 存储所有砖块数据
+        let isDragging = false;
+        let startX, startY;
+        
+        // 初始化画布尺寸
+        function resizeCanvas() {
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            // 重新绘制所有砖块
+            redrawBricks();
+        }
+        
+        // 重新绘制所有砖块
+        function redrawBricks() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            bricks.forEach(brick => {
+                drawBrick(brick.x, brick.y, brick.width, brick.height, brick.color);
+            });
+        }
+        
+        // 绘制砖块函数
+        function drawBrick(x, y, width, height, color = '#e74c3c') {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, width, height);
+            // 绘制砖块边框
+            ctx.strokeStyle = '#c0392b';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, width, height);
+        }
+        
+        // 爆炸效果函数
+        function createExplosion(x, y) {
+            // 爆炸动画的粒子数量
+            const particles = 50;
+            const particleArr = [];
+            
+            // 创建粒子
+            for (let i = 0; i < particles; i++) {
+                particleArr.push({
+                    x: x,
+                    y: y,
+                    radius: Math.random() * 8 + 2,
+                    color: `hsl(${Math.random() * 30 + 30}, 100%, 50%)`, // 橙红色系
+                    speed: Math.random() * 5 + 2,
+                    angle: Math.random() * Math.PI * 2,
+                    alpha: 1,
+                    decay: Math.random() * 0.01 + 0.005
+                });
+            }
+            
+            // 爆炸动画循环
+            function animateExplosion() {
+                // 清除当前帧的爆炸区域（保留砖块）
+                ctx.save();
+                ctx.globalCompositeOperation = 'destination-over';
+                ctx.clearRect(x - 100, y - 100, 200, 200);
+                ctx.restore();
+                
+                // 重新绘制砖块（避免爆炸动画清除砖块）
+                redrawBricks();
+                
+                // 绘制粒子
+                particleArr.forEach((p, index) => {
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color;
+                    ctx.globalAlpha = p.alpha;
+                    ctx.fill();
+                    
+                    // 更新粒子位置和透明度
+                    p.x += Math.cos(p.angle) * p.speed;
+                    p.y += Math.sin(p.angle) * p.speed;
+                    p.alpha -= p.decay;
+                    p.radius *= 0.98;
+                    
+                    // 移除透明度为0的粒子
+                    if (p.alpha <= 0) {
+                        particleArr.splice(index, 1);
+                    }
+                });
+                
+                // 移除爆炸范围内的砖块
+                bricks = bricks.filter(brick => {
+                    const distance = Math.hypot(brick.x + brick.width/2 - x, brick.y + brick.height/2 - y);
+                    return distance > 80; // 爆炸半径80px
+                });
+                
+                // 如果还有粒子，继续动画
+                if (particleArr.length > 0) {
+                    requestAnimationFrame(animateExplosion);
+                } else {
+                    // 动画结束后恢复画布状态
+                    ctx.globalAlpha = 1;
+                    redrawBricks();
+                    updateStatus('爆炸效果完成，已清除范围内的砖块');
+                }
+            }
+            
+            animateExplosion();
+        }
+        
+        // 更新状态栏信息
+        function updateStatus(message) {
+            statusBar.textContent = `状态：${message} | 操作提示：点击按钮选择功能，然后在画布上点击/拖动`;
+        }
+        
+        // 按钮点击事件
+        drawBrickBtn.addEventListener('click', () => {
+            currentMode = 'brick';
+            // 切换按钮激活状态
+            drawBrickBtn.classList.add('active');
+            bombBtn.classList.remove('active');
+            updateStatus('绘制砖块模式 - 点击画布绘制砖块，或拖动绘制自定义尺寸砖块');
+            canvas.style.cursor = 'crosshair';
+        });
+        
+        bombBtn.addEventListener('click', () => {
+            currentMode = 'bomb';
+            // 切换按钮激活状态
+            bombBtn.classList.add('active');
+            drawBrickBtn.classList.remove('active');
+            updateStatus('炸弹爆炸模式 - 点击画布任意位置触发爆炸效果');
+            canvas.style.cursor = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\' viewBox=\'0 0 24 24\'><path fill=\'%23ff0000\' d=\'M12,2C13.5,2 14.75,2.5 15.75,3.5C16.75,4.5 17.25,5.75 17.25,7.25C17.25,8.75 16.75,10 15.75,11C14.75,12 13.5,12.5 12,12.5C10.5,12.5 9.25,12 8.25,11C7.25,10 6.75,8.75 6.75,7.25C6.75,5.75 7.25,4.5 8.25,3.5C9.25,2.5 10.5,2 12,2M12,4C11,4 10,4.5 9.25,5.25C8.5,6 8,7 8,8C8,9 8.5,10 9.25,10.75C10,11.5 11,12 12,12C13,12 14,11.5 14.75,10.75C15.5,10 16,9 16,8C16,7 15.5,6 14.75,5.25C14,4.5 13,4 12,4M12,14C10,14 8,14.5 6,15.5C4,16.5 3,18 3,20V21H21V20C21,18 20,16.5 18,15.5C16,14.5 14,14 12,14Z\'/></svg>"), auto';
+        });
+        
+        // 画布鼠标事件
+        canvas.addEventListener('mousedown', (e) => {
+            if (!currentMode) return;
+            
+            isDragging = true;
+            // 获取鼠标在画布中的坐标
+            const rect = canvas.getBoundingClientRect();
+            startX = e.clientX - rect.left;
+            startY = e.clientY - rect.top;
+            
+            // 如果是炸弹模式，直接触发爆炸
+            if (currentMode === 'bomb') {
+                createExplosion(startX, startY);
+                isDragging = false;
+            }
+        });
+        
+        canvas.addEventListener('mousemove', (e) => {
+            if (!isDragging || currentMode !== 'brick') return;
+            
+            // 实时绘制拖动的砖块（临时）
+            const rect = canvas.getBoundingClientRect();
+            const currentX = e.clientX - rect.left;
+            const currentY = e.clientY - rect.top;
+            
+            // 清除画布并重新绘制已有砖块 + 临时砖块
+            redrawBricks();
+            const width = currentX - startX;
+            const height = currentY - startY;
+            drawBrick(startX, startY, width, height);
+        });
+        
+        canvas.addEventListener('mouseup', (e) => {
+            if (!isDragging || currentMode !== 'brick') {
+                isDragging = false;
+                return;
+            }
+            
+            isDragging = false;
+            // 获取最终坐标
+            const rect = canvas.getBoundingClientRect();
+            const endX = e.clientX - rect.left;
+            const endY = e.clientY - rect.top;
+            
+            // 计算砖块尺寸（确保宽高为正）
+            const width = Math.abs(endX - startX);
+            const height = Math.abs(endY - startY);
+            const x = Math.min(startX, endX);
+            const y = Math.min(startY, endY);
+            
+            // 如果尺寸太小，视为点击绘制默认尺寸砖块
+            const brickWidth = width < 10 ? 80 : width;
+            const brickHeight = height < 10 ? 40 : height;
+            const brickX = width < 10 ? startX - 40 : x;
+            const brickY = height < 10 ? startY - 20 : y;
+            
+            // 存储砖块数据
+            bricks.push({
+                x: brickX,
+                y: brickY,
+                width: brickWidth,
+                height: brickHeight,
+                color: `hsl(${Math.random() * 360}, 70%, 50%)` // 随机颜色
+            });
+            
+            // 重新绘制所有砖块
+            redrawBricks();
+            updateStatus(`已绘制砖块 - 位置：(${Math.round(brickX)}, ${Math.round(brickY)}) 尺寸：${Math.round(brickWidth)}x${Math.round(brickHeight)}`);
+        });
+        
+        // 窗口大小变化时调整画布尺寸
+        window.addEventListener('resize', resizeCanvas);
+        
+        // 初始化
+        resizeCanvas();
+    </script>
+</body>
+</html>
